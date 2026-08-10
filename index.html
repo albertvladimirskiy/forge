@@ -283,6 +283,35 @@ input[type=date],input[type=time]{min-height:40px}
 .banner.moss{background:#121A0F;border-color:#243318}
 .banner.steel{background:#0F161C;border-color:#1C2A36}
 
+
+/* ---------- day rail (drag calendar) ---------- */
+.railwrap{position:relative;overflow:hidden;border:1px solid var(--rule);background:var(--panel);margin-bottom:2px}
+.rail{position:relative;margin:10px 12px 10px 50px}
+.rhour{position:absolute;left:-46px;right:0;border-top:1px solid #1B1E23;height:0}
+.rhour span{position:absolute;left:0;top:-6px;width:40px;text-align:right;font-size:8px;color:var(--faint);padding-right:6px}
+.rnow{position:absolute;left:-46px;right:0;height:1px;background:var(--amber);z-index:6}
+.rnow:before{content:'';position:absolute;left:-3px;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
+.rblk{position:absolute;left:2px;right:2px;background:var(--panel2);border-left:3px solid var(--rule2);
+  padding:4px 8px;overflow:hidden;touch-action:none;border-radius:1px}
+.rblk.lock{opacity:.5;background:repeating-linear-gradient(135deg,#181B20,#181B20 5px,#121417 5px,#121417 10px)}
+.rblk.drag{cursor:grab}
+.rblk.dragging{box-shadow:0 8px 22px rgba(0,0,0,.55);z-index:10;cursor:grabbing;opacity:.96}
+.rblkT{font-size:9.5px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.rblkS{font-size:7.5px;color:var(--faint);margin-top:2px}
+.railhint{display:flex;align-items:center;gap:6px;padding:8px 2px 15px;font-size:9.5px;color:var(--faint)}
+
+/* ---------- commitment tag dots ---------- */
+.tagdot{width:7px;height:7px;min-width:7px;border-radius:50%;margin-right:2px}
+
+/* ---------- PR badges ---------- */
+.setrow .award-inline{display:inline-flex}
+
+
+/* ---------- day navigation ---------- */
+.daynav{display:flex;align-items:center;margin:14px 0 10px}
+.darrow{padding:10px 12px;color:var(--faint)}
+.darrow:active{color:var(--text)}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -718,6 +747,85 @@ const FOODS = [
 ['Orange juice, 1 cup',110,2,26,0],['Gatorade, 1 bottle',140,0,36,0],['Energy drink',110,0,28,0],['Latte, medium',190,10,18,7],
 ['Coffee w/ cream',35,0,1,3],['Coffee, black',2,0,0,0],
 ];
+const FOODS_MORE = [
+/* -- the missed items, first -- */
+['Caviar, 1 tbsp',42,4,1,3],['Kiwi',42,1,10,0],['Pumpkin seeds, 1oz',151,7,5,13],['Tomato sauce (marinara), 1/2 cup',70,2,10,3],
+/* -- proteins: more meat, poultry, seafood -- */
+['Turkey breast, 6oz',240,51,0,2],['Duck breast, 6oz',250,45,0,7],['Venison, 6oz',260,51,0,5],['Lamb chop, 6oz',470,44,0,32],
+['Veal, 6oz',280,46,0,10],['Crab, 6oz',180,34,0,3],['Lobster, 6oz',170,36,1,1],['Scallops, 6oz',200,38,3,2],
+['Mussels, 6oz',250,34,11,6],['Oysters, 6 raw',90,9,5,3],['Anchovies, 5',40,6,0,2],['Sardines, 1 can',190,23,0,11],
+['Smoked salmon, 3oz',100,16,0,4],['Catfish, 6oz',260,32,0,14],['Tilapia, 6oz',220,46,0,4],['Cod, 6oz',180,40,0,1],
+['Halibut, 6oz',250,47,0,5],['Mahi mahi, 6oz',190,42,0,2],['Swordfish, 6oz',260,42,0,9],['Trout, 6oz',280,40,0,12],
+['Calamari, fried, 6oz',350,24,24,18],['Octopus, 6oz',230,42,6,3],['Chorizo, 2oz',260,14,1,22],['Pepperoni, 15 slices',140,6,1,12],
+['Prosciutto, 2 slices',70,10,0,3],['Salami, 4 slices',150,8,1,13],['Pastrami, 4 slices',100,14,1,4],['Roast beef, deli, 4 slices',90,15,1,3],
+['Chicken wings, 6',430,30,0,34],['Chicken drumstick, 2',260,32,0,14],['Ground chicken, 6oz',280,38,0,14],['Ground pork, 6oz',380,38,0,26],
+['Pork tenderloin, 6oz',250,45,0,7],['Pork ribs, 6oz',500,38,0,38],['Bacon, turkey, 2 slices',60,5,0,4],['Beef liver, 4oz',200,27,5,5],
+['Bison, 6oz',290,48,0,10],
+/* -- dairy & eggs -- */
+['Egg yolk, 1',55,3,1,4],['Ricotta, 1/2 cup',210,14,6,15],['Mozzarella, 1oz',85,6,1,6],['Parmesan, 2 tbsp grated',45,4,0,3],
+['Feta, 1/4 cup',100,5,1,8],['Cheddar, shredded, 1/4 cup',110,7,1,9],['Blue cheese, 1oz',100,6,1,8],['Brie, 1oz',95,6,0,8],
+['Swiss cheese, 1 slice',105,8,1,8],['Goat cheese, 1oz',75,5,0,6],['Half and half, 2 tbsp',40,1,1,3],['Heavy cream, 2 tbsp',100,1,1,11],
+['Sour cream, 2 tbsp',60,1,1,6],['Kefir, 1 cup',110,9,12,2],['Skyr, 1 cup',130,22,8,0],['Buttermilk, 1 cup',100,8,12,2],
+['Almond milk, 1 cup',40,1,2,3],['Oat milk, 1 cup',120,3,16,5],['Soy milk, 1 cup',110,8,9,4],['Coconut milk, canned, 1/4 cup',110,1,2,12],
+/* -- grains & starches -- */
+['Brown rice, 1 cup',215,5,45,2],['Wild rice, 1 cup',165,7,35,1],['Couscous, 1 cup',175,6,36,0],['Farro, 1 cup',200,7,40,1],
+['Barley, 1 cup',190,4,44,1],['Polenta, 1 cup',145,3,31,1],['Grits, 1 cup',150,4,32,1],['Naan bread, 1',260,9,45,5],
+['Pita bread, 1',165,5,33,1],['English muffin',135,5,26,1],['Sourdough, 1 slice',90,4,17,1],['Rye bread, 1 slice',85,3,15,1],
+['Whole wheat bread, 1 slice',80,4,14,1],['Waffle',220,6,25,10],['Pancakes, 2',350,8,42,15],['French toast, 2 slices',350,11,40,15],
+['Croissant',230,5,26,12],['Blueberry muffin',340,6,47,15],['Biscuit',210,4,27,10],['Dinner roll',90,3,15,2],
+['Breadsticks, 2',130,4,22,3],['Soba noodles, 1 cup',210,8,43,0],['Udon noodles, 1 cup',190,5,41,1],['Rice noodles, 1 cup',190,3,44,0],
+['Gnocchi, 1 cup',250,6,51,2],['Orzo, 1 cup',220,8,43,1],
+/* -- vegetables -- */
+['Kale, 1 cup',35,3,7,0],['Spinach, cooked, 1 cup',40,5,7,0],['Spinach, raw, 2 cups',15,2,2,0],['Asparagus, 1 cup',27,3,5,0],
+['Brussels sprouts, 1 cup',56,4,11,0],['Cauliflower, 1 cup',27,2,5,0],['Zucchini, 1 cup',20,1,4,0],['Eggplant, 1 cup',20,1,5,0],
+['Mushrooms, 1 cup',15,2,2,0],['Green beans, 1 cup',31,2,7,0],['Cabbage, 1 cup',22,1,5,0],['Bok choy, 1 cup',9,1,2,0],
+['Artichoke, 1 medium',60,4,13,0],['Beets, 1 cup',58,2,13,0],['Radish, 1 cup',19,1,4,0],['Celery, 1 cup',16,1,3,0],
+['Butternut squash, 1 cup',82,2,22,0],['Okra, 1 cup',33,2,7,0],['Leeks, 1 cup',54,1,13,0],['Turnip, 1 cup',36,1,8,0],
+['Jalapeno, 1',4,0,1,0],['Garlic, 3 cloves',13,1,3,0],['Scallions, 1/4 cup',8,0,2,0],
+/* -- fruits -- */
+['Pear',100,1,27,0],['Peach',60,1,15,0],['Plum',30,0,8,0],['Cherries, 1 cup',90,2,22,0],
+['Pomegranate seeds, 1/2 cup',72,1,16,1],['Papaya, 1 cup',55,1,14,0],['Guava, 1',37,1,8,0],['Passionfruit, 1',17,0,4,0],
+['Dragonfruit, 1 cup',60,1,13,0],['Persimmon, 1',118,1,31,0],['Fig, fresh, 2',75,1,19,0],['Figs, dried, 3',110,1,28,0],
+['Apricot, 3',50,1,12,0],['Cranberries, dried, 1/4 cup',90,0,22,0],['Coconut meat, 1/4 cup',100,1,4,9],['Lychee, 10',66,1,17,0],
+['Blackberries, 1 cup',62,2,14,1],['Blueberries, 1 cup',84,1,21,0],
+/* -- nuts, seeds & butters -- */
+['Sunflower seeds, 1oz',165,6,7,14],['Walnuts, 1oz',185,4,4,18],['Pecans, 1oz',195,3,4,20],['Cashews, 1oz',155,5,9,12],
+['Pistachios, 1oz',160,6,8,13],['Brazil nuts, 1oz (6)',185,4,3,19],['Macadamia nuts, 1oz',200,2,4,21],['Chia seeds, 1 tbsp',60,2,5,4],
+['Flax seeds, 1 tbsp',55,2,3,4],['Sesame seeds, 1 tbsp',52,2,2,4],['Hemp seeds, 1 tbsp',55,3,1,4],['Almond butter, 2 tbsp',200,7,7,18],
+['Cashew butter, 2 tbsp',190,6,9,16],['Tahini, 2 tbsp',180,5,6,16],
+/* -- condiments & sauces -- */
+['Alfredo sauce, 1/4 cup',110,2,3,10],['Pesto, 2 tbsp',160,2,2,16],['Soy sauce, 1 tbsp',10,1,1,0],['Sriracha, 1 tbsp',15,0,3,0],
+['BBQ sauce, 2 tbsp',60,0,14,0],['Salsa, 2 tbsp',10,0,2,0],['Guacamole, 2 tbsp',50,1,3,5],['Vinaigrette, 2 tbsp',130,0,3,13],
+['Caesar dressing, 2 tbsp',150,1,1,16],['Thousand island, 2 tbsp',115,0,5,11],['Buffalo sauce, 2 tbsp',30,0,2,2],['Teriyaki sauce, 2 tbsp',30,1,6,0],
+['Hoisin sauce, 2 tbsp',70,1,14,1],['Fish sauce, 1 tbsp',10,1,1,0],['Worcestershire, 1 tbsp',13,0,3,0],['Dijon mustard, 1 tbsp',15,1,1,1],
+['Relish, 1 tbsp',20,0,5,0],['Cocktail sauce, 2 tbsp',40,0,10,0],['Tzatziki, 2 tbsp',30,1,2,2],['Nutella, 1 tbsp',100,1,11,6],
+['Maple syrup, 1 tbsp',52,0,13,0],['Balsamic glaze, 1 tbsp',40,0,10,0],
+/* -- composed meals & dishes -- */
+['Lasagna, 1 slice',400,24,34,19],['Chicken parmesan',550,42,30,28],['Chicken tikka masala, 1 cup',440,30,20,27],['Butter chicken, 1 cup',490,28,18,33],
+['Vegetable curry, 1 cup',300,8,30,17],['Falafel, 4 pieces',330,13,32,18],['Shawarma wrap',550,30,50,25],['Gyro',500,27,40,26],
+['Dumplings, 6',300,12,40,10],['Spring rolls, 2',150,4,20,6],['Egg roll, 1',200,6,20,11],['Pot stickers, 6',300,10,35,13],
+['Kimchi, 1/2 cup',23,1,4,0],['Bibimbap, 1 bowl',550,25,75,16],['Poke bowl',500,30,55,17],['Ceviche, 1 cup',180,25,12,3],
+['Paella, 1 cup',380,20,45,12],['Risotto, 1 cup',350,8,45,14],['Quiche, 1 slice',400,14,25,27],['Frittata, 1 slice',220,14,4,16],
+['Omelette, 3-egg',280,19,2,21],['Breakfast burrito',500,22,45,26],['Bagel with cream cheese',380,13,58,12],['Avocado toast',280,8,30,15],
+['Overnight oats, 1 cup',350,15,50,10],['Smoothie bowl',400,12,70,8],['Protein smoothie',300,30,35,5],['Acai bowl',450,8,75,14],
+['Chili, 1 cup',300,20,25,13],['Beef stew, 1 cup',280,22,20,12],['Pot roast, 6oz',400,40,5,24],['Meatloaf, 1 slice',280,20,10,18],
+['Meatballs, 4',280,20,8,18],['Stir fry, chicken + veg, 1 plate',450,32,35,18],['Fajitas, chicken, 1 plate',500,35,40,20],['Enchiladas, 2',480,22,45,24],
+['Tacos, beef, 2',340,18,30,16],['Quesadilla',450,20,35,26],['Nachos, 1 plate',700,25,60,40],['Caesar salad w/ chicken',400,32,12,25],
+['Cobb salad',450,30,15,30],['Greek salad',250,8,15,18],['Caprese salad',250,12,8,19],['Club sandwich',550,30,45,27],
+['BLT',400,15,35,22],['Grilled cheese',400,15,35,22],['Tuna melt',450,28,30,24],['French onion soup',250,10,22,13],
+['Minestrone, 1 cup',150,6,25,3],['Chicken noodle soup, 1 cup',120,8,15,3],['Tomato soup, 1 cup',130,3,20,4],['Clam chowder, 1 cup',200,10,18,10],
+['Miso soup, 1 cup',40,3,5,1],
+/* -- snacks & sweets -- */
+['Rice cake',35,1,7,0],['Beef jerky, 1oz',115,9,3,7],['Protein cookie',200,15,20,8],['Fig bar',140,1,27,3],
+['Granola bar',120,2,20,4],['Pita chips, 1oz',130,4,20,5],['Tortilla chips, 1oz',140,2,19,7],['Cheese puffs, 1oz',160,2,15,10],
+['Fruit snacks, 1 pack',80,0,21,0],['Pudding, 1 cup',150,3,25,4],['Jello, 1 cup',80,2,19,0],['Brownie',240,3,35,10],
+['Cupcake',200,2,30,9],['Cheesecake, 1 slice',400,7,30,28],['Apple pie, 1 slice',300,2,43,14],['Tiramisu, 1 slice',350,6,35,20],
+['Macaron, 1',90,1,12,4],
+/* -- beverages -- */
+['Kombucha, 1 cup',30,0,7,0],['Chai latte, medium',190,8,30,5],['Matcha latte, medium',180,8,24,6],['Hot chocolate',190,8,27,6],
+['Whiskey, 1 shot',105,0,0,0],['Vodka, 1 shot',97,0,0,0],['Margarita',200,0,20,0],['Sparkling water',0,0,0,0],
+];
+FOODS.push(...FOODS_MORE);
 
 /* ------------------------------------------- progression exercise map ----- */
 /* inc in kg (2.27=5lb, 4.54=10lb). m = standard as multiple of bodyweight.
@@ -742,6 +850,10 @@ const PAINSWAP = {
   row:'Swap: chest-supported row. Takes the lower back out of it.',
 };
 
+/* -------------------------------------------------------- commitment tags - */
+const CTAGS = [['','Other'],['physical','Physical / sport'],['class','Class'],['work','Work']];
+const TAGCOLOR = {physical:'var(--moss)', class:'var(--steel)', work:'var(--amber)', '':'var(--faint)'};
+
 
 /* ================================================================ state == */
 const DEFAULTS = {
@@ -752,6 +864,7 @@ const DEFAULTS = {
   days:{},           // { date:{ blocks:{}, mind, news, habits:{}, rv:{}, nudge:{}, food:[] } }
   log:[], nw:[], books:{}, tiers:{}, capital:{}, reach:{},
   gym:{}, flags:{}, deload:{}, notif:{on:false}, bookDates:{},
+  meta:{start:null}, prs:{},
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
@@ -772,7 +885,7 @@ const DOWL = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const pad = n => String(n).padStart(2,'0');
 function dkey(off=0){ const d=new Date(); d.setDate(d.getDate()+off); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function dowIdx(key){ const [y,m,d]=key.split('-').map(Number); const js=new Date(y,m-1,d).getDay(); return js===0?6:js-1; }
-function m2s(t){ const [h,m]=String(t).split(':').map(Number); return h*60+(m||0); }
+function m2s(t){ if(!t) return 0; const [h,m]=String(t).split(':').map(Number); return (isFinite(h)?h:0)*60+(isFinite(m)?m:0); }
 function s2m(x){ x=Math.round(x); const h=Math.floor(x/60)%24, m=x%60; return `${pad(h)}:${pad(m)}`; }
 function s2disp(x){ const h24=Math.floor(x/60)%24, m=x%60; const ap=h24<12?'a':'p'; let h=h24%12||12; return m===0?`${h}${ap}`:`${h}:${pad(m)}${ap}`; }
 function tdisp(t){ return s2disp(m2s(t)); }
@@ -815,14 +928,15 @@ function buildDay(key){
   const wake=m2s(p.wake); let sleep=m2s(p.sleep); if(sleep<=wake) sleep+=1440;
 
   const fixed = [ ...(S.fixed[DOW[dowIdx(key)]]||[]), ...(S.extra[key]||[]) ]
-    .map(c=>({s:m2s(c.s), e:m2s(c.e)<m2s(c.s)?m2s(c.e)+1440:m2s(c.e), l:c.l, fixed:true}))
+    .map(c=>({s:m2s(c.s), e:m2s(c.e)<m2s(c.s)?m2s(c.e)+1440:m2s(c.e), l:c.l, t:c.t, fixed:true}))
     .sort((a,b)=>a.s-b.s);
 
   let free=[[wake,sleep]];
   const buf=+p.commute||0;
   for (const c of fixed) free=subtract(free,c.s-buf,c.e+buf);
 
-  const out=[...fixed], missed=[], nudge=day(key).nudge;
+  const out=[...fixed], missed=[], adapt=[], nudge=day(key).nudge;
+  const physMin = fixed.filter(c=>c.t==='physical').reduce((a,c)=>a+(c.e-c.s),0);
 
   const add=(id,label,sub,dur,anchor,win,kind)=>{
     let slot=null;
@@ -859,7 +973,15 @@ function buildDay(key){
   };
 
   const trainWin=PREF[p.trainPref]||PREF.morning;
-  add('train',def.title,def.aim,def.dur,null,trainWin,'train');
+  let trainDur=def.dur;
+  if (def.type==='engine' && physMin>=90){
+    trainDur=Math.max(35,Math.round(def.dur*0.55));
+    adapt.push(`Heavy tagged practice today (${physMin} min) already covers conditioning. Session trimmed to ${trainDur} min — mobility and core, not more cardio.`);
+  } else if (def.type==='engine' && physMin>=45){
+    trainDur=Math.max(30,Math.round(def.dur*0.45));
+    adapt.push(`${physMin} minutes of tagged practice today already covers conditioning. Engine block trimmed to ${trainDur} min of core and mobility.`);
+  }
+  add('train',def.title,def.aim,trainDur,null,trainWin,'train');
   const tr=out.find(o=>o.id==='train');
   add('news','Daily intelligence','Markets, macro, one long piece. Twenty minutes, then stop.',20,wake+40,null,'mind');
   add('meal1','Meal 1','Protein-forward. Within 90 minutes of waking or of training.',30, tr&&tr.s<wake+180?tr.e+20:wake+75,null,'meal');
@@ -869,7 +991,7 @@ function buildDay(key){
   add('review','Shutdown + review','Log the day, set tomorrow\'s one thing, screens off',20,sleep-50,null,'review');
 
   out.sort((a,b)=>a.s-b.s);
-  return {def,di,entries:out,missed,wake,sleep};
+  return {def,di,entries:out,missed,adapt,wake,sleep};
 }
 
 /* ============================================================== derived == */
@@ -916,7 +1038,7 @@ function nutrition(){
   const kcal=Math.round(tdee*adj/10)*10;
   const protein=Math.round(kg*2.0);
   const fat=Math.round(kcal*0.27/9);
-  const carbs=Math.round((kcal-protein*4-fat*9)/4);
+  const carbs=Math.max(20,Math.round((kcal-protein*4-fat*9)/4));
   return {tdee:Math.round(tdee),kcal,protein,fat,carbs,water:(kg*40/1000).toFixed(1)};
 }
 function foodTotals(k){
@@ -929,11 +1051,18 @@ function e1rm(w,r){ return r<=1 ? w : w*(1+r/30); }
 function gymSessions(ex){
   return Object.keys(S.gym||{}).filter(k=>S.gym[k][ex]&&S.gym[k][ex].length).sort();
 }
-function sessionTop(ex,k){ return Math.max(...S.gym[k][ex].map(s=>s.w)); }
-function sessionSuccess(ex,k){
+function sessionWork(ex,k){
   const E=EXS[ex], sets=S.gym[k][ex];
-  const top=Math.max(...sets.map(s=>s.w));
-  return sets.filter(s=>s.r>=E.reps && s.w>=top-0.1).length >= E.sets;
+  const byW={};
+  sets.forEach(s=>{ const key=Math.round(s.w*100)/100; (byW[key]=byW[key]||[]).push(s); });
+  let qualW=null, overallTop=-Infinity;
+  Object.keys(byW).forEach(key=>{
+    const arr=byW[key], w=arr[0].w;
+    if (w>overallTop) overallTop=w;
+    const cnt=arr.filter(s=>s.r>=E.reps).length;
+    if (cnt>=E.sets && (qualW==null||w>qualW)) qualW=w;
+  });
+  return { top: qualW!=null?qualW:overallTop, ok: qualW!=null };
 }
 function gymBest(ex){
   let best=null;
@@ -952,32 +1081,63 @@ function bestLift(k){
 }
 
 /* what should today's working weight be? returns kg + coaching state */
+function daysSinceStart(){
+  if(!S.meta||!S.meta.start) return 999;
+  const [y,m,dd]=S.meta.start.split('-').map(Number), [ty,tm,td]=T.split('-').map(Number);
+  return Math.round((new Date(ty,tm-1,td)-new Date(y,m-1,dd))/86400000);
+}
+function rampFactor(){
+  const dse=daysSinceStart();
+  if (dse<7)  return {f:0.70, label:'Ramp week 1 of 2 — loads intentionally held at 70%. Learning the movement pattern matters more than the weight this week.'};
+  if (dse<14) return {f:0.85, label:'Ramp week 2 of 2 — 85% loads. Full intensity starts next week.'};
+  return null;
+}
+
 function prescribe(ex){
   const E=EXS[ex]; if(!E) return null;
+  let rx;
   if (deloadActive()){
     const base=bestLift(ex);
-    return base==null ? {mode:'start'} : {mode:'deload', w:base*0.6, sets:3, reps:5};
+    rx = base==null ? {mode:'start'} : {mode:'deload', w:base*0.6, sets:3, reps:5};
+  } else {
+    const ss=gymSessions(ex);
+    if (!ss.length){
+      const man=latestLog()&&latestLog()[ex];
+      rx = man ? {mode:'first', w:(E.added?man:man*0.8), sets:E.sets, reps:E.reps} : {mode:'start'};
+    } else {
+      const last=ss[ss.length-1];
+      const lastWork=sessionWork(ex,last);
+      const topW=lastWork.top, ok=lastWork.ok;
+      let fails=0;
+      for (let i=ss.length-1;i>=0;i--){
+        const w=sessionWork(ex,ss[i]);
+        if (Math.abs(w.top-topW)>0.5) break;
+        if (w.ok) break;
+        fails++;
+      }
+      if (fails>=3)     rx={mode:'reset', w:topW*0.9, sets:E.sets, reps:E.reps};
+      else if (ok)      rx={mode:'progress', w:topW+E.inc, sets:E.sets, reps:E.reps};
+      else              rx={mode:'repeat', w:topW, sets:E.sets, reps:E.reps, miss:fails};
+    }
   }
-  const ss=gymSessions(ex);
-  if (!ss.length){
-    const man=latestLog()&&latestLog()[ex];
-    return man ? {mode:'first', w:(E.added?man:man*0.8), sets:E.sets, reps:E.reps}
-               : {mode:'start'};
-  }
-  const last=ss[ss.length-1];
-  const topW=sessionTop(ex,last);
-  const ok=sessionSuccess(ex,last);
-  /* consecutive failed attempts at this same weight */
-  let fails=0;
-  for (let i=ss.length-1;i>=0;i--){
-    if (Math.abs(sessionTop(ex,ss[i])-topW)>0.5) break;
-    if (sessionSuccess(ex,ss[i])) break;
-    fails++;
-  }
-  if (fails>=3) return {mode:'reset', w:topW*0.9, sets:E.sets, reps:E.reps};
-  if (ok)       return {mode:'progress', w:topW+E.inc, sets:E.sets, reps:E.reps};
-  return {mode:'repeat', w:topW, sets:E.sets, reps:E.reps, miss:fails};
+  const ramp=rampFactor();
+  if (ramp && rx.w!=null && rx.mode!=='deload'){ rx.w=rx.w*ramp.f; rx.ramp=ramp.label; }
+  return rx;
 }
+
+/* ============================================================= records === */
+function e1rmVal(ex,w,r){ return EXS[ex].added ? w : e1rm(w,r); }
+function checkPR(ex,w,r){
+  const val=e1rmVal(ex,w,r), prev=S.prs[ex];
+  if (!prev || val>prev.e1rm+0.01){ S.prs[ex]={w,r,e1rm:val,date:T}; return true; }
+  return false;
+}
+function bestStreakEver(){
+  let max=0,cur=0;
+  for (let i=1100;i>=0;i--){ const s=dayScore(dkey(-i)); if(s>0.08){ cur++; if(cur>max)max=cur; } else cur=0; }
+  return Math.max(max,streak());
+}
+function totalSessions(){ return Object.values(S.days).filter(d=>d.blocks&&Object.values(d.blocks).some(Boolean)).length; }
 function dispLoad(kg){
   if (kg==null) return '—';
   if (kg<0.5) return 'bodyweight';
@@ -1041,8 +1201,13 @@ function skipPattern(){
   return worst!=null&&wv<0.5 ? {day:DOWL[worst], pct:Math.round(wv*100)} : null;
 }
 function monthAvg(off){
-  let s=0; for(let i=off*30;i<off*30+30;i++) s+=dayScore(dkey(-i));
-  return s/30;
+  const dse=daysSinceStart();
+  let s=0,n=0;
+  for(let i=off*30;i<off*30+30;i++){
+    if (i>dse) continue;
+    s+=dayScore(dkey(-i)); n++;
+  }
+  return {avg:n?s/n:0, n};
 }
 
 
@@ -1051,6 +1216,8 @@ let view='today', openBlock='train', shiftId=null, openTrack='markets', openPhas
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
     foodQ='', copyMode=false, copySel={}, swapOpen=false, foodOpen=false;
 const T = dkey();
+let viewOff = 0;
+const VD = () => dkey(viewOff);
 
 /* ============================================================== helpers == */
 function heatColor(s){ if(s<=0.02) return '#15181C'; return `rgba(224,160,58,${(0.18+s*0.82).toFixed(2)})`; }
@@ -1088,16 +1255,18 @@ function rxLine(b){
 }
 function gymHTML(b){
   const ex=BLOCKEX[b.id]; if(!ex) return '';
-  const sets=(S.gym[T]&&S.gym[T][ex])||[];
+  const sets=(S.gym[VD()]&&S.gym[VD()][ex])||[];
   const rx=prescribe(ex);
   const flagged=S.flags[ex];
+  const pr=S.prs[ex];
   return `<div class="setlog">
     ${flagged?`<div class="painnote">${svg('shield',11,'var(--rust)')} <div>${esc(PAINSWAP[ex])}<button class="unflag" data-act="painflag" data-v="${ex}">clear flag</button></div></div>`:''}
     <div class="eyebrow" style="margin-bottom:8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
-    ${sets.map((s,i)=>`<div class="setrow"><span class="setn">${i+1}</span>
-      <span style="flex:1">${dispLoad(s.w)} × ${s.r}</span>
+    ${sets.map((s,i)=>{ const isPR = pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r;
+      return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
+      <span style="flex:1">${dispLoad(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:9px;letter-spacing:.08em\">PR</span>':''}</span>
       ${s.r>=EXS[ex].reps?svg('check',12,'var(--moss)',3):`<span style="font-size:9px;color:var(--rust)">-${EXS[ex].reps-s.r}</span>`}
-      <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}">${svg('x',12)}</button></div>`).join('')}
+      <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}">${svg('x',12)}</button></div>`;}).join('')}
     <div class="setadd">
       <input type="number" step="0.5" id="sw_${ex}" inputmode="decimal" placeholder="${rx&&rx.w?dispLoad(rx.w).replace(' ','&nbsp;'):'weight'}">
       <span class="setx">×</span>
@@ -1131,11 +1300,34 @@ function Header(){
 }
 
 /* ================================================================= today == */
+/* ================================================================== rail == */
+function DayRail(plan){
+  const {wake,sleep,entries,def}=plan, span=sleep-wake, RH=520, px=RH/span;
+  const hourStart=Math.ceil(wake/60), hourEnd=Math.floor(sleep/60);
+  let hours='';
+  for (let h=hourStart; h<=hourEnd; h++)
+    hours+=`<div class="rhour" style="top:${(h*60-wake)*px}px"><span>${s2disp(h*60)}</span></div>`;
+  const blocks = entries.map(e=>{
+    const top=clamp((e.s-wake)*px,0,RH-16);
+    const h=Math.max(17,(e.e-e.s)*px);
+    const movable=!e.fixed;
+    const col = e.fixed?'var(--rule2)': e.id==='train'?DTYPE[def.type].c : e.kind==='mind'?'var(--plum)':e.kind==='meal'?'var(--moss)':'var(--amber)';
+    return `<div class="rblk ${e.fixed?'lock':'drag'}" data-id="${e.id}" data-s="${e.s}" data-e="${e.e}"
+      style="top:${top}px;height:${h}px;border-left-color:${col}" ${movable?'data-draggable="1"':''}>
+      <div class="rblkT">${esc(e.l)}</div><div class="rblkS">${s2disp(e.s)}${movable?'':' · fixed'}</div>
+    </div>`;
+  }).join('');
+  return `<div class="railwrap"><div class="rail" id="rail" data-wake="${wake}" data-span="${span}" data-px="${px}" style="height:${RH}px">
+    <div class="rnow" id="rnow"></div>${hours}${blocks}</div></div>
+    <div class="railhint">${svg('rot',11,'var(--faint)')} Drag a block to reschedule it. Locked blocks are fixed commitments.</div>`;
+}
+
 function ViewToday(){
-  const plan=buildDay(T), d=day(T), meta=DTYPE[plan.def.type];
+  const vd=VD();
+  const plan=buildDay(vd), d=day(vd), meta=DTYPE[plan.def.type];
   const trainDone=plan.def.blocks.filter(b=>d.blocks[b.id]).length;
   const dl=daysLogged(), next=MILESTONES.find(m=>dl<m.d);
-  const ft=foodTotals(T), N=nutrition();
+  const ft=foodTotals(vd), N=nutrition();
 
   const stepsHTML = b => b.steps ? `<div class="steps">
       ${b.steps.map(s=>`<div class="step"><div class="stepdot"></div><div>${esc(s)}</div></div>`).join('')}
@@ -1148,7 +1340,10 @@ function ViewToday(){
       <div class="meat"><div class="etitle">${esc(e.l)}</div>
         <div class="esub">${svg('lock',9,'var(--faint)',2)} Fixed · ${Math.round((e.e-e.s)/6)/10}h</div></div></div>`;
     const isTrain=e.id==='train';
-    const done = isTrain?(trainDone===plan.def.blocks.length&&trainDone>0):!!d.blocks[e.id];
+    const done = isTrain ? (trainDone===plan.def.blocks.length&&trainDone>0)
+               : e.id==='news' ? !!d.news
+               : e.id==='mind' ? !!d.mind
+               : !!d.blocks[e.id];
     const col = isTrain?meta.c : e.kind==='mind'?'var(--plum)' : e.kind==='meal'?'var(--moss)':'var(--amber)';
     return `<div class="ent ${done?'done':''}">
       <div class="time" style="${done?'':'color:var(--dim)'}">${s2disp(e.s)}</div>
@@ -1173,14 +1368,28 @@ function ViewToday(){
   };
 
   return `<div class="view wrap">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 12px">
-      <div><div class="eyebrow">${longDate(T)}</div>
-        <div class="disp" style="font-size:20px;margin-top:5px">${esc(plan.def.title)}</div></div>
+    <div class="daynav">
+      <button class="darrow" data-act="daynav" data-v="-1">${svg('chev',15,'var(--faint)').replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" style="transform:rotate(180deg)"')}</button>
+      <div style="flex:1;text-align:center">
+        <div class="eyebrow">${longDate(vd)}${vd!==T?' · PREVIEW':''}</div>
+        <div class="disp" style="font-size:20px;margin-top:5px">${esc(plan.def.title)}</div>
+      </div>
+      <button class="darrow" data-act="daynav" data-v="1">${svg('chev',15,'var(--faint)')}</button>
+    </div>
+    ${vd!==T?`<button class="banner steel" data-act="daynav" data-v="0" style="width:100%;text-align:center;justify-content:center;cursor:pointer">
+      ${svg('rot',13,'var(--steel)')}<div>Previewing ${vd>T?'a future':'a past'} day — checkboxes and logging apply to <b>this</b> date. Tap to jump back to today.</div></button>`:''}
+    <div style="display:flex;justify-content:flex-end;margin:-4px 0 4px">
       <button class="badge" data-act="swapopen">${DTYPE[plan.def.type].label} ⇄</button>
     </div>
     ${swapOpen?`<div class="panel"><div class="chips" style="padding:12px 13px">
       ${WEEK.map((w,i)=>`<button class="chip ${i===plan.di?'on':''}" data-act="swap" data-v="${i}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
-    </div><div class="note">Swaps only affect today. The weekly rotation stays put.</div></div>`:''}
+    </div><div class="note">Swaps only affect ${vd===T?'today':'this date'}. The weekly rotation stays put.</div></div>`:''}
+
+    ${vd===T?DayRail(plan):''}
+
+    ${(()=>{ const ramp=rampFactor();
+      return ramp ? `<div class="banner steel">${svg('flame',14,'var(--steel)')}<div>${esc(ramp.label)}</div></div>` : ''; })()}
+    ${plan.adapt&&plan.adapt.length?plan.adapt.map(a=>`<div class="banner steel">${svg('target',14,'var(--steel)')}<div>${esc(a)}</div></div>`).join(''):''}
 
     ${deloadActive()?`<div class="banner moss">${svg('shield',14,'var(--moss)')}
       <div><b>Deload week.</b> Prescriptions are dropped to 60% for easy 3×5s. Adaptation is happening - let it.</div></div>`
@@ -1230,6 +1439,11 @@ function ViewToday(){
           <label class="f"><span>Kcal</span><input type="number" id="cf_k" inputmode="decimal"></label>
           <label class="f"><span>Protein g</span><input type="number" id="cf_p" inputmode="decimal"></label>
         </div>
+        <div class="grid3">
+          <label class="f"><span>Carbs g</span><input type="number" id="cf_c" inputmode="decimal"></label>
+          <label class="f"><span>Fat g</span><input type="number" id="cf_f" inputmode="decimal"></label>
+        </div>
+        <div class="note" style="padding-top:0">Check the label for carbs and fat if you have it — kcal and protein alone can't determine the split (two unknowns, one equation). Leave blank only if you don't have the numbers; totals below will undercount by that amount.</div>
         <div style="padding:0 13px 13px"><button class="btn ghost" data-act="addcustomfood">ADD CUSTOM</button></div>
       </div>`:''}
     </div>
@@ -1259,11 +1473,12 @@ let openBlock2=null;
 function ViewPlan(){
   const p=S.profile;
   const list=S.fixed[planDay]||[];
-  const PRESETS=[['Work','09:00','17:00'],['Class','10:00','11:15'],['Practice','16:00','18:00'],['Shift','17:00','22:00'],['Custom','12:00','13:00']];
+  const PRESETS=[['Work','09:00','17:00','work'],['Class','10:00','11:15','class'],['Practice','16:00','18:00','physical'],['Shift','17:00','22:00','work'],['Custom','12:00','13:00','']];
   const wakeS=m2s(p.wake); let sleepS=m2s(p.sleep); if(sleepS<=wakeS) sleepS+=1440;
   const span=sleepS-wakeS;
+  const tagSelect = (id,cur) => `<select id="${id}">${CTAGS.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
 
-  /* mini week map: each day a column, commitments as bars */
+  /* mini week map: each day a column, commitments as bars, colored by tag */
   const weekMap = `<div class="wmap">${DOW.map((dw,i)=>{
     const cs=S.fixed[dw]||[];
     return `<button class="wcol ${planDay===dw?'on':''}" data-act="planday" data-v="${dw}">
@@ -1271,13 +1486,13 @@ function ViewPlan(){
       <div class="wtrack">${cs.map(c=>{
         let s=m2s(c.s),e2=m2s(c.e); if(e2<=s)e2+=1440;
         const top=clamp((s-wakeS)/span*100,0,100), h2=clamp((e2-s)/span*100,2,100-top);
-        return `<div class="wbar" style="top:${top}%;height:${h2}%"></div>`;}).join('')}
+        return `<div class="wbar" style="top:${top}%;height:${h2}%;background:${TAGCOLOR[c.t||'']}"></div>`;}).join('')}
       </div>
       <div class="wnum">${cs.length||''}</div></button>`;}).join('')}</div>`;
 
   return `<div class="view wrap">
     ${sect('cal','MY WEEK')}
-    <div class="hint">Tap a day, then add what's immovable - classes, work, practice. Everything else in FORGE gets scheduled into the gaps, automatically, every day.</div>
+    <div class="hint">Tap a day, then add what's immovable - classes, work, practice. Everything else in FORGE gets scheduled into the gaps, automatically, every day. Tag physical activity and training days adapt around it.</div>
     <div class="panel">${weekMap}
       <div class="daylist">
         ${list.length?list.map((c,i)=> editIdx===i
@@ -1287,11 +1502,15 @@ function ViewPlan(){
                 <label class="f"><span>To</span><input type="time" id="ee" value="${c.e}"></label>
                 <label class="f"><span>Name</span><input type="text" id="el" value="${esc(c.l)}"></label>
               </div>
+              <div class="grid2" style="padding-top:0">
+                <label class="f"><span>Type</span>${tagSelect('et',c.t||'')}</label>
+              </div>
               <div style="display:flex;gap:8px;padding:0 13px 12px">
                 <button class="btn" data-act="saveedit" data-v="${i}">SAVE</button>
                 <button class="btn ghost" data-act="deledit" data-v="${i}" style="max-width:64px">${svg('trash',14)}</button>
               </div></div>`
           :`<button class="cmt tap" data-act="editcmt" data-v="${i}">
+              <span class="tagdot" style="background:${TAGCOLOR[c.t||'']}"></span>
               <span class="cmttime">${tdisp(c.s)} – ${tdisp(c.e)}</span>
               <span style="flex:1;text-align:left">${esc(c.l)}</span>
               ${svg('edit',13,'var(--faint)')}</button>`).join('')
@@ -1301,12 +1520,13 @@ function ViewPlan(){
         <div class="eyebrow" style="padding:12px 13px 8px">ADD TO ${DOWL[DOW.indexOf(planDay)].toUpperCase()}</div>
         <div class="chips" style="padding:0 13px 10px">${PRESETS.map(([n])=>`
           <button class="chip ${preset===n?'on':''}" data-act="preset" data-v="${n}">${n}</button>`).join('')}</div>
-        ${preset?`<div class="grid3">
-            <label class="f"><span>From</span><input type="time" id="ns" value="${PRESETS.find(x=>x[0]===preset)[1]}"></label>
-            <label class="f"><span>To</span><input type="time" id="ne" value="${PRESETS.find(x=>x[0]===preset)[2]}"></label>
+        ${preset?(()=>{ const pr=PRESETS.find(x=>x[0]===preset); return `<div class="grid3">
+            <label class="f"><span>From</span><input type="time" id="ns" value="${pr[1]}"></label>
+            <label class="f"><span>To</span><input type="time" id="ne" value="${pr[2]}"></label>
             <label class="f"><span>Name</span><input type="text" id="nl" value="${preset==='Custom'?'':preset}" placeholder="Name"></label>
           </div>
-          <div style="padding:0 13px 13px"><button class="btn" data-act="addcmt">${svg('plus',13,'var(--ink)',2.6)} ADD</button></div>`:''}
+          <div class="grid2" style="padding-top:0"><label class="f"><span>Type</span>${tagSelect('nt',pr[3])}</label></div>
+          <div style="padding:0 13px 13px"><button class="btn" data-act="addcmt">${svg('plus',13,'var(--ink)',2.6)} ADD</button></div>`;})():''}
       </div>
       ${list.length?`<div class="copyzone">
         ${copyMode
@@ -1487,6 +1707,18 @@ function ViewLedger(){
   const week=Array.from({length:7},(_,i)=>S.reach[dkey(-i)]||0).reduce((a,b)=>a+b,0);
   const nwVals=S.nw.map(x=>x.v);
   return `<div class="view wrap">
+    ${sect('award','RECORDS')}
+    <div class="stats">
+      <div class="stat"><div class="v" style="color:var(--amber)">${bestStreakEver()}</div><div class="l">BEST STREAK</div></div>
+      <div class="stat"><div class="v">${totalSessions()}</div><div class="l">SESSIONS</div></div>
+      <div class="stat"><div class="v" style="color:var(--moss)">${Object.keys(S.prs).length}</div><div class="l">LIFTS TRACKED</div></div>
+    </div>
+    <div class="panel">${Object.keys(EXS).map(ex=>{ const pr=S.prs[ex], E=EXS[ex];
+      return `<div class="stand"><div class="standtop"><span style="font-weight:600">${E.n}</span>
+        <span>${pr?`${dispLoad(pr.w)} × ${pr.r}${E.added?'':' · est '+dispLoad(pr.e1rm)+' 1RM'}`:'—'}</span></div>
+        <div style="font-size:9.5px;color:var(--faint)">${pr?longDate(pr.date):'Not logged yet — log a set on Today'}</div></div>`;}).join('')}
+      <div class="note">PRs update automatically the moment a logged set beats your best. Estimated 1RM uses the Epley formula from your top set.</div></div>
+
     ${sect('target','CAPABILITY')}
     <div class="hint">Set your honest current level. Under-rate rather than over-rate - this only works if the numbers are true.</div>
     ${SKILLS.map(s=>{ const cur=S.tiers[s.id]??0; return `
@@ -1536,7 +1768,7 @@ function ViewCodex(){
   return `<div class="view wrap">
     ${(()=>{ const W=weekStats(), sp=skipPattern();
       const m0=monthAvg(0), m1=monthAvg(1);
-      const dir=m1>0?Math.round((m0-m1)/Math.max(m1,0.01)*100):null;
+      const dir=(m1.n>=14&&m0.n>=14&&m1.avg>0.01)?Math.round((m0.avg-m1.avg)/m1.avg*100):null;
       const imp=S.profile.unit==='imperial';
       const wd=W.wDelta!=null?`${W.wDelta>0?'+':''}${(imp?W.wDelta*2.20462:W.wDelta).toFixed(1)} ${imp?'lb':'kg'}`:null;
       const N2=nutrition();
@@ -1621,39 +1853,88 @@ function render(){
     :view==='mind'?ViewMind():view==='ledger'?ViewLedger():ViewCodex();
   document.getElementById('app').innerHTML=Header()+body+Nav()+`<div class="toast ${toastMsg?'show':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
+  const rail=document.getElementById('rail'), rnow=document.getElementById('rnow');
+  if (rail&&rnow){
+    const wake=+rail.dataset.wake, px=+rail.dataset.px;
+    const now=new Date(); const mins=now.getHours()*60+now.getMinutes();
+    rnow.style.top=clamp((mins-wake)*px,0,rail.offsetHeight)+'px';
+  }
   const fq=document.getElementById('foodq');
   if (fq && foodFocus){ fq.focus(); const l=fq.value.length; fq.setSelectionRange(l,l); }
 }
 let foodFocus=false;
 
 
+/* ========================================================= drag-to-time == */
+let dragState=null;
+document.addEventListener('pointerdown', e=>{
+  const blk=e.target.closest('.rblk.drag[data-draggable="1"]'); if(!blk) return;
+  const rail=document.getElementById('rail'); if(!rail) return;
+  dragState={
+    id:blk.dataset.id, startY:e.clientY, origTop:parseFloat(blk.style.top),
+    px:+rail.dataset.px, wake:+rail.dataset.wake, railH:rail.offsetHeight, el:blk
+  };
+  try{ blk.setPointerCapture(e.pointerId); }catch(err){}
+  blk.classList.add('dragging');
+});
+document.addEventListener('pointermove', e=>{
+  if(!dragState) return;
+  const dy=e.clientY-dragState.startY;
+  const top=clamp(dragState.origTop+dy,0,dragState.railH-16);
+  dragState.el.style.top=top+'px';
+  const mins=clamp(Math.round((dragState.wake+top/dragState.px)/5)*5,0,1439);
+  const lab=dragState.el.querySelector('.rblkS');
+  if (lab) lab.textContent=s2disp(mins);
+});
+function endDrag(){
+  if(!dragState) return;
+  const top=parseFloat(dragState.el.style.top);
+  const mins=clamp(Math.round((dragState.wake+top/dragState.px)/5)*5,0,1439);
+  dragState.el.classList.remove('dragging');
+  day(VD()).nudge[dragState.id]=mins;
+  commit();
+  dragState=null;
+  render();
+}
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
+
 /* ================================================================ events == */
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   const a = el.dataset.act, v = el.dataset.v, v2 = el.dataset.v2;
-  const d = day(T);
+  const d = day(VD());
 
   switch(a){
-    case 'view': view=v; shiftId=null; foodOpen=false; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; render(); window.scrollTo(0,0); return;
+
+    /* ---- day preview navigation ---- */
+    case 'daynav':
+      if (+v===0) viewOff=0; else viewOff+=(+v);
+      shiftId=null; foodOpen=false; openBlock2=null; break;
 
     /* ---- today ---- */
     case 'traintoggle': openBlock = openBlock==='train'?null:'train'; break;
     case 'drill': openBlock2 = openBlock2===v?null:v; break;
-    case 'block': d.blocks[v]=!d.blocks[v]; commit(); break;
+    case 'block':
+      if (v==='news') d.news=!d.news;
+      else if (v==='mind') d.mind=!d.mind;
+      else d.blocks[v]=!d.blocks[v];
+      commit(); break;
     case 'habit': d.habits[v]=!d.habits[v]; commit(); break;
     case 'news': d.news=!d.news; commit(); break;
     case 'shift':
       if (v==='train'){ openBlock = openBlock==='train'?null:'train'; break; }
       shiftId = shiftId===v?null:v; break;
     case 'nudge': {
-      const plan=buildDay(T), ent=plan.entries.find(x=>x.id===v);
+      const plan=buildDay(VD()), ent=plan.entries.find(x=>x.id===v);
       if (+v2===0) delete d.nudge[v];
       else if (ent) d.nudge[v]=clamp(ent.s+(+v2),0,1439);
       commit(); break;
     }
     case 'reflow': d.nudge={}; shiftId=null; commit(); render(); toast('Times recalculated'); return;
     case 'swapopen': swapOpen=!swapOpen; break;
-    case 'swap': S.swap[T]=+v; swapOpen=false; commit(); break;
+    case 'swap': S.swap[VD()]=+v; swapOpen=false; commit(); break;
 
     /* ---- food ---- */
     case 'foodopen': foodOpen=!foodOpen; foodQ=''; foodFocus=foodOpen; break;
@@ -1666,8 +1947,10 @@ document.addEventListener('click', e => {
       const n=(document.getElementById('cf_n')||{}).value?.trim();
       const k=num((document.getElementById('cf_k')||{}).value);
       const pr=num((document.getElementById('cf_p')||{}).value)||0;
+      const cb=num((document.getElementById('cf_c')||{}).value)||0;
+      const ft=num((document.getElementById('cf_f')||{}).value)||0;
       if(!n||k==null){ toast('Name and kcal needed'); return; }
-      d.food.push({n,kcal:k,p:pr,c:0,f:0,q:1});
+      d.food.push({n,kcal:k,p:pr,c:cb,f:ft,q:1});
       commit(); render(); toast(`${n} added`); return;
     }
     case 'delfood': d.food.splice(+v,1); commit(); break;
@@ -1678,18 +1961,20 @@ document.addEventListener('click', e => {
     case 'editcmt': editIdx=+v; preset=null; break;
     case 'saveedit': {
       const s=document.getElementById('es').value, en=document.getElementById('ee').value,
-            l=document.getElementById('el').value.trim()||'Commitment';
+            l=document.getElementById('el').value.trim()||'Commitment',
+            t=(document.getElementById('et')||{}).value||'';
       if(!s||!en){ toast('Set both times'); return; }
-      S.fixed[planDay][+v]={s,e:en,l};
+      S.fixed[planDay][+v]={s,e:en,l,t};
       S.fixed[planDay].sort((x,y)=>m2s(x.s)-m2s(y.s));
       editIdx=null; commit(); render(); toast('Saved'); return;
     }
     case 'deledit': S.fixed[planDay].splice(+v,1); editIdx=null; commit(); render(); toast('Removed'); return;
     case 'addcmt': {
       const s=document.getElementById('ns').value, en=document.getElementById('ne').value,
-            l=document.getElementById('nl').value.trim()||preset||'Commitment';
+            l=document.getElementById('nl').value.trim()||preset||'Commitment',
+            t=(document.getElementById('nt')||{}).value||'';
       if(!s||!en){ toast('Set both times'); return; }
-      S.fixed[planDay].push({s,e:en,l});
+      S.fixed[planDay].push({s,e:en,l,t});
       S.fixed[planDay].sort((x,y)=>m2s(x.s)-m2s(y.s));
       preset=null; commit(); render(); toast(`Added to ${DOWL[DOW.indexOf(planDay)]}`); return;
     }
@@ -1740,17 +2025,21 @@ document.addEventListener('click', e => {
       if (r==null) r = E.reps;
       if (w==null&&!E.added){ toast('Enter a weight'); return; }
       if (w==null) w=0;
-      if (!S.gym[T]) S.gym[T]={};
-      if (!S.gym[T][ex]) S.gym[T][ex]=[];
-      S.gym[T][ex].push({w:Math.round(w*100)/100, r:Math.round(r)});
+      if (!S.gym[VD()]) S.gym[VD()]={};
+      if (!S.gym[VD()][ex]) S.gym[VD()][ex]=[];
+      S.gym[VD()][ex].push({w:Math.round(w*100)/100, r:Math.round(r)});
+      const isPR = checkPR(ex, Math.round(w*100)/100, Math.round(r));
       commit(); render();
-      const n=S.gym[T][ex].length;
-      toast(`Set ${n}: ${dispLoad(w)} × ${Math.round(r)}`);
+      const n=S.gym[VD()][ex].length;
+      if (isPR){ toast(`New PR — ${dispLoad(w)} × ${Math.round(r)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
+      else toast(`Set ${n}: ${dispLoad(w)} × ${Math.round(r)}`);
       return;
     }
     case 'delset': {
-      S.gym[T][v].splice(+v2,1);
-      if(!S.gym[T][v].length) delete S.gym[T][v];
+      if (S.gym[VD()] && S.gym[VD()][v]){
+        S.gym[VD()][v].splice(+v2,1);
+        if(!S.gym[VD()][v].length) delete S.gym[VD()][v];
+      }
       commit(); break;
     }
     case 'painflag':
@@ -1811,7 +2100,7 @@ document.addEventListener('input', e => {
   if (t.id==='foodq'){ foodQ=t.value; foodFocus=true; render(); return; }   // search must filter live
   const el=t.closest('[data-in]'); if(!el) return;
   const path=el.dataset.in, val=el.value;
-  if (path.startsWith('rv.')){ day(T).rv[path.slice(3)]=val; commit(); return; }
+  if (path.startsWith('rv.')){ day(VD()).rv[path.slice(3)]=val; commit(); return; }
   if (path==='profile.heightD'){
     const n=num(val); if(n==null) return;
     S.profile.height=S.profile.unit==='imperial'?Math.round(n*2.54*10)/10:n;
@@ -1827,6 +2116,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', e => {
   const el=e.target.closest('[data-in]'); if(!el) return;
   if (el.tagName!=='SELECT' && el.type!=='time' && el.type!=='date') return;
+  if ((el.type==='time'||el.type==='date') && !el.value) return;
   const key=el.dataset.in.split('.')[1];
   S.profile[key]=(key==='activity')?+el.value:el.value;
   commit(); render();
@@ -1852,14 +2142,14 @@ function checkNotif(){
   for (const e of plan.entries){
     if (e.fixed) continue;
     const d=day(T);
-    const done=e.id==='train'?false:!!d.blocks[e.id];
+    const done = e.id==='train'?false : e.id==='news'?!!d.news : e.id==='mind'?!!d.mind : !!d.blocks[e.id];
     if (done) continue;
     if (nowM===e.s-15&&!fired[e.id+'p']){ fired[e.id+'p']=1; notify(e.l,'Starts in 15 minutes'); }
     if (nowM===e.s&&!fired[e.id+'n']){ fired[e.id+'n']=1; notify('Now: '+e.l, e.sub||''); }
   }
   try{
     if (navigator.setAppBadge){
-      const left=plan.entries.filter(e=>!e.fixed&&e.e>nowM&&!(day(T).blocks[e.id])).length;
+      const left=plan.entries.filter(e=>!e.fixed&&e.e>nowM&&!(e.id==='news'?day(T).news:e.id==='mind'?day(T).mind:day(T).blocks[e.id])).length;
       left?navigator.setAppBadge(left):navigator.clearAppBadge();
     }
   }catch(e){}
@@ -1873,13 +2163,22 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),saved);
     S.profile=Object.assign({},DEFAULTS.profile,saved.profile||{});
     S.fixed=Object.assign({},DEFAULTS.fixed,saved.fixed||{});
+    S.meta=Object.assign({},DEFAULTS.meta,saved.meta||{});
     Store.save(S);                                      // migrate old key forward
+  }
+  if (!S.meta.start){
+    const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
+    S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely
+    commit();
   }
   render();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
   setTimeout(()=>location.reload(),Math.max(ms,60000));
+  document.addEventListener('visibilitychange', ()=>{
+    if (document.visibilityState==='visible' && dkey()!==T) location.reload();
+  });
 })();
 
 </script>
