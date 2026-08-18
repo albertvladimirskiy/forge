@@ -312,6 +312,55 @@ input[type=date],input[type=time]{min-height:40px}
 .darrow{padding:10px 12px;color:var(--faint)}
 .darrow:active{color:var(--text)}
 
+
+/* ---------- week strip ---------- */
+.stripwrap{margin:calc(6px + 0px) -14px 0;position:relative}
+.strip{display:flex;gap:5px;overflow-x:auto;scroll-behavior:smooth;padding:12px 14px 13px;
+  scrollbar-width:none;-ms-overflow-style:none}
+.strip::-webkit-scrollbar{display:none}
+.dcell{flex:0 0 auto;width:42px;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:var(--panel);border:1px solid var(--rule);transition:all .18s}
+.dcell.sel{background:var(--panel2);border-color:var(--amber)}
+.dcell.today .dnum{color:var(--amber)}
+.dlab{font-size:8px;letter-spacing:.1em;color:var(--faint);font-weight:700}
+.dnum{font-family:var(--sans);font-weight:800;font-size:15px;line-height:1;color:var(--dim)}
+.dcell.sel .dnum{color:var(--text)}
+.ddot{width:4px;height:4px;border-radius:50%}
+
+/* ---------- day head + next up ---------- */
+.dayhead{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px}
+.nextup{background:linear-gradient(135deg,#16191E,#121417);border:1px solid var(--rule2);
+  border-left:3px solid var(--amber);padding:14px 15px;margin-bottom:14px}
+.nueyebrow{font-size:8px;letter-spacing:.2em;color:var(--amber);font-weight:700}
+.nutitle{font-family:var(--sans);font-weight:800;font-size:17px;letter-spacing:.01em;margin-top:7px;line-height:1.15}
+.nusub{font-size:11px;color:var(--dim);line-height:1.5;margin-top:6px}
+.nuprog{font-size:9.5px;color:var(--faint);letter-spacing:.06em;margin-top:8px}
+
+/* ---------- segmented control ---------- */
+.segwrap{margin:15px 0 4px}
+.seg{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.segbtn{flex:1;padding:11px 0;background:var(--panel);font-size:9.5px;font-weight:700;
+  letter-spacing:.13em;color:var(--faint);transition:all .18s}
+.segbtn.on{background:var(--panel2);color:var(--amber)}
+
+/* ---------- now vs target comparison ---------- */
+.cmp{display:flex;align-items:stretch;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:13px}
+.cmpcol{flex:1;background:var(--panel);padding:13px 12px}
+.cmpcol.tgt{background:var(--panel2)}
+.cmphead{font-size:8px;letter-spacing:.2em;color:var(--faint);font-weight:700;margin-bottom:10px}
+.cmprow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:10.5px;color:var(--dim)}
+.cmprow b{font-size:12.5px;color:var(--text);font-weight:700}
+.cmparrow{display:flex;align-items:center;padding:0 3px;background:var(--panel)}
+
+/* ---------- meal plans ---------- */
+.mslot{border-bottom:1px solid #191D22;padding:11px 13px}
+.mslot:last-of-type{border-bottom:none}
+.mslothead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.mslothead span{font-size:8.5px;letter-spacing:.15em;color:var(--amber);font-weight:700}
+.mslothead .chip{padding:5px 10px;font-size:9px}
+.mitem{display:flex;gap:8px;padding:4px 0;font-size:11.5px;color:var(--dim);line-height:1.4}
+.mitem b{color:var(--text)}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -351,6 +400,8 @@ const ICO = {
   food:'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4zM6 1v3M10 1v3M14 1v3',
   search:'M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35',
   trash:'M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6',
+  award:'M12 15a6 6 0 100-12 6 6 0 000 12zM8.2 13.9L7 22l5-3 5 3-1.2-8.1',
+  eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7zM12 15a3 3 0 100-6 3 3 0 000 6z',
 };
 function svg(name,size,color,sw){
   return `<svg width="${size||16}" height="${size||16}" viewBox="0 0 24 24" fill="none" stroke="${color||'currentColor'}" stroke-width="${sw||2}" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="${ICO[name]}"/></svg>`;
@@ -854,6 +905,90 @@ const PAINSWAP = {
 const CTAGS = [['','Other'],['physical','Physical / sport'],['class','Class'],['work','Work']];
 const TAGCOLOR = {physical:'var(--moss)', class:'var(--steel)', work:'var(--amber)', '':'var(--faint)'};
 
+/* ============================================== physique archetype ======== */
+/* The Nolan-Batman build, expressed as measurable targets rather than vibes.
+   FFMI = fat-free mass index. Untrained men sit ~19, well-trained ~21-22,
+   the natural ceiling is ~24-25. 22.5 is "visibly built, still an athlete."   */
+const ARCH = {
+  ffmi: 22.5,
+  bfLow: 10, bfHigh: 12,
+  vTaper: 1.6,           // shoulder : waist, an aesthetic heuristic not a law
+  note:'Broad shoulders, visible abs at rest, thick back and forearms, and a waist that stays small. Built to move, not to pose.'
+};
+
+/* ------------------------------------------------------ supplements ------- */
+/* Tiered by actual evidence quality. Food first, always.                     */
+const SUPPS = [
+  {t:1,n:'Creatine monohydrate',d:'3–5 g daily, any time, forever',
+   w:'The most studied sports supplement in existence and the only one with a large, consistent effect on strength and lean mass. Monohydrate only — the fancy forms cost more and do nothing extra. No loading phase needed.'},
+  {t:1,n:'Vitamin D3',d:'1000–2000 IU daily, with a meal',
+   w:'Genuinely common to run low on, especially through winter or if you train indoors. Affects bone, immune function and possibly strength. Get a blood level before going higher than this.'},
+  {t:1,n:'Whey or casein protein',d:'1–2 scoops as needed',
+   w:'Not magic — it is just convenient food. Useful precisely on the days when hitting your protein target from meals is not going to happen.'},
+  {t:1,n:'Caffeine',d:'100–200 mg, 30–45 min pre-session',
+   w:'Reliably improves output and perceived effort. Keep it away from the 8 hours before bed — trading sleep for a better session is a losing trade in this program.'},
+  {t:2,n:'Creatine timing / omega-3 (EPA+DHA)',d:'1–2 g combined EPA+DHA daily',
+   w:'Decent evidence for recovery and joint comfort, strong evidence for general cardiovascular health. Oily fish twice a week does the same job.'},
+  {t:2,n:'Magnesium glycinate',d:'200–400 mg, evening',
+   w:'Worth it only if your intake is genuinely low. Glycinate is gentler on the gut than oxide. Mild help with sleep quality for some people.'},
+  {t:2,n:'Electrolytes / sodium',d:'Around heavy sweat sessions',
+   w:'Matters more than people think for tennis in heat and for long conditioning. Plain salt in water works.'},
+  {t:3,n:'BCAAs',d:'Skip',
+   w:'Redundant the moment you are eating adequate total protein, which this program already has you doing. Money better spent on food.'},
+  {t:3,n:'Testosterone boosters, fat burners, "natural anabolics"',d:'Skip',
+   w:'No credible evidence at legal doses, and the category is where contamination problems cluster. This is the aisle that ends collegiate eligibility.'},
+];
+
+/* ----------------------------------------------------- meal templates ---- */
+/* Items are [FOODS name, servings]. Totals are computed at runtime so the
+   displayed numbers are always real.                                        */
+const MEALS = [
+  {id:'t_mod', name:'Training day — moderate', tag:'training',
+   slots:[
+    {w:'Meal 1', items:[['Egg, large',3],['Oats dry, 1/2 cup',1],['Berries, 1 cup',1]]},
+    {w:'Meal 2', items:[['Chicken breast, 6oz',1],['Rice cooked, 1 cup',1],['Broccoli, 1 cup',1],['Olive oil, 1 tbsp',1]]},
+    {w:'Post-training', items:[['Whey protein, 1 scoop',1],['Banana',1]]},
+    {w:'Meal 3', items:[['Salmon, 6oz',1],['Sweet potato, medium',2],['Salad greens, 2 cups',1],['Vinaigrette, 2 tbsp',1]]},
+    {w:'Snack', items:[['Greek yogurt, 1 cup',1],['Almonds, 1 oz (23)',1]]},
+   ]},
+  {id:'t_big', name:'Training day — high intake', tag:'training',
+   slots:[
+    {w:'Meal 1', items:[['Egg, large',4],['Oats dry, 1/2 cup',1],['Peanut butter, 2 tbsp',1],['Milk whole, 1 cup',1]]},
+    {w:'Meal 2', items:[['Chicken breast, 6oz',1],['Rice cooked, 1 cup',2],['Bell pepper',1],['Olive oil, 1 tbsp',1]]},
+    {w:'Post-training', items:[['Protein shake, bottled',1],['Bagel',1],['Honey, 1 tbsp',1]]},
+    {w:'Meal 3', items:[['Ground beef 85%, 6oz',1],['Pasta cooked, 1 cup',2],['Tomato sauce (marinara), 1/2 cup',1],['Parmesan, 2 tbsp grated',1]]},
+    {w:'Snack', items:[['Cottage cheese, 1 cup',1],['Walnuts, 1oz',1],['Berries, 1 cup',1]]},
+   ]},
+  {id:'t_rest', name:'Rest day — lower carb', tag:'rest',
+   slots:[
+    {w:'Meal 1', items:[['Egg, large',3],['Avocado, half',1],['Spinach, raw, 2 cups',1]]},
+    {w:'Meal 2', items:[['Chicken breast, 6oz',1],['Salad greens, 2 cups',1],['Cucumber, 1 cup',1],['Olive oil, 1 tbsp',1],['Chickpeas, 1 cup',1]]},
+    {w:'Meal 3', items:[['Steak (sirloin), 6oz',1],['Asparagus, 1 cup',1],['Sweet potato, medium',2],['Olive oil, 1 tbsp',1]]},
+    {w:'Snack', items:[['Greek yogurt, 1 cup',1],['Pumpkin seeds, 1oz',1],['Apple',1]]},
+   ]},
+  {id:'t_lean', name:'Lean-out day — high protein', tag:'lean',
+   slots:[
+    {w:'Meal 1', items:[['Egg whites, 3',1],['Egg, large',2],['Oats dry, 1/2 cup',1],['Berries, 1 cup',1]]},
+    {w:'Meal 2', items:[['Tuna, 1 can',2],['Salad greens, 2 cups',1],['Tomato',1],['Olive oil, 1 tbsp',1],['Whole wheat bread, 1 slice',2]]},
+    {w:'Meal 3', items:[['White fish, 6oz',1],['Broccoli, 1 cup',2],['Quinoa cooked, 1 cup',1],['Avocado, half',1]]},
+    {w:'Snack', items:[['Skyr, 1 cup',1],['Apple',1],['Almonds, 1 oz (23)',1]]},
+   ]},
+  {id:'t_fast', name:'No-cook / dorm day', tag:'easy',
+   slots:[
+    {w:'Meal 1', items:[['Greek yogurt, 1 cup',1],['Granola, 1/2 cup',1],['Banana',1]]},
+    {w:'Meal 2', items:[['Sandwich, turkey',1],['String cheese',2],['Carrots, 1 cup',1]]},
+    {w:'Meal 3', items:[['Chicken bowl w/ rice',1]]},
+    {w:'Snack', items:[['Protein shake, bottled',1],['Almonds, 1 oz (23)',1],['Bagel',1],['Peanut butter, 2 tbsp',1]]},
+   ]},
+  {id:'t_camp', name:'Campus dining hall', tag:'easy',
+   slots:[
+    {w:'Meal 1', items:[['Egg, large',3],['Oats dry, 1/2 cup',1],['Orange',1]]},
+    {w:'Meal 2', items:[['Deli turkey, 4 slices',2],['Whole wheat bread, 1 slice',2],['Salad greens, 2 cups',1],['Vinaigrette, 2 tbsp',1]]},
+    {w:'Meal 3', items:[['Chicken thigh, 6oz',1],['Rice cooked, 1 cup',2],['Green beans, 1 cup',1],['Olive oil, 1 tbsp',1]]},
+    {w:'Snack', items:[['Milk skim, 1 cup',2],['Peanut butter, 2 tbsp',1],['Whole wheat bread, 1 slice',2],['Banana',1]]},
+   ]},
+];
+
 
 /* ================================================================ state == */
 const DEFAULTS = {
@@ -1029,17 +1164,28 @@ function pillars(){
 }
 function phaseIdx(){ const d=daysLogged(); return d>=730?3:d>=540?2:d>=180?1:0; }
 
-function nutrition(){
+function activityMinutes(k){
+  const items = [ ...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[]) ].filter(c=>c.t==='physical');
+  return items.reduce((a,c)=>{ let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440; return a+(e-s); }, 0);
+}
+function extraKcal(k){
+  const L=latestLog(); if(!L||!L.weight||!k) return 0;
+  const mins=activityMinutes(k); if(!mins) return 0;
+  const METS=7;                                    // moderate-vigorous sport, generic estimate
+  return Math.round(METS*3.5*L.weight/200*mins);
+}
+function nutrition(k){
   const L=latestLog(); if(!L||!L.weight) return null;
   const p=S.profile,kg=L.weight,cm=+p.height,age=+p.age||22;
   const bmr=10*kg+6.25*cm-5*age+(p.sex==='m'?5:-161);
   const tdee=bmr*(+p.activity||1.725);
+  const extra=extraKcal(k);
   const adj=p.goal==='gain'?1.10:p.goal==='lean'?0.85:1.0;
-  const kcal=Math.round(tdee*adj/10)*10;
+  const kcal=Math.round((tdee+extra)*adj/10)*10;
   const protein=Math.round(kg*2.0);
   const fat=Math.round(kcal*0.27/9);
   const carbs=Math.max(20,Math.round((kcal-protein*4-fat*9)/4));
-  return {tdee:Math.round(tdee),kcal,protein,fat,carbs,water:(kg*40/1000).toFixed(1)};
+  return {tdee:Math.round(tdee),kcal,protein,fat,carbs,water:(kg*40/1000).toFixed(1),extra,extraMin:k?activityMinutes(k):0};
 }
 function foodTotals(k){
   const f=day(k).food;
@@ -1210,11 +1356,69 @@ function monthAvg(off){
   return {avg:n?s/n:0, n};
 }
 
+/* ========================================================== physique ===== */
+/* Turns height / weight / body fat into a concrete, measurable target and the
+   honest distance to it. All internal units metric.                          */
+function physique(){
+  const L=latestLog(); if(!L||!L.weight) return null;
+  const kg=L.weight, m=(+S.profile.height)/100;
+  if(!m||m<1.2) return null;
+  const bf=L.bf!=null?L.bf:null;
+  const lbm = bf!=null ? kg*(1-bf/100) : null;
+  const ffmi = lbm!=null ? lbm/(m*m) + 6.1*(1.8-m) : null;
+
+  const tgtLbm = ARCH.ffmi*(m*m) - 6.1*(1.8-m)*(m*m);
+  const tgtBf  = ARCH.bfHigh;                       // aim at the sustainable end
+  const tgtKg  = tgtLbm/(1-tgtBf/100);
+
+  const lbmGap = lbm!=null ? tgtLbm-lbm : null;      // kg of lean mass to add
+  const fatKg  = bf!=null ? kg*(bf/100) : null;
+  const tgtFatKg = tgtKg*(tgtBf/100);
+  const fatGap = fatKg!=null ? fatKg-tgtFatKg : null;
+
+  /* honest rates: lean mass 0.25-0.5 kg/month for an intermediate trainee,
+     fat loss 0.5% bodyweight/week is the ceiling that spares muscle */
+  const months = lbmGap!=null && lbmGap>0 ? Math.ceil(lbmGap/0.375) : 0;
+
+  let phase, guide;
+  if (bf==null){
+    phase='measure'; guide='Log a body fat estimate on the Log tab and this becomes specific. Calipers, a smart scale, or a gym DEXA all work — consistency of method matters far more than absolute accuracy.';
+  } else if (bf>tgtBf+6){
+    phase='lean'; guide='Priority is fat loss while holding your lifts. Small deficit, protein high, keep training heavy. Chasing muscle gain from here mostly adds fat.';
+  } else if (bf>tgtBf+2){
+    phase='recomp'; guide='You are close enough to run a recomposition: eat around maintenance, push the lifts hard, and let the ratio shift. Slower than either extreme but you look better the whole way through.';
+  } else if (lbmGap!=null && lbmGap>1){
+    phase='build'; guide='Leanness is already there — the entire job is adding lean mass. Small surplus, progressive overload, and patience. Some fat gain alongside is normal and correct.';
+  } else {
+    phase='hold'; guide='You are at the archetype. From here it is maintenance and specialisation — pick a lift, a sport, or a skill and go deep rather than chasing further size.';
+  }
+  return {kg,m,bf,lbm,ffmi,tgtLbm,tgtBf,tgtKg,lbmGap,fatGap,months,phase,guide};
+}
+
+/* ------------------------------------------------------- meal totals ----- */
+const FOODIDX = (()=>{ const o={}; FOODS.forEach(f=>o[f[0]]=f); return o; })();
+function mealTotals(m){
+  let kcal=0,p=0,c=0,f=0;
+  m.slots.forEach(s=>s.items.forEach(([n,q])=>{
+    const it=FOODIDX[n]; if(!it) return;
+    kcal+=it[1]*q; p+=it[2]*q; c+=it[3]*q; f+=it[4]*q;
+  }));
+  return {kcal:Math.round(kcal),p:Math.round(p),c:Math.round(c),f:Math.round(f)};
+}
+function bestMeal(){
+  const N=nutrition(T); if(!N) return null;
+  let best=null,bd=Infinity;
+  MEALS.forEach(m=>{ const t=mealTotals(m); const d=Math.abs(t.kcal-N.kcal);
+    if(d<bd){bd=d;best=m.id;} });
+  return best;
+}
+
 
 /* ============================================================== ui state == */
 let view='today', openBlock='train', shiftId=null, openTrack='markets', openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
-    foodQ='', copyMode=false, copySel={}, swapOpen=false, foodOpen=false;
+    foodQ='', copyMode=false, copySel={}, swapOpen=false, foodOpen=false,
+    buildSub='target', openMeal=null;
 const T = dkey();
 let viewOff = 0;
 const VD = () => dkey(viewOff);
@@ -1300,6 +1504,23 @@ function Header(){
 }
 
 /* ================================================================= today == */
+
+/* ============================================================ week strip == */
+function WeekStrip(){
+  const cells=[];
+  for (let o=-7;o<=7;o++){
+    const k=dkey(o), isT=k===T, sel=o===viewOff;
+    const [y,m,d]=k.split('-').map(Number);
+    const sc=dayScore(k);
+    cells.push(`<button class="dcell ${sel?'sel':''} ${isT?'today':''}" data-act="daygo" data-v="${o}">
+      <span class="dlab">${DOWL[dowIdx(k)][0]}</span>
+      <span class="dnum">${d}</span>
+      <span class="ddot" style="background:${sc>0.08?heatColor(sc):'transparent'}"></span>
+    </button>`);
+  }
+  return `<div class="stripwrap"><div class="strip" id="strip">${cells.join('')}</div></div>`;
+}
+
 /* ================================================================== rail == */
 function DayRail(plan){
   const {wake,sleep,entries,def}=plan, span=sleep-wake, RH=520, px=RH/span;
@@ -1327,7 +1548,7 @@ function ViewToday(){
   const plan=buildDay(vd), d=day(vd), meta=DTYPE[plan.def.type];
   const trainDone=plan.def.blocks.filter(b=>d.blocks[b.id]).length;
   const dl=daysLogged(), next=MILESTONES.find(m=>dl<m.d);
-  const ft=foodTotals(vd), N=nutrition();
+  const ft=foodTotals(vd), N=nutrition(vd);
 
   const stepsHTML = b => b.steps ? `<div class="steps">
       ${b.steps.map(s=>`<div class="step"><div class="stepdot"></div><div>${esc(s)}</div></div>`).join('')}
@@ -1367,20 +1588,32 @@ function ViewToday(){
       <button class="chip" data-act="nudge" data-v="${e.id}" data-v2="0">auto</button></div>`:''}`;
   };
 
+  const nextUp = plan.entries.find(e=>{
+    if (e.fixed) return false;
+    const dn = e.id==='train' ? (trainDone===plan.def.blocks.length&&trainDone>0)
+             : e.id==='news' ? !!d.news : e.id==='mind' ? !!d.mind : !!d.blocks[e.id];
+    return !dn;
+  });
+  const nowM = new Date().getHours()*60+new Date().getMinutes();
+
   return `<div class="view wrap">
-    <div class="daynav">
-      <button class="darrow" data-act="daynav" data-v="-1">${svg('chev',15,'var(--faint)').replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" style="transform:rotate(180deg)"')}</button>
-      <div style="flex:1;text-align:center">
-        <div class="eyebrow">${longDate(vd)}${vd!==T?' · PREVIEW':''}</div>
-        <div class="disp" style="font-size:20px;margin-top:5px">${esc(plan.def.title)}</div>
+    ${WeekStrip()}
+    <div class="dayhead">
+      <div>
+        <div class="eyebrow">${vd===T?'TODAY':longDate(vd).toUpperCase()}</div>
+        <div class="disp" style="font-size:21px;margin-top:4px">${esc(plan.def.title)}</div>
       </div>
-      <button class="darrow" data-act="daynav" data-v="1">${svg('chev',15,'var(--faint)')}</button>
-    </div>
-    ${vd!==T?`<button class="banner steel" data-act="daynav" data-v="0" style="width:100%;text-align:center;justify-content:center;cursor:pointer">
-      ${svg('rot',13,'var(--steel)')}<div>Previewing ${vd>T?'a future':'a past'} day — checkboxes and logging apply to <b>this</b> date. Tap to jump back to today.</div></button>`:''}
-    <div style="display:flex;justify-content:flex-end;margin:-4px 0 4px">
       <button class="badge" data-act="swapopen">${DTYPE[plan.def.type].label} ⇄</button>
     </div>
+    ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
+      ${svg('rot',13,'var(--steel)')}<div>Viewing another day — everything you tick here saves to <b>${longDate(vd)}</b>. Tap to return to today.</div></button>`:''}
+
+    ${vd===T&&nextUp?`<div class="nextup">
+      <div class="nueyebrow">${nowM>=nextUp.s?'NOW':'NEXT'} · ${s2disp(nextUp.s)}</div>
+      <div class="nutitle">${esc(nextUp.l)}</div>
+      <div class="nusub">${esc(nextUp.sub||'')}</div>
+      ${nextUp.id==='train'?`<div class="nuprog">${trainDone} of ${plan.def.blocks.length} blocks done</div>`:''}
+    </div>`:''}
     ${swapOpen?`<div class="panel"><div class="chips" style="padding:12px 13px">
       ${WEEK.map((w,i)=>`<button class="chip ${i===plan.di?'on':''}" data-act="swap" data-v="${i}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
     </div><div class="note">Swaps only affect ${vd===T?'today':'this date'}. The weekly rotation stays put.</div></div>`:''}
@@ -1411,13 +1644,15 @@ function ViewToday(){
     ${dowIdx(T)===6?`<button class="panel banner steel" data-act="view" data-v="codex" style="width:100%;text-align:left">
       ${svg('trend',14,'var(--steel)')}<div><b>Sunday.</b> Your weekly review is ready on Codex - two minutes, then plan the week.</div></button>`:''}
 
-    ${sect('food','FOOD — '+Math.round(ft.kcal)+' KCAL TODAY')}
+    ${sect('food','FOOD — '+Math.round(ft.kcal)+' KCAL '+(vd===T?'TODAY':'THIS DAY'))}
     <div class="panel">
       ${N?`<div class="fuelbar">
         ${[['kcal',ft.kcal,N.kcal,'var(--amber)'],['P',ft.p,N.protein,'var(--rust)'],['C',ft.c,N.carbs,'var(--steel)'],['F',ft.f,N.fat,'var(--moss)']].map(([l,v,t2,c])=>`
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(v/t2*100,0,100)}%;background:${c}"></div></div></div>`).join('')}
-      </div>`:'<div class="note" style="border-top:none">Log a weight on Body and targets appear here.</div>'}
+      </div>
+      ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}`
+      :'<div class="note" style="border-top:none">Log a weight on Build → Log and targets appear here.</div>'}
       ${d.food.length?`<div class="foodlist">${d.food.map((f,i)=>`
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
           <span style="color:var(--dim);font-size:10.5px">${Math.round(f.kcal*f.q)} kcal</span>
@@ -1576,10 +1811,10 @@ function ViewPlan(){
   </div>`;
 }
 
-/* ================================================================== body == */
-function ViewBody(){
+/* =========================================================== build: log == */
+function ViewLog(){
   const p=S.profile, imp=p.unit==='imperial', wu=imp?'lb':'kg', lu=imp?'in':'cm';
-  const L=latestLog(), N=nutrition();
+  const L=latestLog();
   const conv=v=>imp?Math.round(v*2.20462*10)/10:v;
   const seriesFor=k=>S.log.map(e=>{ if(e[k]==null) return null;
     return ['weight','squat','bench','dead','ohp'].includes(k)?Math.round(conv(e[k])*10)/10:e[k]; });
@@ -1587,7 +1822,7 @@ function ViewBody(){
   const [ck,cc]=chartMap[chartKey];
   const recent=[...S.log].sort((a,b)=>a.date<b.date?1:-1).slice(0,7);
 
-  return `<div class="view wrap">
+  return `
     ${sect('plus','LOG A MEASUREMENT')}
     <div class="hint">Fill in whatever you measured - one field is enough. Saving the same date updates that entry.</div>
     <div class="panel">
@@ -1596,6 +1831,7 @@ function ViewBody(){
         <label class="f"><span>Weight (${wu})</span><input type="number" step="0.1" id="f_weight" inputmode="decimal"></label>
         <label class="f"><span>Body fat %</span><input type="number" step="0.1" id="f_bf" inputmode="decimal"></label>
         <label class="f"><span>Waist (${lu})</span><input type="number" step="0.1" id="f_waist" inputmode="decimal"></label>
+        <label class="f"><span>Shoulders (${lu})</span><input type="number" step="0.1" id="f_shoulder" inputmode="decimal"></label>
         <label class="f"><span>Resting HR</span><input type="number" id="f_rhr" inputmode="numeric"></label>
         <label class="f"><span>Sleep (h)</span><input type="number" step="0.1" id="f_sleep" inputmode="decimal"></label>
       </div>
@@ -1637,21 +1873,173 @@ function ViewBody(){
         <div class="bar"><div class="barfill" style="width:${pct}%;background:${pct>=100?'var(--moss)':'var(--steel)'}"></div></div></div>`;}).join('')}
       <div class="note">Targets are multiples of current bodyweight, so they move as you do. All four at once is roughly the ceiling for a non-specialist running everything else in this program.</div></div>`:''}
 
-    ${sect('flame','FUEL TARGETS')}
-    <div class="panel">
-      ${N?`<div class="macros">
-        <div class="macro"><div class="v" style="color:var(--amber)">${N.kcal}</div><div class="l">KCAL</div></div>
-        <div class="macro"><div class="v" style="color:var(--rust)">${N.protein}g</div><div class="l">PROTEIN</div></div>
-        <div class="macro"><div class="v" style="color:var(--steel)">${N.carbs}g</div><div class="l">CARBS</div></div>
-        <div class="macro"><div class="v" style="color:var(--moss)">${N.fat}g</div><div class="l">FAT</div></div></div>
+  `;
+}
+
+
+/* ======================================================== build: target == */
+function ViewTarget(){
+  const q=physique(), imp=S.profile.unit==='imperial';
+  const U=imp?'lb':'kg', lb=x=>x==null?'—':(imp?x*2.20462:x).toFixed(1);
+  const L=latestLog();
+
+  if (!q) return `
+    ${sect('target','THE BUILD')}
+    <div class="panel"><div style="padding:15px 13px">
+      <p class="t"><b>${esc(ARCH.note)}</b></p>
+      <p class="t">Log your height in Plan and a weight on the Log tab, and this becomes a specific set of numbers with a timeline attached.</p>
+    </div></div>`;
+
+  const phaseMap={
+    measure:['MEASURE FIRST','var(--faint)'], lean:['LEAN OUT','var(--rust)'],
+    recomp:['RECOMPOSITION','var(--amber)'], build:['ADD LEAN MASS','var(--steel)'], hold:['MAINTAIN','var(--moss)']};
+  const [pl,pc]=phaseMap[q.phase];
+
+  return `
+    ${sect('target','THE BUILD')}
+    <div class="panel acc"><div class="acc-bar" style="background:${pc}"></div>
       <div style="padding:14px 13px 4px">
-        <p class="t"><b>Maintenance sits near ${N.tdee} kcal.</b> The target adjusts from there for your goal. Track against it on Today's food log.</p>
-        <p class="t">Split protein across four meals of about ${Math.round(N.protein/4)}g. Four moderate meals land more reliably than two large ones.</p>
-        <p class="t">Biggest carb share around training. Water about ${N.water} L. Weigh at the same time daily, judge by the two-week average only.</p>
-        <p class="t" style="color:var(--faint)">These are population-average estimates - a starting point to adjust over weeks, not a prescription. Talk to a doctor or dietitian before big changes, especially with any medical condition or a complicated history with food.</p>
-      </div>`
-      :`<div class="empty">Log a weight above and your targets appear here.</div>`}
+        <div class="eyebrow" style="color:${pc}">CURRENT DIRECTIVE · ${pl}</div>
+        <p class="t" style="color:var(--text);margin-top:9px">${esc(q.guide)}</p>
+      </div>
     </div>
+
+    <div class="cmp">
+      <div class="cmpcol"><div class="cmphead">NOW</div>
+        <div class="cmprow"><span>Weight</span><b>${lb(q.kg)} ${U}</b></div>
+        <div class="cmprow"><span>Body fat</span><b>${q.bf!=null?q.bf+'%':'—'}</b></div>
+        <div class="cmprow"><span>Lean mass</span><b>${lb(q.lbm)} ${U}</b></div>
+        <div class="cmprow"><span>FFMI</span><b>${q.ffmi!=null?q.ffmi.toFixed(1):'—'}</b></div>
+      </div>
+      <div class="cmparrow">${svg('chev',15,'var(--faint)')}</div>
+      <div class="cmpcol tgt"><div class="cmphead" style="color:var(--amber)">TARGET</div>
+        <div class="cmprow"><span>Weight</span><b>${lb(q.tgtKg)} ${U}</b></div>
+        <div class="cmprow"><span>Body fat</span><b>${ARCH.bfLow}–${ARCH.bfHigh}%</b></div>
+        <div class="cmprow"><span>Lean mass</span><b>${lb(q.tgtLbm)} ${U}</b></div>
+        <div class="cmprow"><span>FFMI</span><b>${ARCH.ffmi}</b></div>
+      </div>
+    </div>
+
+    <div class="panel"><div style="padding:14px 13px 4px">
+      ${q.lbmGap!=null&&q.lbmGap>0.5?`<p class="t"><b>${lb(q.lbmGap)} ${U} of lean mass to add.</b> At a realistic intermediate rate that is roughly <b>${q.months} months</b> of consistent training and eating — not weeks. Anyone promising faster is selling something.</p>`:''}
+      ${q.fatGap!=null&&q.fatGap>0.5?`<p class="t"><b>${lb(q.fatGap)} ${U} of fat to lose.</b> Cap it at about 0.5% of bodyweight per week; faster costs you muscle and the lifts go backwards.</p>`:''}
+      ${q.lbmGap!=null&&q.lbmGap<=0.5&&q.fatGap!=null&&q.fatGap<=0.5?`<p class="t">You are at the archetype on paper. The remaining work is specialisation and holding it — which is harder than getting here.</p>`:''}
+      <p class="t" style="color:var(--faint)">FFMI is lean mass scaled to height. Untrained men sit near 19, well-trained near 21–22, and the natural ceiling is about 24–25. The ${ARCH.ffmi} target is "visibly built, still an athlete" — reachable without drugs, unlike most superhero physiques.</p>
+    </div></div>
+
+    ${sect('eye','WHAT THE SCREEN VERSION ACTUALLY IS')}
+    <div class="panel"><div style="padding:14px 13px 4px">
+      <p class="t">Worth knowing what you are actually aiming at. The shirtless scenes are a peak, held for about a day: dehydrated, carb-depleted, oiled, and lit from above by someone paid to make it look like that. Nobody walks around in that condition, including the actor.</p>
+      <p class="t">The <b>sustainable</b> version of that build is the one in the target column — around ${ARCH.bfLow}–${ARCH.bfHigh}% body fat, where abs are visible at rest and you can still train hard, sleep well, and think straight. Below about 8% year-round, strength stalls, sleep degrades, and mood usually follows.</p>
+      <p class="t">Also true: the on-screen impression is mostly <b>shoulders, back width and forearms</b> against a small waist. That is why this program pulls as much as it presses, and why the waist measurement matters more than the scale.</p>
+    </div></div>
+
+    ${L&&L.shoulder&&L.waist?(()=>{ const r=L.shoulder/L.waist;
+      return `<div class="panel"><div class="stand"><div class="standtop"><span style="font-weight:600">Shoulder : waist</span>
+        <span>${r.toFixed(2)} <span style="color:var(--faint)">/ ${ARCH.vTaper} target</span></span></div>
+        <div class="bar"><div class="barfill" style="width:${clamp(r/ARCH.vTaper*100,0,100)}%;background:${r>=ARCH.vTaper?'var(--moss)':'var(--steel)'}"></div></div></div>
+        <div class="note">An aesthetic heuristic rather than a scientific one, but it tracks the thing people actually register. Move it by widening the shoulders and back, not by shrinking the waist below a healthy point.</div></div>`;})():''}
+
+    ${sect('dumb','THE LIFTS THAT BUILD IT')}
+    <div class="panel">${LIFTS.map(s=>{
+      const cur=bestLift(s.k), goal=L&&L.weight?L.weight*s.m:null, pct=(cur&&goal)?clamp(cur/goal*100,0,100):0;
+      return `<div class="stand"><div class="standtop"><span style="font-weight:600">${s.l}</span>
+        <span>${cur?dispLoad(cur):'—'} <span style="color:var(--faint)">/ ${goal?dispLoad(goal):'—'}</span></span></div>
+        <div class="bar"><div class="barfill" style="width:${pct}%;background:${pct>=100?'var(--moss)':'var(--steel)'}"></div></div></div>`;}).join('')}
+      <div class="note">These are the numbers that produce the build. Hit all six and the physique follows almost automatically, provided the eating supports it. Exact working weights for every session are on Today.</div></div>`;
+}
+
+/* ========================================================== build: fuel == */
+function ViewFuel(){
+  const N=nutrition(T), q=physique(), imp=S.profile.unit==='imperial';
+  const match=bestMeal();
+  const ftoday=foodTotals(T);
+
+  if(!N) return `${sect('flame','FUEL')}
+    <div class="empty">Log a weight on the Log tab and your exact targets appear here.</div>`;
+
+  const adjNote = q&&q.phase==='lean' ? 'Set your goal to <b>Lean out</b> in Plan and this drops into a deficit automatically.'
+    : q&&q.phase==='build' ? 'Set your goal to <b>Add muscle</b> in Plan for a small surplus.'
+    : 'Your goal is set to recomposition — eating near maintenance while the lifts climb.';
+
+  return `
+    ${sect('flame','DAILY TARGETS')}
+    <div class="macros">
+      <div class="macro"><div class="v" style="color:var(--amber)">${N.kcal}</div><div class="l">KCAL</div></div>
+      <div class="macro"><div class="v" style="color:var(--rust)">${N.protein}g</div><div class="l">PROTEIN</div></div>
+      <div class="macro"><div class="v" style="color:var(--steel)">${N.carbs}g</div><div class="l">CARBS</div></div>
+      <div class="macro"><div class="v" style="color:var(--moss)">${N.fat}g</div><div class="l">FAT</div></div>
+    </div>
+    <div class="panel"><div style="padding:13px">
+      <div class="fbtop" style="margin-bottom:5px"><span>LOGGED TODAY</span><span style="color:var(--text)">${Math.round(ftoday.kcal)} / ${N.kcal}</span></div>
+      <div class="bar"><div class="barfill" style="width:${clamp(ftoday.kcal/N.kcal*100,0,100)}%;background:var(--amber)"></div></div>
+    </div>
+    <div style="padding:0 13px 13px"><p class="t" style="margin:0">Maintenance is near <b>${N.tdee} kcal</b>. ${adjNote}</p>
+      ${N.extra>0?`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('trend',11,'var(--steel)')} <b>+${N.extra} kcal today</b> for ${N.extraMin} minutes of tagged physical activity beyond training — tag it Physical in Plan and this adjusts on its own.</p>`
+        :`<p class="t" style="margin:8px 0 0;color:var(--faint)">Tag any extra activity — practice, a match, a long hike — as <b>Physical</b> in Plan, and this number moves up on its own for that day.</p>`}
+    </div></div>
+
+    ${sect('food','MEAL PLANS')}
+    <div class="hint">Full days built from real foods. Tap one to see it, then log the whole day in one tap — or just one meal at a time. Adapt freely; these are patterns, not prescriptions.</div>
+    ${MEALS.map(m=>{
+      const t=mealTotals(m), open=openMeal===m.id, best=m.id===match;
+      const diff=t.kcal-N.kcal;
+      return `<div class="acc-group">
+        <button class="ahead" data-act="meal" data-v="${m.id}" style="border-left:3px solid ${best?'var(--amber)':'var(--rule)'}">
+          <div style="flex:1">
+            <div class="an" style="font-size:13px">${esc(m.name)}${best?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">BEST FIT</span>':''}</div>
+            <div style="font-size:9.5px;color:var(--faint);letter-spacing:.05em;margin-top:4px">
+              ${t.kcal} kcal · ${t.p}g protein · ${diff>0?'+':''}${diff} vs target</div>
+          </div>
+          ${open?svg('chevD',14,'var(--faint)'):svg('chev',14,'var(--faint)')}</button>
+        ${open?`<div class="abody">
+          ${m.slots.map((s,si)=>`<div class="mslot">
+            <div class="mslothead"><span>${esc(s.w)}</span>
+              <button class="chip" data-act="logslot" data-v="${m.id}" data-v2="${si}">LOG</button></div>
+            ${s.items.map(([n,qq])=>{ const it=FOODIDX[n];
+              return `<div class="mitem"><span style="flex:1">${qq!==1?`<b>${qq}×</b> `:''}${esc(n)}</span>
+                <span style="color:var(--faint);font-size:10px">${it?Math.round(it[1]*qq):'?'} kcal</span></div>`;}).join('')}
+          </div>`).join('')}
+          <div style="padding:12px 13px">
+            <button class="btn" data-act="logmeal" data-v="${m.id}">${svg('check',13,'var(--ink)',2.6)} LOG THE WHOLE DAY</button></div>
+          ${diff<-450?`<div class="note" style="color:var(--amber)">This lands ${Math.abs(diff)} kcal under your target. Fine for an occasional lighter day, but not as your default — add a starch or a shake if you use it regularly.</div>`:''}
+        </div>`:''}
+      </div>`;}).join('')}
+
+    <div class="panel" style="margin-top:14px"><div style="padding:14px 13px 4px">
+      <p class="t"><b>The rules that matter more than the plan.</b></p>
+      <p class="t">Protein at every meal, roughly ${Math.round(N.protein/4)}g a time. That single habit does most of the work.</p>
+      <p class="t">Biggest carbs around training. Everything else is flexible.</p>
+      <p class="t">Water near ${N.water} L, more in heat or on double days.</p>
+      <p class="t">Judge by the two-week weight average, never a single morning.</p>
+      <p class="t" style="color:var(--faint)">These targets are population-average estimates from your height, weight, age and training load — a starting point to adjust from over weeks. They are not a clinical prescription. Talk to a doctor or a registered dietitian before making significant dietary changes, particularly with any medical condition or a complicated history with food.</p>
+    </div></div>
+
+    ${sect('shield','SUPPLEMENTS')}
+    <div class="hint">Food first — supplements are the last 5%, not the first. Ordered by how good the evidence actually is.</div>
+    ${[1,2,3].map(tier=>{
+      const list=SUPPS.filter(s=>s.t===tier);
+      const head=tier===1?['WORTH IT','var(--moss)']:tier===2?['SITUATIONAL','var(--amber)']:['SKIP IT','var(--rust)'];
+      return `<div class="panel acc" style="margin-bottom:11px"><div class="acc-bar" style="background:${head[1]}"></div>
+        <div class="eyebrow" style="padding:12px 13px 2px;color:${head[1]}">${head[0]}</div>
+        ${list.map(s=>`<div class="stand">
+          <div class="standtop"><span style="font-weight:600">${esc(s.n)}</span>
+            <span style="font-size:10px;color:var(--faint)">${esc(s.d)}</span></div>
+          <div class="det" style="margin-top:2px">${esc(s.w)}</div></div>`).join('')}
+      </div>`;}).join('')}
+    <div class="panel"><div class="note" style="border-top:none">
+      Two things that matter specifically for you. <b>One:</b> as a collegiate athlete, supplements are an eligibility risk — the industry is poorly regulated and contamination is a real, documented problem. Use NSF Certified for Sport or Informed Sport products only, and check anything new against your school's compliance office and the NCAA banned-substance list. <b>Two:</b> get bloodwork before guessing. Vitamin D, ferritin, and a basic panel tell you what you actually need instead of what a label claims.
+    </div></div>`;
+}
+
+/* =============================================================== build === */
+function ViewBuild(){
+  const tabs=[['target','TARGET'],['fuel','FUEL'],['log','LOG']];
+  const body = buildSub==='target'?ViewTarget() : buildSub==='fuel'?ViewFuel() : ViewLog();
+  return `<div class="view wrap">
+    <div class="segwrap"><div class="seg">${tabs.map(([k,l])=>`
+      <button class="segbtn ${buildSub===k?'on':''}" data-act="buildsub" data-v="${k}">${l}</button>`).join('')}</div></div>
+    ${body}
   </div>`;
 }
 
@@ -1771,7 +2159,6 @@ function ViewCodex(){
       const dir=(m1.n>=14&&m0.n>=14&&m1.avg>0.01)?Math.round((m0.avg-m1.avg)/m1.avg*100):null;
       const imp=S.profile.unit==='imperial';
       const wd=W.wDelta!=null?`${W.wDelta>0?'+':''}${(imp?W.wDelta*2.20462:W.wDelta).toFixed(1)} ${imp?'lb':'kg'}`:null;
-      const N2=nutrition();
       return `${sect('trend','THIS WEEK')}
     <div class="stats">
       <div class="stat"><div class="v" style="color:${W.hit>=5?'var(--moss)':W.hit>=3?'var(--amber)':'var(--rust)'}">${W.hit}<span style="font-size:13px;color:var(--faint)">/7</span></div><div class="l">SESSIONS</div></div>
@@ -1840,7 +2227,7 @@ function ViewCodex(){
 
 /* =================================================================== nav == */
 function Nav(){
-  const items=[['today','TODAY','swords'],['body','BODY','dumb'],['mind','MIND','brain'],['ledger','LEDGER','coins'],['codex','CODEX','book']];
+  const items=[['today','TODAY','swords'],['build','BUILD','dumb'],['mind','MIND','brain'],['ledger','LEDGER','coins'],['codex','CODEX','book']];
   return `<nav>${items.map(([k,l,i])=>`
     <button class="${view===k?'on':''}" data-act="view" data-v="${k}">
       <div class="mark"></div>${svg(i,18)}<span class="nl">${l}</span></button>`).join('')}</nav>`;
@@ -1849,10 +2236,15 @@ function Nav(){
 /* ================================================================ render == */
 function render(){
   const y=window.scrollY;
-  const body=view==='today'?ViewToday():view==='plan'?ViewPlan():view==='body'?ViewBody()
+  const body=view==='today'?ViewToday():view==='plan'?ViewPlan():(view==='build'||view==='body')?ViewBuild()
     :view==='mind'?ViewMind():view==='ledger'?ViewLedger():ViewCodex();
   document.getElementById('app').innerHTML=Header()+body+Nav()+`<div class="toast ${toastMsg?'show':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
+  const strip=document.getElementById('strip');
+  if (strip){
+    const sel=strip.querySelector('.dcell.sel');
+    if (sel) strip.scrollLeft = sel.offsetLeft - strip.offsetWidth/2 + sel.offsetWidth/2;
+  }
   const rail=document.getElementById('rail'), rnow=document.getElementById('rnow');
   if (rail&&rnow){
     const wake=+rail.dataset.wake, px=+rail.dataset.px;
@@ -1906,12 +2298,36 @@ document.addEventListener('click', e => {
   const d = day(VD());
 
   switch(a){
-    case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
     case 'daynav':
       if (+v===0) viewOff=0; else viewOff+=(+v);
       shiftId=null; foodOpen=false; openBlock2=null; break;
+    case 'daygo':
+      viewOff=+v; shiftId=null; foodOpen=false; openBlock2=null; break;
+
+    /* ---- build tab ---- */
+    case 'buildsub': buildSub=v; openMeal=null; render(); window.scrollTo(0,0); return;
+    case 'meal': openMeal = openMeal===v?null:v; break;
+    case 'logmeal': {
+      const m=MEALS.find(x=>x.id===v); if(!m){ toast('Meal not found'); return; }
+      let n=0;
+      m.slots.forEach(s=>s.items.forEach(([nm,qq])=>{
+        const it=FOODIDX[nm]; if(!it) return;
+        d.food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq}); n++;
+      }));
+      commit(); render(); toast(`${n} items logged — ${Math.round(foodTotals(VD()).kcal)} kcal today`); return;
+    }
+    case 'logslot': {
+      const m=MEALS.find(x=>x.id===v); if(!m) return;
+      const slot=m.slots[+v2]; if(!slot) return;
+      slot.items.forEach(([nm,qq])=>{
+        const it=FOODIDX[nm]; if(!it) return;
+        d.food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq});
+      });
+      commit(); render(); toast(`${slot.w} logged`); return;
+    }
 
     /* ---- today ---- */
     case 'traintoggle': openBlock = openBlock==='train'?null:'train'; break;
@@ -1998,7 +2414,7 @@ document.addEventListener('click', e => {
       const rec={...(S.log.find(x=>x.date===date)||{}),date};
       let any=false;
       ['weight','squat','bench','dead','ohp','row','pullup'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=imp?Math.round(x/2.20462*100)/100:x; any=true;}});
-      ['waist'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=imp?Math.round(x*2.54*10)/10:x; any=true;}});
+      ['waist','shoulder'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=imp?Math.round(x*2.54*10)/10:x; any=true;}});
       ['bf','rhr','sleep'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=x; any=true;}});
       if(!any){ toast('Nothing entered yet'); return; }
       S.log=[...S.log.filter(x=>x.date!==date),rec].sort((x,y)=>x.date>y.date?1:-1);
