@@ -400,8 +400,8 @@ const ICO = {
   plus:'M12 5v14M5 12h14',
   gear:'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 110-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V2a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H22a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z',
   x:'M18 6L6 18M6 6l12 12',
+  edit:'M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z',
   trend:'M22 7l-8.5 8.5-5-5L2 17',
-  cal:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   users:'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   act:'M22 12h-4l-3 9L9 3l-3 9H2',
   globe:'M12 22a10 10 0 100-20 10 10 0 000 20zM2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z',
@@ -1097,7 +1097,7 @@ const DOWSH=['MON','TUE','WED','THU','FRI','SAT','SUN'];
 /* ---------------------------------------------------- training programs -- */
 const PROGRAMS = {
   standard:{ n:'Forge Standard', d:'3 lifts + striking + BJJ + craft. The balanced default — strength, combat, and skills advance together.' },
-  builder:{ n:'Forge Builder', d:'4 lifting days for maximum physique progress. Striking stays weekly; BJJ moves to open-mat optional on Saturday.' },
+  builder:{ n:'Forge Builder', d:'4 lifting days for maximum physique progress. Striking stays weekly; BJJ drops out of the rotation to make room — swap it back in on any day with the ⇄ button on Today if you still want mat time.' },
   fighter:{ n:'Forge Fighter', d:'Two combat days plus fight conditioning. Three heavy lifts survive as the strength anchor. For when the fighting matters most.' },
 };
 const WEEKS = {
@@ -1282,7 +1282,7 @@ function pillars(){
     {k:'CAPITAL',v:Object.values(S.capital).filter(Boolean).length/CAPITAL.length*100,c:'var(--moss)'},
   ];
 }
-function phaseIdx(){ const d=daysLogged(); return d>=730?3:d>=540?2:d>=180?1:0; }
+function phaseIdx(){ const d=daysLogged(); return d>=1095?3:d>=540?2:d>=180?1:0; }
 
 function activityMinutes(k){
   const items = [ ...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[]) ].filter(c=>c.t==='physical');
