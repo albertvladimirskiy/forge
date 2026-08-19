@@ -316,12 +316,6 @@ input[type=date],input[type=time]{min-height:40px}
 .wlhrs{font-size:8.5px;font-weight:700;letter-spacing:.03em}
 .btn.ghost{background:transparent;border:1px solid var(--rule2);color:var(--dim)}
 
-/* ---------- day navigation ---------- */
-.daynav{display:flex;align-items:center;margin:14px 0 10px}
-.darrow{padding:10px 12px;color:var(--faint)}
-.darrow:active{color:var(--text)}
-
-
 /* ---------- week strip ---------- */
 .stripwrap{margin:calc(6px + 0px) -14px 0;position:relative}
 .strip{display:flex;gap:5px;overflow-x:auto;scroll-behavior:smooth;padding:12px 14px 13px;
@@ -962,6 +956,29 @@ const PAINSWAP = {
 const CTAGS = [['','Other'],['physical','Physical / sport'],['class','Class'],['work','Work']];
 const TAGCOLOR = {physical:'var(--moss)', class:'var(--steel)', work:'var(--amber)', '':'var(--faint)'};
 
+/* sport-specific MET values for tagged-physical commitments, so the fuel
+   target reflects what the activity actually costs rather than one flat
+   number for everything from BJJ to a walk. Source: Compendium of Physical
+   Activities, rounded to sane single decimals. First entry is the fallback
+   used when no sport is picked (matches the old flat estimate).            */
+const SPORTS = [
+  ['','General / other',7.0],
+  ['bjj','BJJ / grappling',10.3],
+  ['striking','Boxing / striking',9.0],
+  ['wrestling','Wrestling',9.0],
+  ['basketball','Basketball',8.0],
+  ['soccer','Soccer',10.0],
+  ['tennis','Tennis',8.0],
+  ['running','Running',9.8],
+  ['cycling','Cycling',8.0],
+  ['swimming','Swimming',8.3],
+  ['climbing','Climbing',8.0],
+  ['hiking','Hiking',6.0],
+  ['walking','Walking, brisk',4.3],
+];
+const SPORTMET = Object.fromEntries(SPORTS.map(([k,,met])=>[k,met]));
+const SPORTLABEL = Object.fromEntries(SPORTS.map(([k,l])=>[k,l]));
+
 /* ============================================== physique archetype ======== */
 /* The Nolan-Batman build, expressed as measurable targets rather than vibes.
    FFMI = fat-free mass index. Untrained men sit ~19, well-trained ~21-22,
@@ -1106,6 +1123,11 @@ const WEEKS = {
   fighter:  [0,1,3,'D9',2,5,6].map((x,i)=>({...(x==='D9'?D9:WEEK_STD[x]), short:DOWSH[i]})),
 };
 let WEEK = WEEK_STD;
+/* every workout definition that exists anywhere, keyed by its stable id — used to resolve a
+   per-date swap by id rather than by array position, so a swap made under one program still
+   means the same workout after switching to a different program (whose WEEK array orders and
+   even length can differ in what each position holds). */
+const ALLDAYS = Object.fromEntries([...WEEK_STD,D8,D9].map(d=>[d.id,d]));
 
 
 /* ================================================================ state == */
@@ -1176,8 +1198,8 @@ function place(free,dur,anchor,win){
 
 function buildDay(key){
   const p=S.profile;
-  const di = S.swap[key]!=null ? S.swap[key] : dowIdx(key);
-  const def = WEEK[di];
+  const di = dowIdx(key);
+  const def = S.swap[key]!=null ? (ALLDAYS[S.swap[key]]||WEEK[di]) : WEEK[di];
   const wake=m2s(p.wake); let sleep=m2s(p.sleep); if(sleep<=wake) sleep+=1440;
 
   const fixed = [ ...(S.fixed[DOW[dowIdx(key)]]||[]), ...(S.extra[key]||[]) ]
@@ -1267,6 +1289,15 @@ function streak(){
   return n;
 }
 function latestLog(){ return [...S.log].sort((a,b)=>a.date<b.date?1:-1)[0]||null; }
+/* days since the most recent LOGGED WEIGHT specifically (not just any log entry —
+   a bodyweight-free entry like a squat PR shouldn't reset this) */
+function daysSinceWeight(){
+  const withWeight=S.log.filter(e=>e.weight!=null).sort((a,b)=>a.date>b.date?1:-1);
+  if (!withWeight.length) return null;
+  const last=withWeight[withWeight.length-1].date;
+  const [y,m,dd]=last.split('-').map(Number), [ty,tm,td]=T.split('-').map(Number);
+  return Math.round((new Date(ty,tm-1,td)-new Date(y,m-1,dd))/86400000);
+}
 
 function pillars(){
   const t=id=>((S.tiers[id]??0)/4)*100;
@@ -1284,15 +1315,24 @@ function pillars(){
 }
 function phaseIdx(){ const d=daysLogged(); return d>=1095?3:d>=540?2:d>=180?1:0; }
 
-function activityMinutes(k){
-  const items = [ ...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[]) ].filter(c=>c.t==='physical');
-  return items.reduce((a,c)=>{ let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440; return a+(e-s); }, 0);
+function physicalItems(k){
+  return [ ...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[]) ].filter(c=>c.t==='physical');
 }
+function activityMinutes(k){
+  return physicalItems(k).reduce((a,c)=>{ let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440; return a+(e-s); }, 0);
+}
+/* calories burned by tagged-physical commitments on date k, one MET per
+   item based on its chosen sport (SPORTMET), rather than one flat number
+   for everything — a BJJ round and a brisk walk no longer cost the same.  */
 function extraKcal(k){
   const L=latestLog(); if(!L||!L.weight||!k) return 0;
-  const mins=activityMinutes(k); if(!mins) return 0;
-  const METS=7;                                    // moderate-vigorous sport, generic estimate
-  return Math.round(METS*3.5*L.weight/200*mins);
+  const items=physicalItems(k); if(!items.length) return 0;
+  const kcal=items.reduce((a,c)=>{
+    let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440;
+    const met=SPORTMET[c.sp]!=null?SPORTMET[c.sp]:SPORTMET[''];
+    return a+met*3.5*L.weight/200*(e-s);
+  },0);
+  return Math.round(kcal);
 }
 function nutrition(k){
   const L=latestLog(); if(!L||!L.weight) return null;
@@ -1416,7 +1456,8 @@ function inLoad(v){ const n=num(v); if(n==null) return null;
 /* ============================================================== deload === */
 function trainRatio(k){
   const d=S.days[k]; if(!d||!d.blocks) return 0;
-  const def=WEEK[S.swap[k]!=null?S.swap[k]:dowIdx(k)];
+  const wi=dowIdx(k);
+  const def=S.swap[k]!=null?(ALLDAYS[S.swap[k]]||WEEK[wi]):WEEK[wi];
   const done=def.blocks.filter(b=>d.blocks[b.id]).length;
   return done/def.blocks.length;
 }
@@ -1525,11 +1566,19 @@ function mealTotals(m){
   }));
   return {kcal:Math.round(kcal),p:Math.round(p),c:Math.round(c),f:Math.round(f)};
 }
+/* "best fit" meal template: closest calorie match first, with a modest nudge
+   toward the tag that fits today — training-day carbs on a training day (or
+   any day with tagged sport activity), lean-out on a cut, otherwise rest —
+   so two similarly-sized templates don't come out as a coin flip. */
 function bestMeal(){
   const N=nutrition(T); if(!N) return null;
-  let best=null,bd=Infinity;
-  MEALS.forEach(m=>{ const t=mealTotals(m); const d=Math.abs(t.kcal-N.kcal);
-    if(d<bd){bd=d;best=m.id;} });
+  const plan=buildDay(T);
+  const wantTag = S.profile.goal==='lean' ? 'lean'
+    : (plan.def.type!=='recover'||extraKcal(T)>0) ? 'training' : 'rest';
+  let best=null,bs=Infinity;
+  MEALS.forEach(m=>{ const t=mealTotals(m);
+    const score=Math.abs(t.kcal-N.kcal)-(m.tag===wantTag?150:0);
+    if(score<bs){bs=score;best=m.id;} });
   return best;
 }
 
@@ -1555,8 +1604,9 @@ function scaledTotals(m,f){
 function dayLoad(k){
   const items=[...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[])];
   const cm=items.reduce((a,c)=>{let s=m2s(c.s),e=m2s(c.e);if(e<=s)e+=1440;return a+(e-s);},0);
-  const di=S.swap[k]!=null?S.swap[k]:dowIdx(k);
-  return {commit:cm, train:WEEK[di].dur, type:WEEK[di].type};
+  const wi=dowIdx(k);
+  const def=S.swap[k]!=null?(ALLDAYS[S.swap[k]]||WEEK[wi]):WEEK[wi];
+  return {commit:cm, train:def.dur, type:def.type};
 }
 
 
@@ -1761,10 +1811,18 @@ function ViewToday(){
       ${nextUp.id==='train'?`<div class="nuprog">${trainDone} of ${plan.def.blocks.length} blocks done</div>`:''}
     </div>`:''}
     ${swapOpen?`<div class="panel"><div class="chips" style="padding:12px 13px">
-      ${WEEK.map((w,i)=>`<button class="chip ${i===plan.di?'on':''}" data-act="swap" data-v="${i}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
+      ${WEEK.map((w,i)=>`<button class="chip ${w.id===plan.def.id?'on':''}" data-act="swap" data-v="${w.id}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
     </div><div class="note">Swaps only affect ${vd===T?'today':'this date'}. The weekly rotation stays put.</div></div>`:''}
 
     ${vd===T?DayRail(plan):''}
+
+    ${vd===T?(()=>{ const dsw=daysSinceWeight(), neverLogged=dsw==null, stale=dsw!=null&&dsw>=7;
+      if (!neverLogged&&!stale) return '';
+      if (neverLogged&&daysSinceStart()<3) return '';   // let brand-new users settle in first
+      const msg = neverLogged
+        ? `No weight logged yet — Fuel and Target can't compute your numbers without one.`
+        : `${dsw} days since your last weigh-in. Log one so Fuel and Target stay accurate.`;
+      return `<button class="banner" data-act="golog" style="width:100%;text-align:left">${svg('trend',14,'var(--amber)')}<div>${msg}</div></button>`; })():''}
 
     ${(()=>{ const ramp=rampFactor();
       return ramp ? `<div class="banner steel">${svg('flame',14,'var(--steel)')}<div>${esc(ramp.label)}</div></div>` : ''; })()}
@@ -1797,7 +1855,8 @@ function ViewToday(){
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(v/t2*100,0,100)}%;background:${c}"></div></div></div>`).join('')}
       </div>
-      ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}`
+      ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}
+      ${vd===T&&new Date().getHours()>=18&&N.protein>0&&ft.p<N.protein*0.5?`<div class="note" style="color:var(--amber);border-top:none;padding-top:0">${svg('target',10,'var(--amber)')} Only ${Math.round(ft.p)}g protein logged with evening here — most of that gap won't get made up after tonight. Front-load the next meal.</div>`:''}`
       :'<div class="note" style="border-top:none">Log a weight on Build → Log and targets appear here.</div>'}
       ${d.food.length?`<div class="foodlist">${d.food.map((f,i)=>`
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
@@ -1857,7 +1916,13 @@ function ViewPlan(){
   const PRESETS=[['Work','09:00','17:00','work'],['Class','10:00','11:15','class'],['Practice','16:00','18:00','physical'],['Shift','17:00','22:00','work'],['Custom','12:00','13:00','']];
   const wakeS=m2s(p.wake); let sleepS=m2s(p.sleep); if(sleepS<=wakeS) sleepS+=1440;
   const span=sleepS-wakeS;
-  const tagSelect = (id,cur) => `<select id="${id}">${CTAGS.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  const tagSelect = (id,cur,toggleId) => `<select id="${id}" ${toggleId?`onchange="document.getElementById('${toggleId}').style.display=this.value==='physical'?'':'none'"`:''}>${CTAGS.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  const sportSelect = (id,cur) => `<select id="${id}">${SPORTS.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  /* Type + Activity as a pair — Activity only matters (and only shows, by default) when Type is Physical,
+     since it's the sport picker that drives the calorie estimate for that commitment. */
+  const sportField = (tagId,sportId,tagCur,sportCur) => `
+    <label class="f"><span>Type</span>${tagSelect(tagId,tagCur,sportId+'_w')}</label>
+    <label class="f" id="${sportId}_w" style="${tagCur==='physical'?'':'display:none'}"><span>Activity</span>${sportSelect(sportId,sportCur)}</label>`;
 
   /* mini week map: each day a column, commitments as bars, colored by tag */
   const weekMap = `<div class="wmap">${DOW.map((dw,i)=>{
@@ -1896,7 +1961,7 @@ function ViewPlan(){
     <div class="note">Commitments + planned training per day, next 7 days. Amber = packed — the scheduler auto-compresses the session and skips the finisher on those days. Tap a day to preview it on Today.</div></div>
 
     ${sect('cal','MY WEEK')}
-    <div class="hint">Tap a day, then add what's immovable - classes, work, practice. Everything else in FORGE gets scheduled into the gaps, automatically, every day. Tag physical activity and training days adapt around it.</div>
+    <div class="hint">Tap a day, then add what's immovable - classes, work, practice. Everything else in FORGE gets scheduled into the gaps, automatically, every day. Tag physical activity and pick the sport — training adapts around it and Fuel's calorie target adjusts to what that sport actually costs.</div>
     <div class="panel">${weekMap}
       <div class="daylist">
         ${list.length?list.map((c,i)=> editIdx===i
@@ -1906,9 +1971,7 @@ function ViewPlan(){
                 <label class="f"><span>To</span><input type="time" id="ee" value="${c.e}"></label>
                 <label class="f"><span>Name</span><input type="text" id="el" value="${esc(c.l)}"></label>
               </div>
-              <div class="grid2" style="padding-top:0">
-                <label class="f"><span>Type</span>${tagSelect('et',c.t||'')}</label>
-              </div>
+              <div class="grid2" style="padding-top:0">${sportField('et','esp',c.t||'',c.sp||'')}</div>
               <div style="display:flex;gap:8px;padding:0 13px 12px">
                 <button class="btn" data-act="saveedit" data-v="${i}">SAVE</button>
                 <button class="btn ghost" data-act="deledit" data-v="${i}" style="max-width:64px">${svg('trash',14)}</button>
@@ -1916,7 +1979,7 @@ function ViewPlan(){
           :`<button class="cmt tap" data-act="editcmt" data-v="${i}">
               <span class="tagdot" style="background:${TAGCOLOR[c.t||'']}"></span>
               <span class="cmttime">${tdisp(c.s)} – ${tdisp(c.e)}</span>
-              <span style="flex:1;text-align:left">${esc(c.l)}</span>
+              <span style="flex:1;text-align:left">${esc(c.l)}${c.sp?` <span style="color:var(--faint)">· ${SPORTLABEL[c.sp]}</span>`:''}</span>
               ${svg('edit',13,'var(--faint)')}</button>`).join('')
         :`<div class="empty">Nothing fixed on ${DOWL[DOW.indexOf(planDay)]}. The whole day is open.</div>`}
       </div>
@@ -1929,7 +1992,7 @@ function ViewPlan(){
             <label class="f"><span>To</span><input type="time" id="ne" value="${pr[2]}"></label>
             <label class="f"><span>Name</span><input type="text" id="nl" value="${preset==='Custom'?'':preset}" placeholder="Name"></label>
           </div>
-          <div class="grid2" style="padding-top:0"><label class="f"><span>Type</span>${tagSelect('nt',pr[3])}</label></div>
+          <div class="grid2" style="padding-top:0">${sportField('nt','nsp',pr[3],'')}</div>
           <div style="padding:0 13px 13px"><button class="btn" data-act="addcmt">${svg('plus',13,'var(--ink)',2.6)} ADD</button></div>`;})():''}
       </div>
       ${list.length?`<div class="copyzone">
@@ -1954,19 +2017,20 @@ function ViewPlan(){
 
     ${sect('plus','ONE-OFF EVENT — A SPECIFIC DATE ONLY')}
     <div class="panel"><div style="padding:13px">
-      <div class="hint" style="padding:0 0 10px">A match on Saturday, an exam, a trip day. It affects only that one date — the weekly pattern stays untouched. Tag it Physical and calories + training adapt for that day automatically.</div>
+      <div class="hint" style="padding:0 0 10px">A match on Saturday, an exam, a trip day. It affects only that one date — the weekly pattern stays untouched. Tag it Physical, pick the sport, and calories + training adapt for that day automatically.</div>
       <div class="grid2">
         <label class="f"><span>Date</span><input type="date" id="oo_d"></label>
-        <label class="f"><span>Tag</span>${tagSelect('oo_t','physical')}</label>
+        <label class="f"><span>Tag</span>${tagSelect('oo_t','physical','oo_sp_w')}</label>
         <label class="f"><span>From</span><input type="time" id="oo_s" value="10:00"></label>
         <label class="f"><span>To</span><input type="time" id="oo_e" value="12:00"></label>
+        <label class="f" id="oo_sp_w"><span>Activity</span>${sportSelect('oo_sp','')}</label>
       </div>
       <label class="f" style="margin-top:9px"><span>What is it</span><input type="text" id="oo_l" placeholder="Tennis match"></label>
       <button class="btn" style="margin-top:11px" data-act="addoneoff">${svg('plus',13,'var(--ink)',2.6)} ADD TO THAT DATE</button>
     </div>
     ${(()=>{ const ups=Object.keys(S.extra).filter(k=>k>=T).sort().slice(0,8);
       return ups.length?`<div class="foodlist">${ups.map(k=>S.extra[k].map((c,i)=>`
-        <div class="cmt"><span style="flex:1"><b>${longDate(k)}</b> · ${s2disp(m2s(c.s))}–${s2disp(m2s(c.e))} ${esc(c.l)}${c.t?` <span class="badge" style="border-color:${TAGCOLOR[c.t]};color:${TAGCOLOR[c.t]}">${c.t}</span>`:''}</span>
+        <div class="cmt"><span style="flex:1"><b>${longDate(k)}</b> · ${s2disp(m2s(c.s))}–${s2disp(m2s(c.e))} ${esc(c.l)}${c.t?` <span class="badge" style="border-color:${TAGCOLOR[c.t]};color:${TAGCOLOR[c.t]}">${c.t}${c.sp?' · '+SPORTLABEL[c.sp]:''}</span>`:''}</span>
         <button class="x" data-act="deloneoff" data-v="${k}" data-v2="${i}">${svg('trash',12,'var(--rust)')}</button></div>`).join('')).join('')}</div>`:'';})()}
     </div>
 
@@ -2224,8 +2288,8 @@ function ViewFuel(){
       <div class="bar"><div class="barfill" style="width:${clamp(ftoday.kcal/N.kcal*100,0,100)}%;background:var(--amber)"></div></div>
     </div>
     <div style="padding:0 13px 13px"><p class="t" style="margin:0">Maintenance is near <b>${N.tdee} kcal</b>. ${adjNote}</p>
-      ${N.extra>0?`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('trend',11,'var(--steel)')} <b>+${N.extra} kcal today</b> for ${N.extraMin} minutes of tagged physical activity beyond training — tag it Physical in Plan and this adjusts on its own.</p>`
-        :`<p class="t" style="margin:8px 0 0;color:var(--faint)">Tag any extra activity — practice, a match, a long hike — as <b>Physical</b> in Plan, and this number moves up on its own for that day.</p>`}
+      ${N.extra>0?`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('trend',11,'var(--steel)')} <b>+${N.extra} kcal today</b> for ${N.extraMin} minutes of tagged physical activity beyond training, costed per sport (BJJ and grappling run hotter than a walk) — adjust it any time in Plan.</p>`
+        :`<p class="t" style="margin:8px 0 0;color:var(--faint)">Tag any extra activity — practice, a match, a long hike — as <b>Physical</b> in Plan and pick the sport, and this number moves up on its own for that day.</p>`}
     </div></div>
 
     ${MealSection(N)}
@@ -2533,13 +2597,14 @@ document.addEventListener('click', e => {
       const s=document.getElementById('oo_s').value, en=document.getElementById('oo_e').value;
       const l=document.getElementById('oo_l').value.trim()||'Event';
       const tg=document.getElementById('oo_t')?document.getElementById('oo_t').value:'';
+      const sp=document.getElementById('oo_sp')?document.getElementById('oo_sp').value:'';
       if(!dt){ toast('Pick a date'); return; }
       if(!s||!en){ toast('Set both times'); return; }
       if(!S.extra[dt]) S.extra[dt]=[];
       const sN=m2s(s); let eN=m2s(en); if(eN<=sN) eN+=1440;
       const overlaps = [...(S.fixed[DOW[dowIdx(dt)]]||[]), ...S.extra[dt]]
         .some(c=>{ const cS=m2s(c.s); let cE=m2s(c.e); if(cE<=cS) cE+=1440; return sN<cE&&eN>cS; });
-      S.extra[dt].push({s,e:en,l,t:tg});
+      S.extra[dt].push({s,e:en,l,t:tg,sp:tg==='physical'?sp:''});
       S.extra[dt].sort((a,b)=>m2s(a.s)-m2s(b.s));
       commit(); render();
       toast(overlaps?'Added — heads up, it overlaps something that day':'One-off added');
@@ -2550,11 +2615,9 @@ document.addEventListener('click', e => {
       commit(); break;
     }
     case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; render(); window.scrollTo(0,0); return;
+    case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
-    case 'daynav':
-      if (+v===0) viewOff=0; else viewOff+=(+v);
-      shiftId=null; foodOpen=false; openBlock2=null; break;
     case 'daygo':
       viewOff=+v; shiftId=null; foodOpen=false; openBlock2=null; break;
     case 'daygo2':
@@ -2606,7 +2669,7 @@ document.addEventListener('click', e => {
     }
     case 'reflow': d.nudge={}; shiftId=null; commit(); render(); toast('Times recalculated'); return;
     case 'swapopen': swapOpen=!swapOpen; break;
-    case 'swap': S.swap[VD()]=+v; swapOpen=false; commit(); break;
+    case 'swap': S.swap[VD()]=v; swapOpen=false; commit(); break;
 
     /* ---- food ---- */
     case 'foodopen': foodOpen=!foodOpen; foodQ=''; foodFocus=foodOpen; break;
@@ -2634,9 +2697,10 @@ document.addEventListener('click', e => {
     case 'saveedit': {
       const s=document.getElementById('es').value, en=document.getElementById('ee').value,
             l=document.getElementById('el').value.trim()||'Commitment',
-            t=(document.getElementById('et')||{}).value||'';
+            t=(document.getElementById('et')||{}).value||'',
+            sp=(document.getElementById('esp')||{}).value||'';
       if(!s||!en){ toast('Set both times'); return; }
-      S.fixed[planDay][+v]={s,e:en,l,t};
+      S.fixed[planDay][+v]={s,e:en,l,t,sp:t==='physical'?sp:''};
       S.fixed[planDay].sort((x,y)=>m2s(x.s)-m2s(y.s));
       editIdx=null; commit(); render(); toast('Saved'); return;
     }
@@ -2644,9 +2708,10 @@ document.addEventListener('click', e => {
     case 'addcmt': {
       const s=document.getElementById('ns').value, en=document.getElementById('ne').value,
             l=document.getElementById('nl').value.trim()||preset||'Commitment',
-            t=(document.getElementById('nt')||{}).value||'';
+            t=(document.getElementById('nt')||{}).value||'',
+            sp=(document.getElementById('nsp')||{}).value||'';
       if(!s||!en){ toast('Set both times'); return; }
-      S.fixed[planDay].push({s,e:en,l,t});
+      S.fixed[planDay].push({s,e:en,l,t,sp:t==='physical'?sp:''});
       S.fixed[planDay].sort((x,y)=>m2s(x.s)-m2s(y.s));
       preset=null; commit(); render(); toast(`Added to ${DOWL[DOW.indexOf(planDay)]}`); return;
     }
@@ -2839,6 +2904,14 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     Store.save(S);                                      // migrate old key forward
   }
   WEEK = WEEKS[S.profile.program] || WEEK_STD;
+  { /* one-time migration: S.swap used to store a position in the active WEEK array,
+       which meant a swap could silently resolve to a different workout after switching
+       programs. Convert any leftover numeric values to the stable day id instead. */
+    let migrated=false;
+    for (const k in S.swap){ const v=S.swap[k];
+      if (typeof v==='number'){ const d=WEEK[v]; S.swap[k]=d?d.id:undefined; if(!d) delete S.swap[k]; migrated=true; } }
+    if (migrated) commit();
+  }
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
     S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely

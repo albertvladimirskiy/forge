@@ -36,4 +36,6 @@ fully close the app and reopen, or reopen twice.
 
 All content is plain data at the top of the script in `index.html`: `WEEK` (training days,
 blocks, `steps`, `prog` rules), `FOODS` (the calorie database — add your staples),
-`BOOKS`, `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`.
+`BOOKS`, `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`, `SPORTS` (the MET value
+per sport used to cost calendar commitments tagged Physical — add a sport your gym does that
+isn't listed, or tune a number if it's over/under-crediting you).
