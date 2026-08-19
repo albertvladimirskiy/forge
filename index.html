@@ -307,6 +307,15 @@ input[type=date],input[type=time]{min-height:40px}
 .setrow .award-inline{display:inline-flex}
 
 
+/* ---------- week load overview ---------- */
+.wload{display:flex;gap:6px;padding:13px 13px 8px}
+.wlcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.wllab{font-size:8px;letter-spacing:.1em;color:var(--faint);font-weight:700}
+.wlbar{width:100%;height:52px;background:var(--ink);border:1px solid var(--rule);display:flex;align-items:flex-end}
+.wlfill{width:100%;transition:height .25s}
+.wlhrs{font-size:8.5px;font-weight:700;letter-spacing:.03em}
+.btn.ghost{background:transparent;border:1px solid var(--rule2);color:var(--dim)}
+
 /* ---------- day navigation ---------- */
 .daynav{display:flex;align-items:center;margin:14px 0 10px}
 .darrow{padding:10px 12px;color:var(--faint)}
@@ -402,6 +411,7 @@ const ICO = {
   trash:'M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6',
   award:'M12 15a6 6 0 100-12 6 6 0 000 12zM8.2 13.9L7 22l5-3 5 3-1.2-8.1',
   eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7zM12 15a3 3 0 100-6 3 3 0 000 6z',
+  cal:'M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
 };
 function svg(name,size,color,sw){
   return `<svg width="${size||16}" height="${size||16}" viewBox="0 0 24 24" fill="none" stroke="${color||'currentColor'}" stroke-width="${sw||2}" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="${ICO[name]}"/></svg>`;
@@ -454,144 +464,176 @@ const DTYPE = {
 
 const LIFT_WARMUP = ['Empty bar x 10 slow reps','40% of work weight x 5','60% x 3','80% x 1, then rest 2 min','Start work sets'];
 
-const WEEK = [
-{ id:'d1', short:'MON', type:'strike', dur:90, title:'Boxing / Muay Thai',
+const WEEK_STD = [
+{ id:'d1', short:'MON', type:'strength', dur:85, title:'Strength A — Squat',
+  aim:'The heaviest lower-body day of the week. Everything else you can do physically sits on top of this.',
+  blocks:[
+   {id:'d1a',l:'Prep — 10 min',d:'Do not skip this and then wonder why the first sets feel awful',steps:[
+     '5 min bike or rower, easy, just to raise temperature.',
+     'Deep squat hold 2 x 45s, elbows prying the knees out.',
+     'Ankle rocks x15/side against a wall. Restricted ankles are the #1 cause of ugly squats.',
+     'Glute bridge x15, hip circles x10/side.']},
+   {id:'d1b',l:'Back squat — 5 x 5',d:'Main lift. Rest 3 min between work sets.',steps:[
+     ...LIFT_WARMUP,
+     'Bar on upper traps, hands as close as the shoulders allow, elbows down and under.',
+     'Big breath into the belly, brace like taking a punch, sit down between the heels.',
+     'Depth: hip crease below the knee. Unsure? Film one set from the side at 45 degrees.',
+     'Drive through mid-foot, exhale at the top. Full 3 min rest — this is a strength set, not cardio.',
+     'FINAL SET OPTION: once all 5 sets feel controlled, take set 5 to a hard AMRAP. Stop with 1 rep left in the tank, never to true failure under a bar.'],
+   prog:'All 25 reps clean -> +5 lb. Miss reps -> repeat the weight. Miss 3 sessions running -> drop 10% and climb back. FORGE tracks this for you.'},
+   {id:'d1c',l:'Romanian deadlift — 3 x 8',d:'Superset with the split squat below',steps:[
+     'Start standing, soft knees, push the hips BACK, chest proud.',
+     'Bar slides down the thighs and stays touching. Stop when the hamstrings scream — mid-shin for most.',
+     'Squeeze the glutes to stand. Hamstrings and glutes should burn, never the lower back.',
+     'Rest only 60s here — superset it with the Bulgarian split squat to compress the session.'],
+   prog:'+5 lb when all 24 reps hold a flat back.'},
+   {id:'d1d',l:'Bulgarian split squat — 3 x 10/leg',d:'Superset partner. Brutal, and the reason knees survive.',steps:[
+     'Rear foot on a bench, front foot far enough forward that the knee tracks over the toes.',
+     'Drop straight down, back knee toward the floor, torso tall.',
+     'Weaker leg goes first and the strong leg only matches its reps. Always.',
+     'Hold dumbbells once bodyweight 10s stop being hard.']},
+   {id:'d1e',l:'Loaded carry — 4 x 40m',d:'Grip, trunk, and mental toughness in one movement',steps:[
+     'Heaviest dumbbells or trap bar you can hold. Stand tall, shoulders back, ribs down.',
+     'Walk 40m controlled, no leaning, no rushing. Set down with a flat back.',
+     'Rest 90s. If your grip fails before the distance, that IS the training effect.'],
+   prog:'Target by month 6: half your bodyweight per hand.'},
+   {id:'d1f',l:'Conditioning finisher — 8 min',d:'Short, nasty, non-negotiable',steps:[
+     'EMOM (every minute on the minute) for 8 minutes:',
+     'Odd minutes: 12 kettlebell swings.',
+     'Even minutes: 10 goblet squats or 200m row.',
+     'Whatever time is left in the minute is your rest. If you finish in 30s, you rest 30s.',
+     'This is where the engine gets built without needing a separate cardio day.']},
+   {id:'d1g',l:'Cooldown — 5 min',d:'Down-regulate',steps:['Couch stretch 60s/side','Pigeon 60s/side','5 slow nasal breaths, done.']}]},
+
+{ id:'d2', short:'TUE', type:'strike', dur:90, title:'Striking',
   aim:'Get comfortable with someone trying to hit you. Everything else in combat is downstream of that.',
   blocks:[
-   {id:'d1a',l:'Rope + joint prep',d:'15 min total',steps:[
+   {id:'d2a',l:'Rope + joint prep',d:'15 min total',steps:[
      'Jump rope 3 x 3 min, 30s rest. Trip? Keep going - rhythm arrives in week 2-3.',
      'Arm circles x10 each way, band pull-aparts x15',
      'Ankle rocks x10/side, hip circles x10/side',
      'Finish: 20 slow torso rotations, hands up']},
-   {id:'d1b',l:'Shadowbox - 4 x 3 min',d:'Footwork and guard. Zero power.',steps:[
+   {id:'d2b',l:'Shadowbox - 4 x 3 min',d:'Footwork and guard. Zero power.',steps:[
      'R1: only footwork. Step-drag forward/back/left/right. Feet never cross, never square.',
      'R2: jab only, moving. Hand returns to cheekbone every single time.',
      'R3: jab-cross. Rotate the rear hip into the cross; back heel lifts.',
      'R4: add slips. Two punches, slip left, slip right, step out at an angle.',
      'Do this in front of a mirror. Watch your feet, not your hands.'],
    prog:'When all 4 rounds feel smooth, add hooks in R3 and a duck after the slip in R4.'},
-   {id:'d1c',l:'Bag or pads - 6 x 3 min',d:'One combination per round until automatic',steps:[
+   {id:'d2c',l:'Bag or pads - 6 x 3 min',d:'One combination per round until automatic',steps:[
      'R1-2: 1-2 (jab-cross). 70% power. Snap back to guard between every rep.',
      'R3-4: 1-2-3 (add lead hook). Pivot the lead foot on the hook or it has nothing on it.',
      'R5: 1-2-low kick. Step the lead foot out 45 degrees first, swing the shin like a bat, land with shin not foot.',
      'R6: free flow, everything above, moving around the bag.',
      '1 min rest between rounds. If form dies before the round ends, power down, not rest up.'],
    prog:'Next week: same combos with a slip before or after. Add power only when snap-back is automatic.'},
-   {id:'d1d',l:'Partner work or defence',d:'If your gym runs it',steps:[
+   {id:'d2d',l:'Partner work or defence',d:'If your gym runs it',steps:[
      'Technical sparring only in Phase 1: 30-50% power, headgear + 16oz gloves.',
      'Goal is not to win. Goal: keep your guard up while someone genuinely tries to touch your face.',
      'No partner? 3 x 3 min of slip-rope or mirror defence: slip, roll, block, angle out.'],
    prog:'You are ready for harder sparring when getting jabbed no longer makes you blink and freeze.'},
-   {id:'d1e',l:'Neck + core',d:'Non-negotiable for contact sport',steps:[
+   {id:'d2e',l:'Neck + core',d:'Non-negotiable for contact sport',steps:[
      'Neck isometrics: push palm against forehead 30s, resist. Repeat back, left, right. x2.',
      'Plank 60s. Hips level - film it once to check.',
      'Hanging knee raise x10, slow down phase']},
-   {id:'d1f',l:'Cooldown',d:'10 min',steps:['Doorway chest stretch 45s/side','Couch stretch 60s/side','Calf stretch on a step 45s/side','5 slow nasal breaths, done']}]},
+   {id:'d2f',l:'Cooldown',d:'10 min',steps:['Doorway chest stretch 45s/side','Couch stretch 60s/side','Calf stretch on a step 45s/side','5 slow nasal breaths, done']}]},
 
-{ id:'d2', short:'TUE', type:'strength', dur:80, title:'Strength - Lower',
-  aim:'Force production. Slow, heavy, unglamorous, and the base every other physical quality sits on.',
+{ id:'d3', short:'WED', type:'strength', dur:85, title:'Strength B — Press & Pull',
+  aim:'Upper-body strength and shoulder durability. Pull at least as much as you press, every single week.',
   blocks:[
-   {id:'d2a',l:'Back squat 5 x 5',d:'The main event',steps:[
+   {id:'d3a',l:'Prep — 10 min',d:'Shoulders first',steps:[
+     'Band pull-aparts x20, band dislocates x10.',
+     'Scap push-ups x10, scap pull-ups x10 (hang, shrug down, no elbow bend).',
+     'Thoracic rotations x10/side. Push-ups x10 to finish.']},
+   {id:'d3b',l:'Bench press — 5 x 5',d:'Main lift. Pause on the chest. Rest 3 min.',steps:[
      ...LIFT_WARMUP,
-     'Bar on upper traps, hands as close as shoulders allow, elbows down.',
-     'Big breath into the belly, brace like taking a punch, sit down between your heels.',
-     'Depth: hip crease below knee. Unsure? Film from the side at 45 degrees.',
-     'Drive up through mid-foot, exhale at the top. Rest 2-3 min between sets.'],
-   prog:'All 25 reps clean -> add 5 lb next week. Fail a set -> repeat the weight. Fail 3 sessions running -> drop 10% and climb back.'},
-   {id:'d2b',l:'Deadlift 3 x 5 / RDL 3 x 8',d:'Alternate weekly: odd weeks pull from the floor, even weeks Romanian',steps:[
-     'DEADLIFT weeks: bar over mid-foot, shins touch the bar, flat back, big brace.',
-     'Push the floor away - the bar stays in contact with your legs the whole way up.',
-     'Reset every rep. No touch-and-go until Phase 2.',
-     'RDL weeks: start standing, soft knees, push hips BACK, bar slides down the thighs.',
-     'Stop when the hamstrings scream - mid-shin for most people. Squeeze glutes to stand.',
-     'Either version: you should feel hamstrings and glutes, never lower back.'],
-   prog:'Deadlift adds 10 lb while it moves cleanly, then 5. RDL adds 5 when all 24 reps hold a flat back.'},
-   {id:'d2c',l:'Bulgarian split squat 3 x 10/leg',d:'What keeps knees intact',steps:[
-     'Rear foot on a bench, front foot far enough forward that the knee tracks over the toes.',
-     'Drop straight down, back knee toward the floor. Hold dumbbells once 10 gets easy.',
-     'Weaker leg goes first, and the strong leg only matches its reps.']},
-   {id:'d2d',l:'Loaded carry 4 x 40m',d:'Grip + trunk',steps:[
-     'Heaviest dumbbells you can hold, one per hand. Stand tall, shoulders back.',
-     'Walk 40m controlled. No leaning. Set down with a flat back, rest 90s.'],
-   prog:'Goal by month 6: half your bodyweight in each hand.'},
-   {id:'d2e',l:'Hanging leg raise 4 x max',d:'Slow eccentric, no swing',steps:[
-     'Dead hang, squeeze the bar. Raise knees to chest, 3-second lower.',
-     'The moment you swing, the set is over. Knees-to-chest -> progress to straight legs.']},
-   {id:'d2f',l:'Hip + ankle mobility',d:'10 min',steps:['Deep squat hold 2 x 1 min, elbows prying the knees out','Couch stretch 90s/side','Ankle rocks against a wall x15/side']}]},
+     'Grip so the forearms are vertical at the bottom. Shoulder blades pinched and DOWN into the bench.',
+     'Bar to lower chest, 1s pause, press slightly back toward the face.',
+     'Feet planted, glutes stay on the bench. Never bounce.',
+     'Use a spotter or safety pins on the last two sets. Always.'],
+   prog:'All 25 clean -> +5 lb. FORGE handles the tracking.'},
+   {id:'d3c',l:'Weighted pull-up — 5 x 5',d:'Superset with the press below',steps:[
+     'Dead hang start, chin clearly over the bar, full lower. No kipping.',
+     'Under 5 clean bodyweight reps? Do 5 x 5 negatives: jump up, lower for 5 full seconds.',
+     'Over 12 clean? Add weight on a belt and go back to fives.'],
+   prog:'Milestone: 5 x 5 with 25 lb hanging off you.'},
+   {id:'d3d',l:'Overhead press — 3 x 8',d:'Strict. Superset partner with pull-ups.',steps:[
+     'Bar at the collarbone, forearms vertical, ribs down, glutes squeezed.',
+     'Press up and slightly back; head moves through at the top. Ears past arms = lockout.',
+     'No leg drive. If it needs legs, it is too heavy.',
+     'Rest 90s between supersets.']},
+   {id:'d3e',l:'Barbell row — 3 x 8',d:'Pull what you press',steps:[
+     'Hinge to about 45 degrees, flat back, bar to the lower ribs, elbows tight.',
+     'Squeeze the shoulder blades for a full second at the top. No body English.',
+     'If the torso is rising to move the bar, drop the weight.']},
+   {id:'d3f',l:'Arms + grip — 10 min',d:'The visible stuff, and the useful stuff',steps:[
+     'Superset: barbell curl 3 x 10 with overhead tricep extension 3 x 12.',
+     'Then: 3 x max dead hang, 90s rest. Log the seconds — this is a real Phase 1 milestone.',
+     'Forearms and grip are the most-seen and least-trained muscles on a man.'],
+   prog:'Phase 1 exit: a single 2-minute dead hang.'},
+   {id:'d3g',l:'Core circuit x 3',d:'Anti-rotation, not crunches',steps:[
+     'Plank 60s -> Pallof press 12/side -> hollow hold 30s -> back extension x15.',
+     'Minimal rest inside a round, 90s between rounds.']}]},
 
-{ id:'d3', short:'WED', type:'ground', dur:90, title:'Brazilian Jiu-Jitsu',
+{ id:'d4', short:'THU', type:'ground', dur:90, title:'Brazilian Jiu-Jitsu',
   aim:'The most reliable answer to being physically overpowered by someone bigger than you.',
   blocks:[
-   {id:'d3a',l:'Solo movement - 10 min',d:'The alphabet of grappling',steps:[
+   {id:'d4a',l:'Solo movement - 10 min',d:'The alphabet of grappling',steps:[
      'Shrimp down the mat x10: on your back, foot plants, hips shoot AWAY. This is your escape engine.',
      'Technical stand-up x10/side: post hand and opposite foot, hips up, back leg sweeps behind. Never stand square.',
      'Bridge and turn x10: bridge onto one shoulder, look over it, turn to your knees.',
      'Forward and backward rolls over the shoulder (never the head), 5 each way.']},
-   {id:'d3b',l:'Technique class',d:'Attend a real class',steps:[
+   {id:'d4b',l:'Technique class',d:'Attend a real class',steps:[
      'First month, care about exactly 4 positions: closed guard, mount escape, side control escape, back defence.',
      'One detail per class. Write it down within the hour or it is gone.',
      'Ask the highest belt in the room one question after class. This also builds the network.'],
    prog:'No gym yet? This week\'s task IS finding one: search "BJJ + your town", read reviews, book two trial classes. Judge by how beginners are treated, not by trophies.'},
-   {id:'d3c',l:'Positional sparring',d:'Start from bad positions on purpose',steps:[
+   {id:'d4c',l:'Positional sparring',d:'Start from bad positions on purpose',steps:[
      'Ask your partner to start in mount or back control. Your only goal: survive 2 min, then escape.',
      'Frames before force: elbows inside, hands on hips and biceps, never push a chest with straight arms.',
      'Breathe through your nose. Panic empties the tank in 30 seconds flat.']},
-   {id:'d3d',l:'Free rolling - 4 x 5 min',d:'Tap early, tap often',steps:[
+   {id:'d4d',l:'Free rolling - 5 x 5 min',d:'Tap early, tap often',steps:[
      'Tap the moment a submission is genuinely locked. Getting tapped 20 times a night is the fast lane.',
      'Roll with higher belts when offered - they are safer than spazzy white belts.',
      'One breath of rest in every stable position. Rolling is interval training in disguise.']},
-   {id:'d3e',l:'Roll log',d:'Every session, written',steps:[
+   {id:'d4e',l:'Roll log',d:'Every session, written',steps:[
      'One thing that worked. One thing that got you caught. The name of one technique to look up.',
      'Put it in the After-Action box on Today. Ninety days of these is a private textbook.']}]},
 
-{ id:'d4', short:'THU', type:'engine', dur:70, title:'Engine + Mobility',
-  aim:'The gas tank. Skill evaporates the moment you are winded, and everyone finds this out the hard way.',
+{ id:'d5', short:'FRI', type:'strength', dur:85, title:'Strength C — Pull from the Floor',
+  aim:'The heaviest thing you do all week. Posterior chain, raw pulling power, and the lift that carries over to everything.',
   blocks:[
-   {id:'d4a',l:'Zone 2 - 40 min',d:'Conversational pace, nasal breathing',steps:[
-     'Run, row, or bike. The test: you could speak full sentences the entire time.',
-     'Too fast is the classic error. Ego slows this down by months. Walk the hills if you must.',
-     'Same route weekly - distance covered at the same effort becomes your progress metric.'],
-   prog:'Month 3: one weekly session becomes 60 min. Month 6: add a second easy session on Sunday.'},
-   {id:'d4b',l:'Intervals 8 x 400m',d:'Hard, 90s rest',steps:[
-     'After the Zone 2, or replacing half of it when time is short.',
-     'Pace check: rep 8 should be within 3 seconds of rep 1. If not, you opened too fast.',
-     'No track? 10 x 1 min hard on the bike, 1 min easy spin.']},
-   {id:'d4c',l:'Core circuit x 3',d:'Anti-rotation, not crunches',steps:[
-     'Plank 60s -> Pallof press 12/side (band or cable, resist the twist) -> hollow hold 30s -> back extension x15.',
-     'Minimal rest inside a round, 90s between rounds.']},
-   {id:'d4d',l:'Breath work - 10 min',d:'CO2 tolerance, not wellness',steps:[
-     'Box breathing: in 4s, hold 4s, out 4s, hold 4s. Ten rounds, nasal only.',
-     'Then: exhale fully, hold, walk counting steps. Note the number - watch it climb across weeks.']},
-   {id:'d4e',l:'Full mobility - 20 min',d:'Roll then hold',steps:[
-     'Foam roll: quads, glutes, lats, upper back - 60s each region.',
-     'Then hold end ranges: deep squat 2 min, pigeon 90s/side, thoracic rotations x10/side.']}]},
-
-{ id:'d5', short:'FRI', type:'strength', dur:80, title:'Strength - Upper + Technique',
-  aim:'Pulling strength and shoulder durability, then striking while fresh enough to be precise.',
-  blocks:[
-   {id:'d5a',l:'Pull-ups 5 x 5',d:'The upper-body squat',steps:[
-     'Dead hang start, chin clearly over the bar, full lower. No kipping.',
-     'Under 5 reps? Do 5 x 5 negatives instead: jump up, lower yourself for 5 full seconds.',
-     'Over 12 clean? Add weight on a belt and return to fives.'],
-   prog:'Milestone: 5 x 5 with 25 lb hanging off you.'},
-   {id:'d5b',l:'Bench press 5 x 5',d:'Pause on the chest',steps:[
+   {id:'d5a',l:'Prep — 10 min',d:'Hips and hamstrings',steps:[
+     '5 min easy row — the closest warmup to a hinge pattern there is.',
+     'Cat-cow x10, bird dog x10/side, glute bridge x20.',
+     'Empty-bar RDL x10 to groove the hinge before loading it.']},
+   {id:'d5b',l:'Deadlift — 3 x 5',d:'Main lift. Rest 3-4 min. Reset every rep.',steps:[
      ...LIFT_WARMUP,
-     'Grip: forearms vertical at the bottom. Shoulder blades pinched and DOWN into the bench.',
-     'Bar to lower chest, 1s pause, press slightly back toward your face.',
-     'Feet planted, glutes stay on the bench. Never bounce.'],
-   prog:'Same rule as squat: 25 clean reps -> +5 lb.'},
-   {id:'d5c',l:'Overhead press 3 x 8',d:'Strict',steps:[
-     'Bar at the collarbone, forearms vertical, ribs down, glutes squeezed.',
-     'Press up and slightly back; the head moves through at the top. Ears past arms = lockout.',
-     'No leg drive. If it needs legs, it is too heavy.']},
-   {id:'d5d',l:'Barbell row 3 x 8',d:'Pull what you press',steps:[
-     'Hinge to about 45 degrees, flat back. Bar to the lower ribs, elbows tight.',
-     'Squeeze the shoulder blades at the top for a full second. No body English.']},
-   {id:'d5e',l:'Grip',d:'Dead hangs',steps:['3 x max dead hang, 90s rest. Log the seconds.','Then 2 x towel hang: towel over the bar, grip the ends.'],
-   prog:'Phase 1 exit: a single 2-minute hang.'},
-   {id:'d5f',l:'Technique striking - 20 min',d:'Precision while fresh',steps:[
-     'Light bag work. Take Monday\'s single ugliest combination and give it 20 slow perfect minutes.',
-     'Film 30 seconds. Compare against last week - this feedback loop is where skill actually lives.']}]},
+     'Bar over mid-foot, shins touching the bar, hips higher than a squat but lower than a stiff-leg.',
+     'Flat back, chest up, big brace, lats squeezed as if crushing oranges in the armpits.',
+     'Push the floor away. The bar stays in contact with the legs the whole way up.',
+     'Reset fully every rep. No touch-and-go, no bouncing off the floor, ever.',
+     'Only 3 work sets — this lift takes more out of you than anything else. Quality over quantity.'],
+   prog:'All 15 reps clean -> +10 lb while it moves fast, then +5. FORGE tracks it.'},
+   {id:'d5c',l:'Front squat — 3 x 5',d:'Quads and upper back, and it fixes your back squat',steps:[
+     'Bar in the front rack, elbows HIGH, fingertips only under the bar is fine.',
+     'Torso stays vertical. The moment the elbows drop, the bar dumps forward — that is the feedback.',
+     'Start light. Front squats humble everyone the first month.'],
+   prog:'Roughly 70-80% of your back squat when both are trained.'},
+   {id:'d5d',l:'Weighted dip — 3 x 8',d:'The most underrated upper-body builder',steps:[
+     'Lean slightly forward, elbows tracking back, lower until the upper arm is parallel.',
+     'Shoulder pain at the bottom? Cut the depth. Do not push through joint pain here.',
+     'Add weight on a belt once 12 clean bodyweight reps are easy.',
+     'Cannot do dips yet? Bench dips or a push-up progression instead.']},
+   {id:'d5e',l:'Chin-up + face pull — 3 rounds',d:'Superset. Shoulder insurance.',steps:[
+     'Chin-up (palms toward you) x max, then face pull x20 immediately after.',
+     'Face pulls are the single best exercise for keeping shoulders healthy under all this pressing.',
+     'Rest 90s between rounds.']},
+   {id:'d5f',l:'Conditioning finisher — 10 min',d:'Finish the week emptied',steps:[
+     '5 rounds, as fast as form allows:',
+     '10 kettlebell swings, 10 push-ups, 200m row or 40m sled push.',
+     'Rest exactly 60s between rounds. Log your total time and try to beat it in 4 weeks.',
+     'If your form degrades, slow down. Speed is a reward for competence, not a substitute.']}]},
 
 { id:'d6', short:'SAT', type:'craft', dur:120, title:'Craft Day',
   aim:'The unglamorous competencies almost nobody builds. Rotate through each track weekly.',
@@ -626,13 +668,16 @@ const WEEK = [
      'Done and shared beats perfect and private. Post it, send it, or file it where someone could see it.',
      'Keep the running list - twelve weeks in, that list is a portfolio.']}]},
 
-{ id:'d7', short:'SUN', type:'recover', dur:60, title:'Recovery + Planning',
-  aim:'Adaptation happens here, not in the gym. Skipping recovery is not toughness, it is impatience.',
+{ id:'d7', short:'SUN', type:'recover', dur:70, title:'Recovery + Planning',
+  aim:'Adaptation happens here, not in the gym. Three hard lifting days only work if this day is real.',
   blocks:[
-   {id:'d7a',l:'Easy movement - 45 min',d:'Conversational the whole time',steps:['Walk, swim, or easy spin. Podcast pace.','This is circulation for sore tissue, not a workout. Effort defeats the purpose.']},
+   {id:'d7a',l:'Zone 2 — 40 min',d:'Conversational pace the whole time',steps:[
+     'Walk, easy jog, swim, or bike. The test: you could speak full sentences throughout.',
+     'Too fast is the classic error and it eats into Monday. Ego slows this down by months.',
+     'Same route weekly — distance at the same effort becomes your aerobic progress metric.']},
    {id:'d7b',l:'Long mobility - 30 min',d:'2 min per position',steps:['Deep squat 2 min','Pigeon 2 min/side','Couch stretch 2 min/side','Wall thoracic rotation x10/side','Hang from a bar 3 x 45s']},
    {id:'d7c',l:'Sauna or contrast',d:'Optional',steps:['15-20 min sauna if available, or hot shower 3 min / cold 1 min x3, finish cold.','Skip it entirely if it costs sleep time. Sleep outranks it.']},
-   {id:'d7d',l:'Log the week',d:'Numbers, not impressions',steps:['Body tab: weight, waist, sleep average, and any top sets from the week.','Ledger: one honest look at the capital ladder. Move anything that actually moved.']},
+   {id:'d7d',l:'Log the week',d:'Numbers, not impressions',steps:['Build tab: weight, waist, sleep average, and any top sets from the week.','Ledger: one honest look at the capital ladder. Move anything that actually moved.']},
    {id:'d7e',l:'Plan the week',d:'Sessions become appointments',steps:['Open Plan. Check the fixed commitments match next week\'s reality.','Anything unusual - exam, trip, deadline - add it now and the schedule reroutes around it.','Read Saturday\'s "tomorrow\'s one thing". Set Monday\'s.']}]},
 ];
 
@@ -749,6 +794,7 @@ const LIFTS = [
   {k:'squat',l:'Back squat',m:2.0},{k:'bench',l:'Bench press',m:1.5},
   {k:'dead',l:'Deadlift',m:2.5},{k:'ohp',l:'Overhead press',m:1.0},
   {k:'row',l:'Barbell row',m:0.9},{k:'pullup',l:'Pull-up (added weight)',m:0.4,added:true},
+  {k:'frontsq',l:'Front squat',m:1.5},{k:'dip',l:'Dip (added weight)',m:0.5,added:true},
 ];
 
 const MILESTONES = [
@@ -888,8 +934,16 @@ const EXS = {
   ohp:   {n:'Overhead press',  inc:2.27, sets:3, reps:8, m:1.0},
   row:   {n:'Barbell row',     inc:2.27, sets:3, reps:8, m:0.9},
   pullup:{n:'Weighted pull-up',inc:2.27, sets:5, reps:5, m:0.4, added:true},
+  rdl:   {n:'Romanian deadlift',inc:2.27, sets:3, reps:8, m:1.5},
+  frontsq:{n:'Front squat',    inc:2.27, sets:3, reps:5, m:1.5},
+  dip:   {n:'Weighted dip',    inc:2.27, sets:3, reps:8, m:0.5, added:true},
 };
-const BLOCKEX = { d2a:'squat', d2b:'dead', d5a:'pullup', d5b:'bench', d5c:'ohp', d5d:'row' };
+const BLOCKEX = {
+  d1b:'squat', d1c:'rdl',
+  d3b:'bench', d3c:'pullup', d3d:'ohp', d3e:'row',
+  d5b:'dead',  d5c:'frontsq', d5d:'dip',
+  d8c:'row',   d9b:'dead',
+};
 
 /* pain-flag exercise swaps: keep training, remove the aggravating pattern */
 const PAINSWAP = {
@@ -899,6 +953,9 @@ const PAINSWAP = {
   ohp:'Swap: landmine press. The angle spares most cranky shoulders.',
   pullup:'Swap: lat pulldown or ring row. Full range, zero pain.',
   row:'Swap: chest-supported row. Takes the lower back out of it.',
+  rdl:'Swap: back extension or hip thrust. Loads the same chain without the spinal demand.',
+  frontsq:'Swap: goblet squat or leg press, pain-free range only.',
+  dip:'Swap: close-grip push-ups or floor press. Dips are the most shoulder-hostile pressing angle there is.',
 };
 
 /* -------------------------------------------------------- commitment tags - */
@@ -989,11 +1046,72 @@ const MEALS = [
    ]},
 ];
 
+/* ============================================ program variant day defs ==== */
+const D8 = { id:'d8', short:'FRI', type:'strength', dur:80, title:'Strength D — Upper Volume',
+  aim:'The fourth lifting day. Pure hypertrophy for shoulders, back and arms — the muscles that build the silhouette.',
+  blocks:[
+   {id:'d8a',l:'Prep — 8 min',d:'Shoulders and elbows',steps:[
+     'Band pull-aparts x20, band dislocates x10, scap push-ups x10.',
+     'Light dumbbell press x15, curls x15, just to move blood.']},
+   {id:'d8b',l:'Incline dumbbell press — 4 x 10',d:'Upper chest and front delts',steps:[
+     'Bench at 30 degrees. Dumbbells start at the shoulders, press up and slightly together.',
+     'Lower for a full 2 seconds. The lowering IS the hypertrophy stimulus.',
+     'Rest 2 min. Leave 1-2 reps in the tank every set until the last, which goes near-failure.']},
+   {id:'d8c',l:'Barbell row — 4 x 10',d:'Volume back work',steps:[
+     'Same setup as Wednesday but lighter and stricter: 45-degree hinge, bar to lower ribs.',
+     'Full 1s squeeze at the top of every rep. No momentum whatsoever at these loads.'],
+   prog:'Logged under the same barbell row as Wednesday — the app tracks both toward one progression.'},
+   {id:'d8d',l:'Lateral raise + rear delt — 4 x 15 each',d:'Superset. Width lives here.',steps:[
+     'Lateral raise: lead with the elbows, stop at shoulder height, no swinging.',
+     'Rear delt fly immediately after, chest supported on an incline bench.',
+     'These stay light forever. Delts respond to reps and consistency, not load.']},
+   {id:'d8e',l:'Arms — 4 rounds',d:'Direct work, no apologies',steps:[
+     'Superset: incline dumbbell curl x10 with rope pushdown x12.',
+     'Then 2 x max-rep chin-up hold at the top, just hanging with chin over the bar.']},
+   {id:'d8f',l:'Carry + core — 10 min',d:'Finish heavy',steps:[
+     'Farmer carry 4 x 40m, heaviest handles available.',
+     'Hanging leg raise 3 x 10 between carries.']}]};
+
+const D9 = { id:'d9', short:'THU', type:'engine', dur:75, title:'Fight Engine',
+  aim:'The gap between rounds one and three is decided here. Fight-specific conditioning plus the one heavy pull that keeps you strong.',
+  blocks:[
+   {id:'d9a',l:'Prep — 8 min',d:'Full body',steps:[
+     '3 min jump rope easy, then hip circles, leg swings, arm circles x10 each.',
+     'Sprawl x5 slow, just grooving the pattern.']},
+   {id:'d9b',l:'Trap bar deadlift — 3 x 5',d:'The strength anchor of this day',steps:[
+     ...LIFT_WARMUP,
+     'Trap bar if available, straight bar if not. Same rules: flat back, big brace, push the floor away.',
+     'Reset every rep. This logs to the same deadlift progression as the standard program.'],
+   prog:'All 15 clean -> +10 lb early, then +5. Tracked automatically.'},
+   {id:'d9c',l:'Fight intervals — 5 x 3 min',d:'Round structure, fight pace',steps:[
+     'Each 3-min round: 30s hard bag work or shadowbox sprint, 30s sprawls, 30s hard, 30s knees or kicks, 60s moderate flow.',
+     '1 min rest between rounds — exactly what you get in a real fight.',
+     'The goal is pace management: hard when you choose to, never gassed by accident.']},
+   {id:'d9d',l:'Neck + grip — 10 min',d:'Fighter insurance',steps:[
+     'Neck isometrics all four directions, 2 x 30s each.',
+     'Towel hang 3 x max — wrap a towel over the bar and hang from the ends.',
+     'Plate pinch 3 x 30s per hand.']},
+   {id:'d9e',l:'Cooldown',d:'5 min',steps:['Walk until the heart rate is conversational.','Couch stretch 60s/side, done.']}]};
+
+const DOWSH=['MON','TUE','WED','THU','FRI','SAT','SUN'];
+/* ---------------------------------------------------- training programs -- */
+const PROGRAMS = {
+  standard:{ n:'Forge Standard', d:'3 lifts + striking + BJJ + craft. The balanced default — strength, combat, and skills advance together.' },
+  builder:{ n:'Forge Builder', d:'4 lifting days for maximum physique progress. Striking stays weekly; BJJ moves to open-mat optional on Saturday.' },
+  fighter:{ n:'Forge Fighter', d:'Two combat days plus fight conditioning. Three heavy lifts survive as the strength anchor. For when the fighting matters most.' },
+};
+const WEEKS = {
+  standard: WEEK_STD,
+  builder:  [0,2,1,4,'D8',5,6].map((x,i)=>({...(x==='D8'?D8:WEEK_STD[x]), short:DOWSH[i]})),
+  fighter:  [0,1,3,'D9',2,5,6].map((x,i)=>({...(x==='D9'?D9:WEEK_STD[x]), short:DOWSH[i]})),
+};
+let WEEK = WEEK_STD;
+
 
 /* ================================================================ state == */
 const DEFAULTS = {
   profile:{ unit:'imperial', sex:'m', age:22, height:178, activity:1.725, goal:'recomp',
-            wake:'06:00', sleep:'22:30', trainPref:'morning', commute:15 },
+            wake:'06:00', sleep:'22:30', trainPref:'morning', commute:15, program:'standard' },
   fixed:{ mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] },
   extra:{}, swap:{},
   days:{},           // { date:{ blocks:{}, mind, news, habits:{}, rv:{}, nudge:{}, food:[] } }
@@ -1109,12 +1227,14 @@ function buildDay(key){
 
   const trainWin=PREF[p.trainPref]||PREF.morning;
   let trainDur=def.dur;
-  if (def.type==='engine' && physMin>=90){
-    trainDur=Math.max(35,Math.round(def.dur*0.55));
-    adapt.push(`Heavy tagged practice today (${physMin} min) already covers conditioning. Session trimmed to ${trainDur} min — mobility and core, not more cardio.`);
-  } else if (def.type==='engine' && physMin>=45){
-    trainDur=Math.max(30,Math.round(def.dur*0.45));
-    adapt.push(`${physMin} minutes of tagged practice today already covers conditioning. Engine block trimmed to ${trainDur} min of core and mobility.`);
+  if (physMin>=90 && def.type==='strength'){
+    trainDur=Math.max(50,def.dur-20);
+    adapt.push(`${physMin} minutes of tagged practice today. Keep the main lift heavy but skip the conditioning finisher — you have already paid that bill on court.`);
+  } else if (physMin>=90 && (def.type==='recover'||def.type==='craft')){
+    trainDur=Math.max(30,Math.round(def.dur*0.6));
+    adapt.push(`Heavy tagged practice today (${physMin} min). Recovery work trimmed — the priority is being fresh tomorrow, not accumulating more volume.`);
+  } else if (physMin>=45 && def.type==='strength'){
+    adapt.push(`${physMin} min of tagged practice today. Main lift stays as prescribed; cut the finisher if your legs are already cooked.`);
   }
   add('train',def.title,def.aim,trainDur,null,trainWin,'train');
   const tr=out.find(o=>o.id==='train');
@@ -1413,12 +1533,38 @@ function bestMeal(){
   return best;
 }
 
+/* -------------------------------------------------- meal scaling --------- */
+function scaleQ(q,f){ return Math.max(0.5, Math.round(q*f*2)/2); }
+function mealFactor(m){
+  if (typeof mealScale==='undefined' || !mealScale || openMeal!==m.id) return 1;
+  const N=nutrition(T); if(!N) return 1;
+  const t=mealTotals(m); if(!t.kcal) return 1;
+  return clamp(N.kcal/t.kcal, 0.75, 1.6);
+}
+function scaledTotals(m,f){
+  if (f===1) return mealTotals(m);
+  let kcal=0,p=0,c=0,ff=0;
+  m.slots.forEach(s=>s.items.forEach(([n,q])=>{
+    const it=FOODIDX[n]; if(!it) return;
+    const q2=scaleQ(q,f);
+    kcal+=it[1]*q2; p+=it[2]*q2; c+=it[3]*q2; ff+=it[4]*q2;
+  }));
+  return {kcal:Math.round(kcal),p:Math.round(p),c:Math.round(c),f:Math.round(ff)};
+}
+/* committed minutes for a date, for the week-ahead overview */
+function dayLoad(k){
+  const items=[...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[])];
+  const cm=items.reduce((a,c)=>{let s=m2s(c.s),e=m2s(c.e);if(e<=s)e+=1440;return a+(e-s);},0);
+  const di=S.swap[k]!=null?S.swap[k]:dowIdx(k);
+  return {commit:cm, train:WEEK[di].dur, type:WEEK[di].type};
+}
+
 
 /* ============================================================== ui state == */
 let view='today', openBlock='train', shiftId=null, openTrack='markets', openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
     foodQ='', copyMode=false, copySel={}, swapOpen=false, foodOpen=false,
-    buildSub='target', openMeal=null;
+    buildSub='target', openMeal=null, mealScale=true;
 const T = dkey();
 let viewOff = 0;
 const VD = () => dkey(viewOff);
@@ -1726,6 +1872,29 @@ function ViewPlan(){
       <div class="wnum">${cs.length||''}</div></button>`;}).join('')}</div>`;
 
   return `<div class="view wrap">
+    ${sect('dumb','TRAINING PROGRAM')}
+    <div class="panel">
+      ${Object.entries(PROGRAMS).map(([k,pr])=>`
+        <button class="ahead" data-act="setprog" data-v="${k}" style="border-left:3px solid ${S.profile.program===k?'var(--amber)':'var(--rule)'}">
+          <div style="flex:1">
+            <div class="an" style="font-size:13px">${pr.n}${S.profile.program===k?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">ACTIVE</span>':''}</div>
+            <div class="det" style="margin-top:4px">${pr.d}</div>
+          </div>${chk(S.profile.program===k)}</button>`).join('')}
+      <div class="note">Switching applies from today. Lift progressions carry across programs — squat history is squat history regardless of which week structure you run.</div>
+    </div>
+
+    ${sect('cal','WEEK AHEAD — LOAD CHECK')}
+    <div class="panel"><div class="wload">
+      ${[0,1,2,3,4,5,6].map(o=>{ const k=dkey(o); const L=dayLoad(k);
+        const tot=L.commit+L.train; const packed=tot>600; const hrs=(tot/60).toFixed(1);
+        return `<button class="wlcol" data-act="daygo2" data-v="${o}">
+          <div class="wllab">${DOWL[dowIdx(k)]}</div>
+          <div class="wlbar"><div class="wlfill" style="height:${Math.min(100,tot/720*100)}%;background:${packed?'var(--amber)':'var(--steel)'}"></div></div>
+          <div class="wlhrs" style="color:${packed?'var(--amber)':'var(--faint)'}">${hrs}h</div>
+        </button>`;}).join('')}
+    </div>
+    <div class="note">Commitments + planned training per day, next 7 days. Amber = packed — the scheduler auto-compresses the session and skips the finisher on those days. Tap a day to preview it on Today.</div></div>
+
     ${sect('cal','MY WEEK')}
     <div class="hint">Tap a day, then add what's immovable - classes, work, practice. Everything else in FORGE gets scheduled into the gaps, automatically, every day. Tag physical activity and training days adapt around it.</div>
     <div class="panel">${weekMap}
@@ -1781,6 +1950,24 @@ function ViewPlan(){
         <div style="flex:1"><div class="lab">Session reminders</div>
         <div class="det">Pings 15 minutes before each scheduled block, and at start time</div></div></button>
       <div class="note">Honest limits: these fire while FORGE is open or recently used - a home-screen web app can't wake your phone from fully closed like a native app. Best combo: turn this on, and put training in your phone calendar as the backstop.</div>
+    </div>
+
+    ${sect('plus','ONE-OFF EVENT — A SPECIFIC DATE ONLY')}
+    <div class="panel"><div style="padding:13px">
+      <div class="hint" style="padding:0 0 10px">A match on Saturday, an exam, a trip day. It affects only that one date — the weekly pattern stays untouched. Tag it Physical and calories + training adapt for that day automatically.</div>
+      <div class="grid2">
+        <label class="f"><span>Date</span><input type="date" id="oo_d"></label>
+        <label class="f"><span>Tag</span>${tagSelect('oo_t','physical')}</label>
+        <label class="f"><span>From</span><input type="time" id="oo_s" value="10:00"></label>
+        <label class="f"><span>To</span><input type="time" id="oo_e" value="12:00"></label>
+      </div>
+      <label class="f" style="margin-top:9px"><span>What is it</span><input type="text" id="oo_l" placeholder="Tennis match"></label>
+      <button class="btn" style="margin-top:11px" data-act="addoneoff">${svg('plus',13,'var(--ink)',2.6)} ADD TO THAT DATE</button>
+    </div>
+    ${(()=>{ const ups=Object.keys(S.extra).filter(k=>k>=T).sort().slice(0,8);
+      return ups.length?`<div class="foodlist">${ups.map(k=>S.extra[k].map((c,i)=>`
+        <div class="cmt"><span style="flex:1"><b>${longDate(k)}</b> · ${s2disp(m2s(c.s))}–${s2disp(m2s(c.e))} ${esc(c.l)}${c.t?` <span class="badge" style="border-color:${TAGCOLOR[c.t]};color:${TAGCOLOR[c.t]}">${c.t}</span>`:''}</span>
+        <button class="x" data-act="deloneoff" data-v="${k}" data-v2="${i}">${svg('trash',12,'var(--rust)')}</button></div>`).join('')).join('')}</div>`:'';})()}
     </div>
 
     ${sect('clock','BOUNDARIES')}
@@ -1895,6 +2082,11 @@ function ViewTarget(){
     recomp:['RECOMPOSITION','var(--amber)'], build:['ADD LEAN MASS','var(--steel)'], hold:['MAINTAIN','var(--moss)']};
   const [pl,pc]=phaseMap[q.phase];
 
+  const goalMap={lean:'lean', recomp:'recomp', build:'gain', hold:'recomp', measure:null};
+  const recGoal=goalMap[q.phase];
+  const goals=[['lean','CUT','Deficit — drop fat, hold muscle'],['recomp','RECOMP','Maintenance — swap fat for muscle'],['gain','BUILD','Surplus — add lean mass']];
+  const misaligned = recGoal && S.profile.goal!==recGoal;
+
   return `
     ${sect('target','THE BUILD')}
     <div class="panel acc"><div class="acc-bar" style="background:${pc}"></div>
@@ -1902,6 +2094,25 @@ function ViewTarget(){
         <div class="eyebrow" style="color:${pc}">CURRENT DIRECTIVE · ${pl}</div>
         <p class="t" style="color:var(--text);margin-top:9px">${esc(q.guide)}</p>
       </div>
+    </div>
+
+    ${sect('flame','YOUR GOAL — DRIVES EVERY FOOD NUMBER')}
+    <div class="panel"><div class="chips" style="padding:13px">
+      ${goals.map(([k,l,d2])=>`<button class="chip ${S.profile.goal===k?'on':''}" data-act="setgoal" data-v="${k}">${l}${recGoal===k?' ★':''}</button>`).join('')}
+    </div>
+    <div class="note" style="border-top:none;padding-top:0">${goals.find(g=>g[0]===S.profile.goal)?.[2]||''}${recGoal?` · ★ = what the numbers above recommend right now`:''}</div>
+    ${(()=>{ const N=nutrition(T); if(!N) return '';
+      const diff=N.kcal-N.tdee;
+      return `<div class="panel" style="margin:0 13px 13px;background:var(--ink);padding:11px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:9px;letter-spacing:.1em;color:var(--faint)">AT THIS SETTING</span>
+          <span style="font-size:15px;font-weight:700;color:var(--amber)">${N.kcal} kcal/day</span>
+        </div>
+        <div style="font-size:10.5px;color:var(--dim);margin-top:3px">${diff===0?'Right at maintenance':`${diff>0?'+':''}${diff} kcal vs your ${N.tdee} kcal maintenance`} — this is the exact number driving FUEL and every meal template below.</div>
+      </div>`;})()}
+    ${misaligned?`<button class="banner steel" data-act="setgoal" data-v="${recGoal}" style="width:calc(100% - 26px);margin:0 13px 13px;text-align:left">
+      ${svg('target',13,'var(--steel)')}<div>Your goal is set to <b>${S.profile.goal.toUpperCase()}</b> but your current numbers point to <b>${recGoal.toUpperCase()}</b> — that mismatch is why food targets can contradict the plan. Tap to align.</div></button>`:''}
+    <div class="note" style="border-top:none;padding-top:0;color:var(--faint)">The NOW/TARGET numbers below don't move when you switch this — that's the fixed destination. This selector only changes the day-to-day calorie strategy for getting there.</div>
     </div>
 
     <div class="cmp">
@@ -1921,7 +2132,8 @@ function ViewTarget(){
     </div>
 
     <div class="panel"><div style="padding:14px 13px 4px">
-      ${q.lbmGap!=null&&q.lbmGap>0.5?`<p class="t"><b>${lb(q.lbmGap)} ${U} of lean mass to add.</b> At a realistic intermediate rate that is roughly <b>${q.months} months</b> of consistent training and eating — not weeks. Anyone promising faster is selling something.</p>`:''}
+      ${q.lbmGap!=null&&q.lbmGap>0.5?`<p class="t"><b>${lb(q.lbmGap)} ${U} of lean mass to add.</b> At a realistic intermediate rate that is roughly <b>${q.months} months</b> of consistent training and eating — not weeks. Anyone promising faster is selling something.</p>
+      <p class="t">Adding mass requires a <b>surplus</b>: with goal set to BUILD, your daily target sits ~10% above maintenance — expect roughly <b>0.5 ${imp?'lb':'0.25 kg'} a week</b> on the scale average. Faster than that and the extra is mostly fat.</p>`:''}
       ${q.fatGap!=null&&q.fatGap>0.5?`<p class="t"><b>${lb(q.fatGap)} ${U} of fat to lose.</b> Cap it at about 0.5% of bodyweight per week; faster costs you muscle and the lifts go backwards.</p>`:''}
       ${q.lbmGap!=null&&q.lbmGap<=0.5&&q.fatGap!=null&&q.fatGap<=0.5?`<p class="t">You are at the archetype on paper. The remaining work is specialisation and holding it — which is harder than getting here.</p>`:''}
       <p class="t" style="color:var(--faint)">FFMI is lean mass scaled to height. Untrained men sit near 19, well-trained near 21–22, and the natural ceiling is about 24–25. The ${ARCH.ffmi} target is "visibly built, still an athlete" — reachable without drugs, unlike most superhero physiques.</p>
@@ -1949,14 +2161,51 @@ function ViewTarget(){
       <div class="note">These are the numbers that produce the build. Hit all six and the physique follows almost automatically, provided the eating supports it. Exact working weights for every session are on Today.</div></div>`;
 }
 
+/* ======================================================= build: meals ==== */
+function MealSection(N){
+  const match=bestMeal();
+  return `
+    ${sect('food','MEAL PLANS')}
+    <div class="hint">Full days built from real foods. Tap one to see it, then log the whole day in one tap — or just one meal at a time. Adapt freely; these are patterns, not prescriptions.</div>
+    ${MEALS.map(m=>{
+      const f=mealFactor(m);
+      const t=scaledTotals(m,f), open=openMeal===m.id, best=N&&m.id===match;
+      const diff=N?t.kcal-N.kcal:null;
+      return `<div class="acc-group">
+        <button class="ahead" data-act="meal" data-v="${m.id}" style="border-left:3px solid ${best?'var(--amber)':'var(--rule)'}">
+          <div style="flex:1">
+            <div class="an" style="font-size:13px">${esc(m.name)}${best?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">BEST FIT</span>':''}</div>
+            <div style="font-size:9.5px;color:var(--faint);letter-spacing:.05em;margin-top:4px">
+              ${t.kcal} kcal · ${t.p}g protein${diff!=null?` · ${diff>0?'+':''}${diff} vs target`:''}</div>
+          </div>
+          ${open?svg('chevD',14,'var(--faint)'):svg('chev',14,'var(--faint)')}</button>
+        ${open?`<div class="abody">
+          ${m.slots.map((s,si)=>`<div class="mslot">
+            <div class="mslothead"><span>${esc(s.w)}</span>
+              <button class="chip" data-act="logslot" data-v="${m.id}" data-v2="${si}">LOG</button></div>
+            ${s.items.map(([n,qq0])=>{ const it=FOODIDX[n]; const qq=scaleQ(qq0,f);
+              return `<div class="mitem"><span style="flex:1">${qq!==1?`<b>${qq}×</b> `:''}${esc(n)}</span>
+                <span style="color:var(--faint);font-size:10px">${it?Math.round(it[1]*qq):'?'} kcal</span></div>`;}).join('')}
+          </div>`).join('')}
+          <div style="padding:12px 13px;display:flex;flex-direction:column;gap:9px">
+            ${N&&Math.abs(mealTotals(m).kcal-N.kcal)>150?`<button class="btn ghost" data-act="mealscale">${f!==1?'SHOW ORIGINAL PORTIONS':'SCALE PORTIONS TO MY TARGET ('+N.kcal+' KCAL)'}</button>`:''}
+            <button class="btn" data-act="logmeal" data-v="${m.id}">${svg('check',13,'var(--ink)',2.6)} LOG THE WHOLE DAY${f!==1?' — SCALED':''}</button></div>
+          ${diff!=null&&diff<-450?`<div class="note" style="color:var(--amber)">This lands ${Math.abs(diff)} kcal under your target. Fine for an occasional lighter day, but not as your default — add a starch or a shake if you use it regularly.</div>`:''}
+        </div>`:''}
+      </div>`;}).join('')}
+`;
+}
+
 /* ========================================================== build: fuel == */
 function ViewFuel(){
   const N=nutrition(T), q=physique(), imp=S.profile.unit==='imperial';
   const match=bestMeal();
   const ftoday=foodTotals(T);
 
-  if(!N) return `${sect('flame','FUEL')}
-    <div class="empty">Log a weight on the Log tab and your exact targets appear here.</div>`;
+  if(!N) return `${sect('flame','DAILY TARGETS')}
+    <div class="panel"><div class="empty">Log a weight on the <b>LOG</b> tab and your exact calorie and macro targets appear here.</div></div>
+    ${MealSection(null)}
+    ${SuppSection()}`;
 
   const adjNote = q&&q.phase==='lean' ? 'Set your goal to <b>Lean out</b> in Plan and this drops into a deficit automatically.'
     : q&&q.phase==='build' ? 'Set your goal to <b>Add muscle</b> in Plan for a small surplus.'
@@ -1979,32 +2228,7 @@ function ViewFuel(){
         :`<p class="t" style="margin:8px 0 0;color:var(--faint)">Tag any extra activity — practice, a match, a long hike — as <b>Physical</b> in Plan, and this number moves up on its own for that day.</p>`}
     </div></div>
 
-    ${sect('food','MEAL PLANS')}
-    <div class="hint">Full days built from real foods. Tap one to see it, then log the whole day in one tap — or just one meal at a time. Adapt freely; these are patterns, not prescriptions.</div>
-    ${MEALS.map(m=>{
-      const t=mealTotals(m), open=openMeal===m.id, best=m.id===match;
-      const diff=t.kcal-N.kcal;
-      return `<div class="acc-group">
-        <button class="ahead" data-act="meal" data-v="${m.id}" style="border-left:3px solid ${best?'var(--amber)':'var(--rule)'}">
-          <div style="flex:1">
-            <div class="an" style="font-size:13px">${esc(m.name)}${best?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">BEST FIT</span>':''}</div>
-            <div style="font-size:9.5px;color:var(--faint);letter-spacing:.05em;margin-top:4px">
-              ${t.kcal} kcal · ${t.p}g protein · ${diff>0?'+':''}${diff} vs target</div>
-          </div>
-          ${open?svg('chevD',14,'var(--faint)'):svg('chev',14,'var(--faint)')}</button>
-        ${open?`<div class="abody">
-          ${m.slots.map((s,si)=>`<div class="mslot">
-            <div class="mslothead"><span>${esc(s.w)}</span>
-              <button class="chip" data-act="logslot" data-v="${m.id}" data-v2="${si}">LOG</button></div>
-            ${s.items.map(([n,qq])=>{ const it=FOODIDX[n];
-              return `<div class="mitem"><span style="flex:1">${qq!==1?`<b>${qq}×</b> `:''}${esc(n)}</span>
-                <span style="color:var(--faint);font-size:10px">${it?Math.round(it[1]*qq):'?'} kcal</span></div>`;}).join('')}
-          </div>`).join('')}
-          <div style="padding:12px 13px">
-            <button class="btn" data-act="logmeal" data-v="${m.id}">${svg('check',13,'var(--ink)',2.6)} LOG THE WHOLE DAY</button></div>
-          ${diff<-450?`<div class="note" style="color:var(--amber)">This lands ${Math.abs(diff)} kcal under your target. Fine for an occasional lighter day, but not as your default — add a starch or a shake if you use it regularly.</div>`:''}
-        </div>`:''}
-      </div>`;}).join('')}
+    ${MealSection(N)}
 
     <div class="panel" style="margin-top:14px"><div style="padding:14px 13px 4px">
       <p class="t"><b>The rules that matter more than the plan.</b></p>
@@ -2015,6 +2239,12 @@ function ViewFuel(){
       <p class="t" style="color:var(--faint)">These targets are population-average estimates from your height, weight, age and training load — a starting point to adjust from over weeks. They are not a clinical prescription. Talk to a doctor or a registered dietitian before making significant dietary changes, particularly with any medical condition or a complicated history with food.</p>
     </div></div>
 
+    ${SuppSection()}`;
+}
+
+/* ==================================================== build: supplements == */
+function SuppSection(){
+  return `
     ${sect('shield','SUPPLEMENTS')}
     <div class="hint">Food first — supplements are the last 5%, not the first. Ordered by how good the evidence actually is.</div>
     ${[1,2,3].map(tier=>{
@@ -2298,6 +2528,27 @@ document.addEventListener('click', e => {
   const d = day(VD());
 
   switch(a){
+    case 'addoneoff': {
+      const dt=document.getElementById('oo_d').value;
+      const s=document.getElementById('oo_s').value, en=document.getElementById('oo_e').value;
+      const l=document.getElementById('oo_l').value.trim()||'Event';
+      const tg=document.getElementById('oo_t')?document.getElementById('oo_t').value:'';
+      if(!dt){ toast('Pick a date'); return; }
+      if(!s||!en){ toast('Set both times'); return; }
+      if(!S.extra[dt]) S.extra[dt]=[];
+      const sN=m2s(s); let eN=m2s(en); if(eN<=sN) eN+=1440;
+      const overlaps = [...(S.fixed[DOW[dowIdx(dt)]]||[]), ...S.extra[dt]]
+        .some(c=>{ const cS=m2s(c.s); let cE=m2s(c.e); if(cE<=cS) cE+=1440; return sN<cE&&eN>cS; });
+      S.extra[dt].push({s,e:en,l,t:tg});
+      S.extra[dt].sort((a,b)=>m2s(a.s)-m2s(b.s));
+      commit(); render();
+      toast(overlaps?'Added — heads up, it overlaps something that day':'One-off added');
+      return;
+    }
+    case 'deloneoff': {
+      if (S.extra[v]){ S.extra[v].splice(+v2,1); if(!S.extra[v].length) delete S.extra[v]; }
+      commit(); break;
+    }
     case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
@@ -2306,10 +2557,15 @@ document.addEventListener('click', e => {
       shiftId=null; foodOpen=false; openBlock2=null; break;
     case 'daygo':
       viewOff=+v; shiftId=null; foodOpen=false; openBlock2=null; break;
+    case 'daygo2':
+      viewOff=+v; view='today'; shiftId=null; foodOpen=false; openBlock2=null; render(); window.scrollTo(0,0); return;
 
     /* ---- build tab ---- */
     case 'buildsub': buildSub=v; openMeal=null; render(); window.scrollTo(0,0); return;
-    case 'meal': openMeal = openMeal===v?null:v; break;
+    case 'meal': openMeal = openMeal===v?null:v; mealScale=true; break;
+    case 'mealscale': mealScale=!mealScale; break;
+    case 'setgoal': S.profile.goal=v; commit(); break;
+    case 'setprog': S.profile.program=v; WEEK=WEEKS[v]||WEEK_STD; commit(); toast(PROGRAMS[v].n+' active from today'); break;
     case 'logmeal': {
       const m=MEALS.find(x=>x.id===v); if(!m){ toast('Meal not found'); return; }
       let n=0;
@@ -2582,6 +2838,7 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     S.meta=Object.assign({},DEFAULTS.meta,saved.meta||{});
     Store.save(S);                                      // migrate old key forward
   }
+  WEEK = WEEKS[S.profile.program] || WEEK_STD;
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
     S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely
