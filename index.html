@@ -316,12 +316,6 @@ input[type=date],input[type=time]{min-height:40px}
 .wlhrs{font-size:8.5px;font-weight:700;letter-spacing:.03em}
 .btn.ghost{background:transparent;border:1px solid var(--rule2);color:var(--dim)}
 
-/* ---------- day navigation ---------- */
-.daynav{display:flex;align-items:center;margin:14px 0 10px}
-.darrow{padding:10px 12px;color:var(--faint)}
-.darrow:active{color:var(--text)}
-
-
 /* ---------- week strip ---------- */
 .stripwrap{margin:calc(6px + 0px) -14px 0;position:relative}
 .strip{display:flex;gap:5px;overflow-x:auto;scroll-behavior:smooth;padding:12px 14px 13px;
@@ -1129,6 +1123,11 @@ const WEEKS = {
   fighter:  [0,1,3,'D9',2,5,6].map((x,i)=>({...(x==='D9'?D9:WEEK_STD[x]), short:DOWSH[i]})),
 };
 let WEEK = WEEK_STD;
+/* every workout definition that exists anywhere, keyed by its stable id — used to resolve a
+   per-date swap by id rather than by array position, so a swap made under one program still
+   means the same workout after switching to a different program (whose WEEK array orders and
+   even length can differ in what each position holds). */
+const ALLDAYS = Object.fromEntries([...WEEK_STD,D8,D9].map(d=>[d.id,d]));
 
 
 /* ================================================================ state == */
@@ -1199,8 +1198,8 @@ function place(free,dur,anchor,win){
 
 function buildDay(key){
   const p=S.profile;
-  const di = S.swap[key]!=null ? S.swap[key] : dowIdx(key);
-  const def = WEEK[di];
+  const di = dowIdx(key);
+  const def = S.swap[key]!=null ? (ALLDAYS[S.swap[key]]||WEEK[di]) : WEEK[di];
   const wake=m2s(p.wake); let sleep=m2s(p.sleep); if(sleep<=wake) sleep+=1440;
 
   const fixed = [ ...(S.fixed[DOW[dowIdx(key)]]||[]), ...(S.extra[key]||[]) ]
@@ -1290,6 +1289,15 @@ function streak(){
   return n;
 }
 function latestLog(){ return [...S.log].sort((a,b)=>a.date<b.date?1:-1)[0]||null; }
+/* days since the most recent LOGGED WEIGHT specifically (not just any log entry —
+   a bodyweight-free entry like a squat PR shouldn't reset this) */
+function daysSinceWeight(){
+  const withWeight=S.log.filter(e=>e.weight!=null).sort((a,b)=>a.date>b.date?1:-1);
+  if (!withWeight.length) return null;
+  const last=withWeight[withWeight.length-1].date;
+  const [y,m,dd]=last.split('-').map(Number), [ty,tm,td]=T.split('-').map(Number);
+  return Math.round((new Date(ty,tm-1,td)-new Date(y,m-1,dd))/86400000);
+}
 
 function pillars(){
   const t=id=>((S.tiers[id]??0)/4)*100;
@@ -1448,7 +1456,8 @@ function inLoad(v){ const n=num(v); if(n==null) return null;
 /* ============================================================== deload === */
 function trainRatio(k){
   const d=S.days[k]; if(!d||!d.blocks) return 0;
-  const def=WEEK[S.swap[k]!=null?S.swap[k]:dowIdx(k)];
+  const wi=dowIdx(k);
+  const def=S.swap[k]!=null?(ALLDAYS[S.swap[k]]||WEEK[wi]):WEEK[wi];
   const done=def.blocks.filter(b=>d.blocks[b.id]).length;
   return done/def.blocks.length;
 }
@@ -1557,11 +1566,19 @@ function mealTotals(m){
   }));
   return {kcal:Math.round(kcal),p:Math.round(p),c:Math.round(c),f:Math.round(f)};
 }
+/* "best fit" meal template: closest calorie match first, with a modest nudge
+   toward the tag that fits today — training-day carbs on a training day (or
+   any day with tagged sport activity), lean-out on a cut, otherwise rest —
+   so two similarly-sized templates don't come out as a coin flip. */
 function bestMeal(){
   const N=nutrition(T); if(!N) return null;
-  let best=null,bd=Infinity;
-  MEALS.forEach(m=>{ const t=mealTotals(m); const d=Math.abs(t.kcal-N.kcal);
-    if(d<bd){bd=d;best=m.id;} });
+  const plan=buildDay(T);
+  const wantTag = S.profile.goal==='lean' ? 'lean'
+    : (plan.def.type!=='recover'||extraKcal(T)>0) ? 'training' : 'rest';
+  let best=null,bs=Infinity;
+  MEALS.forEach(m=>{ const t=mealTotals(m);
+    const score=Math.abs(t.kcal-N.kcal)-(m.tag===wantTag?150:0);
+    if(score<bs){bs=score;best=m.id;} });
   return best;
 }
 
@@ -1587,8 +1604,9 @@ function scaledTotals(m,f){
 function dayLoad(k){
   const items=[...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[])];
   const cm=items.reduce((a,c)=>{let s=m2s(c.s),e=m2s(c.e);if(e<=s)e+=1440;return a+(e-s);},0);
-  const di=S.swap[k]!=null?S.swap[k]:dowIdx(k);
-  return {commit:cm, train:WEEK[di].dur, type:WEEK[di].type};
+  const wi=dowIdx(k);
+  const def=S.swap[k]!=null?(ALLDAYS[S.swap[k]]||WEEK[wi]):WEEK[wi];
+  return {commit:cm, train:def.dur, type:def.type};
 }
 
 
@@ -1793,10 +1811,18 @@ function ViewToday(){
       ${nextUp.id==='train'?`<div class="nuprog">${trainDone} of ${plan.def.blocks.length} blocks done</div>`:''}
     </div>`:''}
     ${swapOpen?`<div class="panel"><div class="chips" style="padding:12px 13px">
-      ${WEEK.map((w,i)=>`<button class="chip ${i===plan.di?'on':''}" data-act="swap" data-v="${i}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
+      ${WEEK.map((w,i)=>`<button class="chip ${w.id===plan.def.id?'on':''}" data-act="swap" data-v="${w.id}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
     </div><div class="note">Swaps only affect ${vd===T?'today':'this date'}. The weekly rotation stays put.</div></div>`:''}
 
     ${vd===T?DayRail(plan):''}
+
+    ${vd===T?(()=>{ const dsw=daysSinceWeight(), neverLogged=dsw==null, stale=dsw!=null&&dsw>=7;
+      if (!neverLogged&&!stale) return '';
+      if (neverLogged&&daysSinceStart()<3) return '';   // let brand-new users settle in first
+      const msg = neverLogged
+        ? `No weight logged yet — Fuel and Target can't compute your numbers without one.`
+        : `${dsw} days since your last weigh-in. Log one so Fuel and Target stay accurate.`;
+      return `<button class="banner" data-act="golog" style="width:100%;text-align:left">${svg('trend',14,'var(--amber)')}<div>${msg}</div></button>`; })():''}
 
     ${(()=>{ const ramp=rampFactor();
       return ramp ? `<div class="banner steel">${svg('flame',14,'var(--steel)')}<div>${esc(ramp.label)}</div></div>` : ''; })()}
@@ -1829,7 +1855,8 @@ function ViewToday(){
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(v/t2*100,0,100)}%;background:${c}"></div></div></div>`).join('')}
       </div>
-      ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}`
+      ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}
+      ${vd===T&&new Date().getHours()>=18&&N.protein>0&&ft.p<N.protein*0.5?`<div class="note" style="color:var(--amber);border-top:none;padding-top:0">${svg('target',10,'var(--amber)')} Only ${Math.round(ft.p)}g protein logged with evening here — most of that gap won't get made up after tonight. Front-load the next meal.</div>`:''}`
       :'<div class="note" style="border-top:none">Log a weight on Build → Log and targets appear here.</div>'}
       ${d.food.length?`<div class="foodlist">${d.food.map((f,i)=>`
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
@@ -2588,11 +2615,9 @@ document.addEventListener('click', e => {
       commit(); break;
     }
     case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; render(); window.scrollTo(0,0); return;
+    case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
-    case 'daynav':
-      if (+v===0) viewOff=0; else viewOff+=(+v);
-      shiftId=null; foodOpen=false; openBlock2=null; break;
     case 'daygo':
       viewOff=+v; shiftId=null; foodOpen=false; openBlock2=null; break;
     case 'daygo2':
@@ -2644,7 +2669,7 @@ document.addEventListener('click', e => {
     }
     case 'reflow': d.nudge={}; shiftId=null; commit(); render(); toast('Times recalculated'); return;
     case 'swapopen': swapOpen=!swapOpen; break;
-    case 'swap': S.swap[VD()]=+v; swapOpen=false; commit(); break;
+    case 'swap': S.swap[VD()]=v; swapOpen=false; commit(); break;
 
     /* ---- food ---- */
     case 'foodopen': foodOpen=!foodOpen; foodQ=''; foodFocus=foodOpen; break;
@@ -2879,6 +2904,14 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     Store.save(S);                                      // migrate old key forward
   }
   WEEK = WEEKS[S.profile.program] || WEEK_STD;
+  { /* one-time migration: S.swap used to store a position in the active WEEK array,
+       which meant a swap could silently resolve to a different workout after switching
+       programs. Convert any leftover numeric values to the stable day id instead. */
+    let migrated=false;
+    for (const k in S.swap){ const v=S.swap[k];
+      if (typeof v==='number'){ const d=WEEK[v]; S.swap[k]=d?d.id:undefined; if(!d) delete S.swap[k]; migrated=true; } }
+    if (migrated) commit();
+  }
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
     S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely
