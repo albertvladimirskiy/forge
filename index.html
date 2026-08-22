@@ -919,8 +919,10 @@ const FOODS_MORE = [
 FOODS.push(...FOODS_MORE);
 
 /* ------------------------------------------- progression exercise map ----- */
-/* inc in kg (2.27=5lb, 4.54=10lb). m = standard as multiple of bodyweight.
-   added:true means the logged weight is ADDED load (pull-ups).              */
+/* inc in kg (1.13=2.5lb, 2.27=5lb, 4.54=10lb). m = standard as multiple of
+   bodyweight (only set for the 8 lifts that appear on the standards
+   screens — accessories below intentionally don't have one).
+   added:true means the logged weight is ADDED load (pull-ups, dips).       */
 const EXS = {
   squat: {n:'Back squat',      inc:2.27, sets:5, reps:5, m:2.0},
   bench: {n:'Bench press',     inc:2.27, sets:5, reps:5, m:1.5},
@@ -931,12 +933,28 @@ const EXS = {
   rdl:   {n:'Romanian deadlift',inc:2.27, sets:3, reps:8, m:1.5},
   frontsq:{n:'Front squat',    inc:2.27, sets:3, reps:5, m:1.5},
   dip:   {n:'Weighted dip',    inc:2.27, sets:3, reps:8, m:0.5, added:true},
+  /* accessories — same progression engine, just not tracked as a bodyweight standard */
+  splitsq:    {n:'Bulgarian split squat',      inc:2.27, sets:3, reps:10},
+  curl:       {n:'Barbell curl',               inc:2.27, sets:3, reps:10},
+  triceps:    {n:'Overhead tricep extension',  inc:2.27, sets:3, reps:12},
+  facepull:   {n:'Face pull',                  inc:2.27, sets:3, reps:20},
+  inclinepress:{n:'Incline dumbbell press',    inc:2.27, sets:4, reps:10},
+  lateral:    {n:'Lateral raise',              inc:1.13, sets:4, reps:15},
+  reardelt:   {n:'Rear delt fly',              inc:1.13, sets:4, reps:15},
+  inclinecurl:{n:'Incline dumbbell curl',      inc:1.13, sets:4, reps:10},
+  pushdown:   {n:'Rope pushdown',              inc:2.27, sets:4, reps:12},
 };
+/* block id -> exercise key(s) loggable in that block. Most blocks are one
+   exercise; a few combine two in a superset and list both. Blocks left out
+   (warmups, cooldowns, EMOMs/conditioning, carries, holds, technique/rolling,
+   shadowboxing) don't have a single external weight to log against — those
+   stay plain checkboxes rather than forcing a fake number into a field.    */
 const BLOCKEX = {
-  d1b:'squat', d1c:'rdl',
-  d3b:'bench', d3c:'pullup', d3d:'ohp', d3e:'row',
-  d5b:'dead',  d5c:'frontsq', d5d:'dip',
-  d8c:'row',   d9b:'dead',
+  d1b:['squat'], d1c:['rdl'], d1d:['splitsq'],
+  d3b:['bench'], d3c:['pullup'], d3d:['ohp'], d3e:['row'], d3f:['curl','triceps'],
+  d5b:['dead'],  d5c:['frontsq'], d5d:['dip'], d5e:['facepull'],
+  d8b:['inclinepress'], d8c:['row'], d8d:['lateral','reardelt'], d8e:['inclinecurl','pushdown'],
+  d9b:['dead'],
 };
 
 /* pain-flag exercise swaps: keep training, remove the aggravating pattern */
@@ -950,6 +968,15 @@ const PAINSWAP = {
   rdl:'Swap: back extension or hip thrust. Loads the same chain without the spinal demand.',
   frontsq:'Swap: goblet squat or leg press, pain-free range only.',
   dip:'Swap: close-grip push-ups or floor press. Dips are the most shoulder-hostile pressing angle there is.',
+  splitsq:'Swap: reverse lunge or leg press. Lighter load, same pattern, easier on the front knee.',
+  curl:'Swap: cable or dumbbell curl instead — a fixed barbell grip is often the actual problem, not the movement.',
+  triceps:'Swap: rope pushdown. Same muscle, no overhead shoulder position.',
+  facepull:'Swap: band pull-apart. Same rear-delt pattern, no load through a painful range.',
+  inclinepress:'Swap: flat dumbbell press or push-ups. The incline angle is often the aggravating factor.',
+  lateral:'Swap: cable lateral raise, or just drop the weight — this is almost always a load problem, not a pattern problem.',
+  reardelt:'Swap: band pull-apart or face pull. Same muscle, easier to keep pain-free.',
+  inclinecurl:'Swap: hammer curl or flat dumbbell curl, lighter weight.',
+  pushdown:'Swap: dumbbell kickback, or skip triceps work this week and let the elbow rest.',
 };
 
 /* -------------------------------------------------------- commitment tags - */
@@ -1639,11 +1666,14 @@ const chk=(on,c)=>`<div class="box" style="${on?`background:${c||'var(--amber)'}
 
 
 /* ---- auto-progression UI helpers ---- */
-function rxLine(b){
-  const ex=BLOCKEX[b.id]; if(!ex) return '';
+/* per-exercise rx line. `label` prefixes the exercise name — needed once a
+   block has more than one loggable exercise (a superset), so the two lines
+   don't read as duplicates of each other. */
+function exRxLine(ex,label){
   const rx=prescribe(ex);
+  const pre=label?`<b>${esc(EXS[ex].n)}:</b> `:'';
   if (!rx||rx.mode==='start')
-    return `<div class="rx dim">${svg('target',10,'var(--faint)')} First time: work up to a hard clean ${EXS[ex].reps}, log it below</div>`;
+    return `<div class="rx dim">${svg('target',10,'var(--faint)')} ${pre}First time: work up to a hard clean ${EXS[ex].reps}, log it below</div>`;
   const w=dispLoad(rx.w);
   const map={ deload:[`DELOAD: ${w} · 3×5 easy`,'var(--moss)'],
     first:[`START: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
@@ -1651,10 +1681,14 @@ function rxLine(b){
     repeat:[`REPEAT ${w} — get all ${rx.sets*rx.reps}`,'var(--steel)'],
     reset:[`RESET: ${w} · back off, climb again`,'var(--rust)'] };
   const [txt,c]=map[rx.mode];
-  return `<div class="rx" style="color:${c}">${svg('target',10,c)} ${txt}</div>`;
+  return `<div class="rx" style="color:${c}">${svg('target',10,c)} ${pre}${txt}</div>`;
 }
-function gymHTML(b){
-  const ex=BLOCKEX[b.id]; if(!ex) return '';
+/* block-level wrapper: a block may log 0, 1, or 2 exercises (supersets) */
+function rxLine(b){
+  const exs=BLOCKEX[b.id]; if(!exs) return '';
+  return exs.map(ex=>exRxLine(ex,exs.length>1)).join('');
+}
+function exGymHTML(ex,label){
   const sets=(S.gym[VD()]&&S.gym[VD()][ex])||[];
   const rx=prescribe(ex);
   const flagged=S.flags[ex];
@@ -1678,6 +1712,10 @@ function gymHTML(b){
       ${!flagged?`<button class="flagbtn" data-act="painflag" data-v="${ex}">${svg('shield',10)} pain?</button>`:''}
     </div>
   </div>`;
+}
+function gymHTML(b){
+  const exs=BLOCKEX[b.id]; if(!exs) return '';
+  return exs.map(ex=>exGymHTML(ex,exs.length>1)).join('');
 }
 
 /* ================================================================ header == */
