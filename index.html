@@ -39,7 +39,7 @@ button:active{transform:scale(.99)}
 /* ---------- shell ---------- */
 #app{min-height:100vh;min-height:100dvh}
 .wrap{padding:0 var(--pad) 92px}
-.view{animation:fade .28s ease both}
+.view.enter{animation:fade .28s ease both}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* ---------- header ---------- */
@@ -115,9 +115,7 @@ p.t b{color:var(--text);font-weight:700}
 .dur{font-size:9px;color:var(--faint);letter-spacing:.06em}
 .chev{padding:12px 12px 0 0;color:var(--faint);transition:transform .25s}
 .chev.open{transform:rotate(90deg)}
-.subblocks{background:var(--sunk);border-bottom:1px solid var(--rule);
-  animation:grow .3s ease both;overflow:hidden}
-@keyframes grow{from{opacity:0;max-height:0}to{opacity:1;max-height:900px}}
+.subblocks{background:var(--sunk);border-bottom:1px solid var(--rule);overflow:hidden}
 .subblocks .row{padding-left:57px;border-bottom:1px solid #191D22}
 .warn{margin:0;padding:11px 13px;background:#241B10;border-top:1px solid var(--rule);
   font-size:10.5px;color:var(--amber);line-height:1.5}
@@ -175,7 +173,7 @@ input[type=date],input[type=time]{min-height:40px}
 .ahead{display:flex;align-items:center;gap:11px;width:100%;padding:13px;background:var(--panel);
   border:1px solid var(--rule);text-align:left}
 .ahead .an{flex:1;font-family:var(--sans);font-weight:800;font-size:14px;letter-spacing:.1em;text-transform:uppercase}
-.abody{border:1px solid var(--rule);border-top:none;background:#101317;animation:fade .25s ease both}
+.abody{border:1px solid var(--rule);border-top:none;background:#101317}
 .acc-group{margin-bottom:9px}
 
 /* books */
@@ -214,7 +212,7 @@ input[type=date],input[type=time]{min-height:40px}
 .brow.done .det{opacity:.5}
 .bmain{flex:1;display:flex;gap:11px;align-items:flex-start;padding:12px 4px 12px 57px;text-align:left;min-width:0}
 .chev.sm{padding:12px 14px;display:flex;align-items:center}
-.steps{background:#0A0D10;border-bottom:1px solid #191D22;padding:11px 15px 13px 57px;animation:fade .22s ease both}
+.steps{background:#0A0D10;border-bottom:1px solid #191D22;padding:11px 15px 13px 57px}
 .step{display:flex;gap:10px;padding:5px 0;font-size:11px;color:var(--dim);line-height:1.55}
 .stepdot{width:5px;height:5px;min-width:5px;background:var(--rule2);margin-top:6px}
 .prognote{display:flex;gap:8px;margin-top:9px;padding:9px 11px;background:#151208;border:1px solid #2A2210;font-size:10.5px;color:var(--amber);line-height:1.5;align-items:flex-start}
@@ -223,7 +221,7 @@ input[type=date],input[type=time]{min-height:40px}
 .fuelbar{display:flex;flex-direction:column;gap:9px;padding:13px}
 .fb .fbtop{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-bottom:4px}
 .foodlist{border-top:1px solid var(--rule)}
-.foodpick{border-top:1px solid var(--rule);background:#101317;animation:fade .2s ease both}
+.foodpick{border-top:1px solid var(--rule);background:#101317}
 .searchrow{display:flex;align-items:center;gap:9px;padding:11px 13px;border-bottom:1px solid var(--rule)}
 .searchrow input{border:none;background:none;padding:2px 0;font-size:13px}
 .foodresults{max-height:290px;overflow-y:auto}
@@ -247,7 +245,7 @@ input[type=date],input[type=time]{min-height:40px}
 .cmt.tap{width:100%;text-align:left}
 .cmt.tap:active{background:var(--panel2)}
 .cmttime{color:var(--faint);min-width:104px;font-size:11px}
-.editrow{background:#101317;border-bottom:1px solid var(--rule);animation:fade .2s ease both}
+.editrow{background:#101317;border-bottom:1px solid var(--rule)}
 .addzone{border-top:1px solid var(--rule)}
 .copyzone{border-top:1px solid var(--rule)}
 
@@ -266,7 +264,7 @@ input[type=date],input[type=time]{min-height:40px}
 /* ---------- progression ---------- */
 .rx{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:9.5px;font-weight:700;letter-spacing:.06em}
 .rx.dim{color:var(--faint);font-weight:500}
-.setlog{background:#0C0F13;border-bottom:1px solid #191D22;padding:12px 15px 13px 57px;animation:fade .2s ease both}
+.setlog{background:#0C0F13;border-bottom:1px solid #191D22;padding:12px 15px 13px 57px}
 .setrow{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12px;border-bottom:1px solid #14181D}
 .setn{width:16px;font-size:9px;color:var(--faint)}
 .setadd{display:flex;align-items:center;gap:8px;margin-top:10px}
@@ -1473,11 +1471,28 @@ function bestStreakEver(){
   return Math.max(max,streak());
 }
 function totalSessions(){ return Object.values(S.days).filter(d=>d.blocks&&Object.values(d.blocks).some(Boolean)).length; }
-function dispLoad(kg){
+/* exact: what was actually logged or measured, formatted (unit-converted, tidied
+   to a clean decimal) but never snapped to a plate increment — an 8 lb dumbbell
+   stays 8 lb here, it doesn't get rounded to the nearest 5. Use this anywhere the
+   number needs to match what the user actually entered. */
+function dispExact(kg){
   if (kg==null) return '—';
   if (kg<0.5) return 'bodyweight';
   const imp=S.profile.unit==='imperial';
-  return imp ? `${Math.round(kg*2.20462/5)*5} lb` : `${Math.round(kg/2.5)*2.5} kg`;
+  return imp ? `${Math.round(kg*2.20462*2)/2} lb` : `${Math.round(kg*4)/4} kg`;
+}
+/* suggested: a next-weight recommendation or an aspirational target, snapped to
+   a loadable increment — the exercise's own progression step (EXS[ex].inc) when
+   known (2.5 lb for light dumbbell isolation work, 5 lb for most barbell lifts,
+   10 lb for deadlift), falling back to a plain 5 lb / 2.5 kg plate otherwise.
+   Never use this for a weight that was actually logged — see dispExact above. */
+function dispLoad(kg,ex){
+  if (kg==null) return '—';
+  if (kg<0.5) return 'bodyweight';
+  const imp=S.profile.unit==='imperial';
+  const incKg=(ex&&EXS[ex]&&EXS[ex].inc)||2.27;
+  if (imp){ const incLb=Math.round(incKg*2.20462*2)/2; return `${Math.round(kg*2.20462/incLb)*incLb} lb`; }
+  return `${Math.round(kg/incKg)*incKg} kg`;
 }
 function inLoad(v){ const n=num(v); if(n==null) return null;
   return S.profile.unit==='imperial' ? n/2.20462 : n; }
@@ -1676,7 +1691,7 @@ function exRxLine(ex,label){
   const pre=label?`<b>${esc(EXS[ex].n)}:</b> `:'';
   if (!rx||rx.mode==='start')
     return `<div class="rx dim">${svg('target',10,'var(--faint)')} ${pre}First time: work up to a hard clean ${EXS[ex].reps}, log it below</div>`;
-  const w=dispLoad(rx.w);
+  const w=dispLoad(rx.w,ex);
   const map={ deload:[`DELOAD: ${w} · 3×5 easy`,'var(--moss)'],
     first:[`START: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
     progress:[`NEW WEIGHT: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
@@ -1700,11 +1715,11 @@ function exGymHTML(ex,label){
     <div class="eyebrow" style="margin-bottom:8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
     ${sets.map((s,i)=>{ const isPR = pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r;
       return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
-      <span style="flex:1">${dispLoad(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:9px;letter-spacing:.08em\">PR</span>':''}</span>
+      <span style="flex:1">${dispExact(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:9px;letter-spacing:.08em\">PR</span>':''}</span>
       ${s.r>=EXS[ex].reps?svg('check',12,'var(--moss)',3):`<span style="font-size:9px;color:var(--rust)">-${EXS[ex].reps-s.r}</span>`}
       <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}">${svg('x',12)}</button></div>`;}).join('')}
     <div class="setadd">
-      <input type="number" step="0.5" id="sw_${ex}" inputmode="decimal" placeholder="${rx&&rx.w?dispLoad(rx.w).replace(' ','&nbsp;'):'weight'}">
+      <input type="number" step="0.5" id="sw_${ex}" inputmode="decimal" placeholder="${rx&&rx.w?dispLoad(rx.w,ex).replace(' ','&nbsp;'):'weight'}">
       <span class="setx">×</span>
       <input type="number" id="sr_${ex}" inputmode="numeric" placeholder="${EXS[ex].reps}">
       <button class="chip on" data-act="addset" data-v="${ex}">LOG SET</button>
@@ -2260,7 +2275,7 @@ function ViewTarget(){
     <div class="panel">${LIFTS.map(s=>{
       const cur=bestLift(s.k), goal=L&&L.weight?L.weight*s.m:null, pct=(cur&&goal)?clamp(cur/goal*100,0,100):0;
       return `<div class="stand"><div class="standtop"><span style="font-weight:600">${s.l}</span>
-        <span>${cur?dispLoad(cur):'—'} <span style="color:var(--faint)">/ ${goal?dispLoad(goal):'—'}</span></span></div>
+        <span>${cur?dispExact(cur):'—'} <span style="color:var(--faint)">/ ${goal?dispLoad(goal,s.k):'—'}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${pct}%;background:${pct>=100?'var(--moss)':'var(--steel)'}"></div></div></div>`;}).join('')}
       <div class="note">These are the numbers that produce the build. Hit all six and the physique follows almost automatically, provided the eating supports it. Exact working weights for every session are on Today.</div></div>`;
 }
@@ -2437,7 +2452,7 @@ function ViewLedger(){
     </div>
     <div class="panel">${Object.keys(EXS).map(ex=>{ const pr=S.prs[ex], E=EXS[ex];
       return `<div class="stand"><div class="standtop"><span style="font-weight:600">${E.n}</span>
-        <span>${pr?`${dispLoad(pr.w)} × ${pr.r}${E.added?'':' · est '+dispLoad(pr.e1rm)+' 1RM'}`:'—'}</span></div>
+        <span>${pr?`${dispExact(pr.w)} × ${pr.r}${E.added?'':' · est '+dispExact(pr.e1rm)+' 1RM'}`:'—'}</span></div>
         <div style="font-size:9.5px;color:var(--faint)">${pr?longDate(pr.date):'Not logged yet — log a set on Today'}</div></div>`;}).join('')}
       <div class="note">PRs update automatically the moment a logged set beats your best. Estimated 1RM uses the Epley formula from your top set.</div></div>
 
@@ -2568,10 +2583,19 @@ function Nav(){
 }
 
 /* ================================================================ render == */
+let lastRenderedView=null;
 function render(){
   const y=window.scrollY;
-  const body=view==='today'?ViewToday():view==='plan'?ViewPlan():(view==='build'||view==='body')?ViewBuild()
+  let body=view==='today'?ViewToday():view==='plan'?ViewPlan():(view==='build'||view==='body')?ViewBuild()
     :view==='mind'?ViewMind():view==='ledger'?ViewLedger():ViewCodex();
+  /* Every click/keystroke re-renders by replacing the whole #app tree — cheap and simple,
+     but it means the .view wrapper is a brand-new DOM node every single time, and a CSS
+     entrance animation on it would replay on every single interaction, not just when a tab
+     is actually switched (that's the "whole screen flashes when I expand something or type
+     in food search" report). Only tag it "entering" — and let it animate — when the tab
+     itself just changed; every other re-render of the same tab skips it. */
+  if (view!==lastRenderedView) body=body.replace('class="view wrap"','class="view wrap enter"');
+  lastRenderedView=view;
   document.getElementById('app').innerHTML=Header()+body+Nav()+`<div class="toast ${toastMsg?'show':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
   const strip=document.getElementById('strip');
@@ -2808,8 +2832,8 @@ document.addEventListener('click', e => {
       const isPR = checkPR(ex, Math.round(w*100)/100, Math.round(r));
       commit(); render();
       const n=S.gym[VD()][ex].length;
-      if (isPR){ toast(`New PR — ${dispLoad(w)} × ${Math.round(r)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
-      else toast(`Set ${n}: ${dispLoad(w)} × ${Math.round(r)}`);
+      if (isPR){ toast(`New PR — ${dispExact(w)} × ${Math.round(r)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
+      else toast(`Set ${n}: ${dispExact(w)} × ${Math.round(r)}`);
       return;
     }
     case 'delset': {
