@@ -934,6 +934,7 @@ const EXS = {
   frontsq:{n:'Front squat',    inc:2.27, sets:3, reps:5, m:1.5},
   dip:   {n:'Weighted dip',    inc:2.27, sets:3, reps:8, m:0.5, added:true},
   /* accessories — same progression engine, just not tracked as a bodyweight standard */
+  rowvol:     {n:'Barbell row (volume)',       inc:2.27, sets:4, reps:10},
   splitsq:    {n:'Bulgarian split squat',      inc:2.27, sets:3, reps:10},
   curl:       {n:'Barbell curl',               inc:2.27, sets:3, reps:10},
   triceps:    {n:'Overhead tricep extension',  inc:2.27, sets:3, reps:12},
@@ -953,7 +954,7 @@ const BLOCKEX = {
   d1b:['squat'], d1c:['rdl'], d1d:['splitsq'],
   d3b:['bench'], d3c:['pullup'], d3d:['ohp'], d3e:['row'], d3f:['curl','triceps'],
   d5b:['dead'],  d5c:['frontsq'], d5d:['dip'], d5e:['facepull'],
-  d8b:['inclinepress'], d8c:['row'], d8d:['lateral','reardelt'], d8e:['inclinecurl','pushdown'],
+  d8b:['inclinepress'], d8c:['rowvol'], d8d:['lateral','reardelt'], d8e:['inclinecurl','pushdown'],
   d9b:['dead'],
 };
 
@@ -965,6 +966,7 @@ const PAINSWAP = {
   ohp:'Swap: landmine press. The angle spares most cranky shoulders.',
   pullup:'Swap: lat pulldown or ring row. Full range, zero pain.',
   row:'Swap: chest-supported row. Takes the lower back out of it.',
+  rowvol:'Swap: chest-supported row. Takes the lower back out of it.',
   rdl:'Swap: back extension or hip thrust. Loads the same chain without the spinal demand.',
   frontsq:'Swap: goblet squat or leg press, pain-free range only.',
   dip:'Swap: close-grip push-ups or floor press. Dips are the most shoulder-hostile pressing angle there is.',
@@ -1104,7 +1106,7 @@ const D8 = { id:'d8', short:'FRI', type:'strength', dur:80, title:'Strength D �
    {id:'d8c',l:'Barbell row — 4 x 10',d:'Volume back work',steps:[
      'Same setup as Wednesday but lighter and stricter: 45-degree hinge, bar to lower ribs.',
      'Full 1s squeeze at the top of every rep. No momentum whatsoever at these loads.'],
-   prog:'Logged under the same barbell row as Wednesday — the app tracks both toward one progression.'},
+   prog:'Tracked as its own progression, separate from Wednesday\'s row — same movement, different rep range, so the two numbers don\'t need to match.'},
    {id:'d8d',l:'Lateral raise + rear delt — 4 x 15 each',d:'Superset. Width lives here.',steps:[
      'Lateral raise: lead with the elbows, stop at shoulder height, no swinging.',
      'Rear delt fly immediately after, chest supported on an incline bench.',
@@ -2949,6 +2951,26 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     for (const k in S.swap){ const v=S.swap[k];
       if (typeof v==='number'){ const d=WEEK[v]; S.swap[k]=d?d.id:undefined; if(!d) delete S.swap[k]; migrated=true; } }
     if (migrated) commit();
+  }
+  { /* one-time migration: Friday's "Barbell row — 4x10" block used to log under the
+       same key as Wednesday's "Barbell row — 3x8" ('row'), on the premise they'd
+       share one progression number — which showed Wednesday's 3x8 target on Friday's
+       4x10 block. Now split into its own key (rowvol). Move anything already logged
+       under 'row' on a Friday (the only weekday d8c can appear on) over to rowvol so
+       it doesn't just vanish from the page it was actually logged on. */
+    let rowMigrated=false;
+    for (const k in S.gym){
+      if (S.gym[k]&&S.gym[k].row&&dowIdx(k)===4){
+        S.gym[k].rowvol=(S.gym[k].rowvol||[]).concat(S.gym[k].row);
+        delete S.gym[k].row;
+        rowMigrated=true;
+      }
+    }
+    if (S.prs.row && dowIdx(S.prs.row.date)===4 &&
+        (!S.prs.rowvol || S.prs.row.e1rm>S.prs.rowvol.e1rm)){
+      S.prs.rowvol=S.prs.row; delete S.prs.row; rowMigrated=true;
+    }
+    if (rowMigrated) commit();
   }
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
