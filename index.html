@@ -985,6 +985,49 @@ const FOODS_VENUES = [
 ['UMW Dining — Santa Fe Roasted Cauliflower Bowl',470,14,65,16],
 ['UMW Dining — Southern Style Green Beans',66,2,10,2],
 ['UMW Dining — Sauteed Spinach & Caramelized Onions',45,2,6,2],
+/* -- Chipotle Mexican Grill --
+   Exact, not estimated: built from Chipotle's own printed nutrition-facts
+   menu (per-ingredient calories/fat/carbs/fiber/sugar/protein), summed for
+   a realistic single order. Composed meals are one 4oz protein + rice +
+   beans + salsa + a topping or two, matching what actually comes in a
+   normal bowl/burrito. Individual ingredients are also broken out below
+   so you can log a custom build piece by piece and still get exact numbers
+   instead of the generic "Chicken breast" entry in the base FOODS list. */
+['Chipotle — Chicken Burrito Bowl (rice, black beans, salsa, cheese)',655,50,67,21],
+['Chipotle — Steak Burrito (tortilla, rice, pinto beans, salsa, cheese)',945,47,117,29],
+['Chipotle — Barbacoa Bowl (rice, black beans, salsa, guac)',820,41,88,36],
+['Chipotle — Carnitas Bowl (rice, pinto beans, salsa, cheese)',685,41,66,26],
+['Chipotle — Sofritas Bowl (rice, black beans, salsa, guac)',800,25,95,39],
+['Chipotle — Chicken Salad (greens, black beans, salsa, vinaigrette)',645,46,64,26],
+['Chipotle — Veggie Bowl (rice, black beans, pinto beans, fajita veg, cheese)',625,27,93,15],
+['Chipotle — Chicken, 4oz',180,32,0,7],
+['Chipotle — Steak, 4oz',150,21,1,6],
+['Chipotle — Barbacoa, 4oz',170,24,2,7],
+['Chipotle — Carnitas, 4oz',210,23,0,12],
+['Chipotle — Sofritas, 4oz',150,8,9,10],
+['Chipotle — Cilantro-Lime Rice, 4oz',210,4,40,4],
+['Chipotle — Black Beans, 4oz',130,8,22,2],
+['Chipotle — Pinto Beans, 4oz',130,8,21,2],
+['Chipotle — Guacamole, 4oz',230,2,8,22],
+['Chipotle — Queso Blanco, 4oz (side)',240,10,7,18],
+/* -- Domoishi (poké bowl / rice bowl / ramen) --
+   No published nutrition data exists for this one — it's a small chain,
+   not a "print a PDF from the corporate site" situation like the others
+   above. Every number here, calories included, is ESTIMATED by building
+   up the dish from its stated components (base + protein + toppings +
+   sauce) using typical values for each part. Lowest-confidence entries in
+   this file by a wide margin — treat as a rough placeholder, not a label.
+   Ramen and Wings & Appetizers weren't on the printed menu (collapsed
+   sections that didn't expand) — send those over if you want them added. */
+['Domoishi — House Poké Bowl, tuna, white rice',770,37,98,18],
+['Domoishi — Spicy Tuna Poké Bowl, white rice',830,32,93,31],
+['Domoishi — Salmon Poké Bowl, brown rice',780,33,106,23],
+['Domoishi — Shrimp Poké Bowl, white rice',770,37,97,21],
+['Domoishi — Tofu Poké Bowl, brown rice',760,29,122,16],
+['Domoishi — Tokyo Chicken Katsu Bowl, white rice',830,36,110,20],
+['Domoishi — Soy Garlic Chicken Bowl, white rice',820,34,107,20],
+['Domoishi — Beef Curry Bowl, white rice',730,27,95,19],
+['Domoishi — Gyudon Beef Bowl, white rice',720,29,93,18],
 ];
 FOODS.push(...FOODS_VENUES);
 
