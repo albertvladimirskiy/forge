@@ -916,6 +916,32 @@ const FOODS_MORE = [
 ];
 FOODS.push(...FOODS_MORE);
 
+/* ---------------------- restaurant & venue menu items ----------------------
+   Same shape as FOODS: [name, kcal, protein g, carbs g, fat g].
+   Naming convention: "Venue — Item (portion)" so typing the venue name in
+   the food search groups everything from that place together, and typing
+   the item name still finds it on its own. Figures below are sourced from
+   each chain's published nutrition info / public nutrition trackers as a
+   solid starting point for whole, as-served portions — swap in your own
+   numbers if your usual order or location differs. Add your dining hall,
+   your gym's smoothie spot, whatever you actually eat, the same way:
+   one line, five numbers, done. */
+const FOODS_VENUES = [
+/* -- Panera Bread -- */
+['Panera — Bacon Turkey Bravo sandwich (whole)',770,41,65,37],
+['Panera — Napa Almond Chicken Salad sandwich (whole)',630,30,62,32],
+['Panera — Broccoli Cheddar Soup (bowl)',360,14,30,21],
+['Panera — Chicken Noodle Soup (bowl)',180,14,19,5],
+['Panera — Mac & Cheese (bowl)',960,32,67,64],
+['Panera — Caesar Salad with Chicken (whole)',550,39,25,31],
+['Panera — Fuji Apple Chicken Salad (whole)',550,30,37,32],
+['Panera — Grilled Cheese sandwich (whole)',810,33,72,44],
+['Panera — Plain Bagel',280,10,57,1],
+['Panera — Cinnamon Crunch Bagel',430,13,78,7],
+['Panera — Chocolate Chipper Cookie',390,4,52,18],
+];
+FOODS.push(...FOODS_VENUES);
+
 /* ------------------------------------------- progression exercise map ----- */
 /* inc in kg (1.13=2.5lb, 2.27=5lb, 4.54=10lb). m = standard as multiple of
    bodyweight (only set for the 8 lifts that appear on the standards

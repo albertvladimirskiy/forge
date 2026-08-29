@@ -39,3 +39,9 @@ blocks, `steps`, `prog` rules), `FOODS` (the calorie database — add your stapl
 `BOOKS`, `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`, `SPORTS` (the MET value
 per sport used to cost calendar commitments tagged Physical — add a sport your gym does that
 isn't listed, or tune a number if it's over/under-crediting you).
+
+`FOODS_VENUES`, right after `FOODS`/`FOODS_MORE`, is where real menu items live — a cafeteria,
+a dining hall, a restaurant chain — so you can log "the whole sandwich" instead of guessing at
+ingredients. Same `[name, kcal, protein, carbs, fat]` shape as `FOODS`; name it
+`"Venue — Item (portion)"` so searching the venue groups its items together. A Panera starter
+set is in there now — add your own cafeteria/restaurants the same way, one line per item.
