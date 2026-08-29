@@ -923,9 +923,12 @@ FOODS.push(...FOODS_MORE);
    the item name still finds it on its own. Figures below are sourced from
    each chain's published nutrition info / public nutrition trackers as a
    solid starting point for whole, as-served portions — swap in your own
-   numbers if your usual order or location differs. Add your dining hall,
-   your gym's smoothie spot, whatever you actually eat, the same way:
-   one line, five numbers, done. */
+   numbers if your usual order or location differs.
+   Curation rule: real entrees and sides only — the thing you'd actually
+   build a meal around. Desserts, milkshakes, and pure-sugar drinks are left
+   out on purpose; log those from the base FOODS list if you want them.
+   Add your dining hall, your gym's smoothie spot, whatever you actually
+   eat, the same way: one line, five numbers, done. */
 const FOODS_VENUES = [
 /* -- Panera Bread -- */
 ['Panera — Bacon Turkey Bravo sandwich (whole)',770,41,65,37],
@@ -938,7 +941,20 @@ const FOODS_VENUES = [
 ['Panera — Grilled Cheese sandwich (whole)',810,33,72,44],
 ['Panera — Plain Bagel',280,10,57,1],
 ['Panera — Cinnamon Crunch Bagel',430,13,78,7],
-['Panera — Chocolate Chipper Cookie',390,4,52,18],
+/* -- Chick-fil-A -- */
+['Chick-fil-A — Chick-fil-A Sandwich (classic)',466,30,39,21],
+['Chick-fil-A — Spicy Chicken Sandwich',450,28,45,19],
+['Chick-fil-A — Grilled Chicken Sandwich',380,28,44,11],
+['Chick-fil-A — Grilled Chicken Club',520,37,45,22],
+['Chick-fil-A — Nuggets, 8-count',250,27,11,11],
+['Chick-fil-A — Grilled Nuggets, 8-count',130,25,1,3],
+['Chick-fil-A — Chick-n-Strips, 4-count',410,39,22,19],
+['Chick-fil-A — Cool Wrap',660,43,32,45],
+/* -- Tropical Smoothie Cafe -- */
+['Tropical Smoothie — Peanut Paradise smoothie, 24oz (w/ protein)',690,22,93,20],
+['Tropical Smoothie — Buffalo Chicken Wrap',620,33,59,27],
+['Tropical Smoothie — Turkey Bacon Ranch Wrap',560,42,59,20],
+['Tropical Smoothie — Chicken Pesto Flatbread',430,28,43,16],
 ];
 FOODS.push(...FOODS_VENUES);
 
