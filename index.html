@@ -941,6 +941,12 @@ const FOODS_VENUES = [
 ['Panera — Grilled Cheese sandwich (whole)',810,33,72,44],
 ['Panera — Plain Bagel',280,10,57,1],
 ['Panera — Cinnamon Crunch Bagel',430,13,78,7],
+/* Asiago Bagel Stacks — the 2026 lineup: 3 breakfast + 2 permanent lunch/dinner */
+['Panera — Farmhouse Duo Asiago Bagel Stack',700,33,58,37],
+['Panera — Wake-Up BLT Asiago Everything Bagel Stack',530,27,59,21],
+['Panera — Sausage & Egg Asiago Bagel Stack',780,32,58,47],
+['Panera — Chicken Roma Asiago Bagel Stack',570,30,59,24],
+['Panera — Spicy Steak Asiago Bagel Stack',590,39,59,23],
 /* -- Chick-fil-A -- */
 ['Chick-fil-A — Chick-fil-A Sandwich (classic)',466,30,39,21],
 ['Chick-fil-A — Spicy Chicken Sandwich',450,28,45,19],
@@ -1430,21 +1436,31 @@ function streak(){
     if(s>0.08)n++; else if(i===0)continue; else break; }
   return n;
 }
-function latestLog(){ return [...S.log].sort((a,b)=>a.date<b.date?1:-1)[0]||null; }
+/* the most recent log entry that actually HAS this field — not just the most
+   recent entry overall. The Log form explicitly supports partial entries
+   ("one field is enough"), so a squat PR logged today with no bodyweight
+   re-entered must not hide a perfectly good weight from three days ago.
+   Every reader of a specific measurement (weight, a lift, bf%, shoulder,
+   waist...) goes through this rather than grabbing the latest row blind. */
+function latestField(key){
+  const withField=S.log.filter(e=>e[key]!=null).sort((a,b)=>a.date>b.date?1:-1);
+  return withField.length ? withField[withField.length-1] : null;
+}
 /* days since the most recent LOGGED WEIGHT specifically (not just any log entry —
    a bodyweight-free entry like a squat PR shouldn't reset this) */
 function daysSinceWeight(){
-  const withWeight=S.log.filter(e=>e.weight!=null).sort((a,b)=>a.date>b.date?1:-1);
-  if (!withWeight.length) return null;
-  const last=withWeight[withWeight.length-1].date;
-  const [y,m,dd]=last.split('-').map(Number), [ty,tm,td]=T.split('-').map(Number);
+  const L=latestField('weight'); if(!L) return null;
+  const [y,m,dd]=L.date.split('-').map(Number), [ty,tm,td]=T.split('-').map(Number);
   return Math.round((new Date(ty,tm-1,td)-new Date(y,m-1,dd))/86400000);
 }
 
 function pillars(){
   const t=id=>((S.tiers[id]??0)/4)*100;
-  const L=latestLog(), bw=L&&L.weight;
-  const lift=(!bw)?0:LIFTS.map(s=>L[s.k]?clamp(L[s.k]/(bw*s.m)*100,0,100):0).reduce((a,b)=>a+b,0)/LIFTS.length;
+  const Lw=latestField('weight'), bw=Lw&&Lw.weight;
+  /* bestLift() so a session logged on Today counts even if the Log tab's
+     own squat/bench/etc fields haven't been re-typed since — matches how
+     STRENGTH STANDARDS and THE LIFTS THAT BUILD IT already read strength. */
+  const lift=(!bw)?0:LIFTS.map(s=>{ const cur=bestLift(s.k); return cur?clamp(cur/(bw*s.m)*100,0,100):0; }).reduce((a,b)=>a+b,0)/LIFTS.length;
   const read=Object.values(S.books).filter(v=>v===2).length;
   const dl=daysLogged();
   return [
@@ -1467,7 +1483,7 @@ function activityMinutes(k){
    item based on its chosen sport (SPORTMET), rather than one flat number
    for everything — a BJJ round and a brisk walk no longer cost the same.  */
 function extraKcal(k){
-  const L=latestLog(); if(!L||!L.weight||!k) return 0;
+  const L=latestField('weight'); if(!L||!k) return 0;
   const items=physicalItems(k); if(!items.length) return 0;
   const kcal=items.reduce((a,c)=>{
     let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440;
@@ -1477,7 +1493,7 @@ function extraKcal(k){
   return Math.round(kcal);
 }
 function nutrition(k){
-  const L=latestLog(); if(!L||!L.weight) return null;
+  const L=latestField('weight'); if(!L) return null;
   const p=S.profile,kg=L.weight,cm=+p.height,age=+p.age||22;
   const bmr=10*kg+6.25*cm-5*age+(p.sex==='m'?5:-161);
   const tdee=bmr*(+p.activity||1.725);
@@ -1523,7 +1539,7 @@ function gymBest(ex){
 }
 /* best known strength for standards: manual body-log entry vs gym-derived */
 function bestLift(k){
-  const L=latestLog(), man=L?L[k]:null, gym=gymBest(k);
+  const L=latestField(k), man=L?L[k]:null, gym=gymBest(k);
   if (man==null&&gym==null) return null;
   return Math.max(man??-1, gym??-1);
 }
@@ -1550,7 +1566,7 @@ function prescribe(ex){
   } else {
     const ss=gymSessions(ex);
     if (!ss.length){
-      const man=latestLog()&&latestLog()[ex];
+      const Lf=latestField(ex), man=Lf?Lf[ex]:null;
       rx = man ? {mode:'first', w:(E.added?man:man*0.8), sets:E.sets, reps:E.reps} : {mode:'start'};
     } else {
       const last=ss[ss.length-1];
@@ -1680,10 +1696,12 @@ function monthAvg(off){
 /* Turns height / weight / body fat into a concrete, measurable target and the
    honest distance to it. All internal units metric.                          */
 function physique(){
-  const L=latestLog(); if(!L||!L.weight) return null;
-  const kg=L.weight, m=(+S.profile.height)/100;
+  const Lw=latestField('weight'); if(!Lw) return null;
+  const kg=Lw.weight, m=(+S.profile.height)/100;
   if(!m||m<1.2) return null;
-  const bf=L.bf!=null?L.bf:null;
+  /* bf% read independently of weight — a caliper reading logged on its own
+     shouldn't be hidden just because the latest weigh-in didn't repeat it */
+  const Lbf=latestField('bf'), bf=Lbf?Lbf.bf:null;
   const lbm = bf!=null ? kg*(1-bf/100) : null;
   const ffmi = lbm!=null ? lbm/(m*m) + 6.1*(1.8-m) : null;
 
@@ -1717,6 +1735,27 @@ function physique(){
 
 /* ------------------------------------------------------- meal totals ----- */
 const FOODIDX = (()=>{ const o={}; FOODS.forEach(f=>o[f[0]]=f); return o; })();
+/* food search: [entry, originalIndex] pairs (index carried through so the
+   picker never has to re-locate a row with FOODS.indexOf), ranked so the
+   most relevant match leads rather than whatever happened to be pushed
+   into FOODS first — the whole-name match, then a match at the start of
+   any word (so "chicken" surfaces "Chicken breast" AND "Chick-fil-A —
+   Chick-fil-A Sandwich" ahead of a food that just happens to contain the
+   word mid-name), then any other substring hit. Ties keep FOODS order. */
+function foodSearch(q){
+  const query=q.trim().toLowerCase();
+  const pairs=FOODS.map((f,idx)=>[f,idx]);
+  if (!query) return pairs;
+  const scored=[];
+  for (const pair of pairs){
+    const name=pair[0][0].toLowerCase();
+    const at=name.indexOf(query); if (at<0) continue;
+    const wordStart = at===0 || /[^a-z0-9]/.test(name[at-1]);
+    scored.push([pair, at===0?0:wordStart?1:2]);
+  }
+  scored.sort((a,b)=>a[1]-b[1]);
+  return scored.map(s=>s[0]);
+}
 function mealTotals(m){
   let kcal=0,p=0,c=0,f=0;
   m.slots.forEach(s=>s.items.forEach(([n,q])=>{
@@ -1773,7 +1812,7 @@ function dayLoad(k){
 let view='today', openBlock='train', shiftId=null, openTrack='markets', openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
     foodQ='', copyMode=false, copySel={}, swapOpen=false, foodOpen=false,
-    buildSub='target', openMeal=null, mealScale=true;
+    buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='';
 const T = dkey();
 let viewOff = 0;
 const VD = () => dkey(viewOff);
@@ -2035,9 +2074,8 @@ function ViewToday(){
       <button class="btn ghost" data-act="foodopen" style="border:none;border-top:1px solid var(--rule)">${svg('plus',13)} ADD FOOD</button>
       ${foodOpen?`<div class="foodpick">
         <div class="searchrow">${svg('search',14,'var(--faint)')}
-          <input type="text" id="foodq" placeholder="Search 100+ foods..." value="${esc(foodQ)}" autocomplete="off"></div>
-        <div class="foodresults">${FOODS.filter(f=>!foodQ||f[0].toLowerCase().includes(foodQ.toLowerCase())).slice(0,12).map((f,i)=>{
-          const idx=FOODS.indexOf(f);
+          <input type="text" id="foodq" placeholder="Search ${FOODS.length}+ foods..." value="${esc(foodQ)}" autocomplete="off"></div>
+        <div class="foodresults">${foodSearch(foodQ).slice(0,24).map(([f,idx])=>{
           return `<div class="fres"><button class="fresmain" data-act="addfood" data-v="${idx}" data-v2="1">
             <span style="flex:1;text-align:left">${esc(f[0])}</span>
             <span style="color:var(--faint);font-size:10px">${f[1]} kcal · ${f[2]}p</span></button>
@@ -2235,35 +2273,43 @@ function ViewPlan(){
 /* =========================================================== build: log == */
 function ViewLog(){
   const p=S.profile, imp=p.unit==='imperial', wu=imp?'lb':'kg', lu=imp?'in':'cm';
-  const L=latestLog();
+  const L=latestField('weight');
   const conv=v=>imp?Math.round(v*2.20462*10)/10:v;
+  const lconv=v=>imp?Math.round(v/2.54*10)/10:v;
   const seriesFor=k=>S.log.map(e=>{ if(e[k]==null) return null;
     return ['weight','squat','bench','dead','ohp'].includes(k)?Math.round(conv(e[k])*10)/10:e[k]; });
   const chartMap={weight:['weight','#E0A03A'],bf:['bf','#5C8CA8'],squat:['squat','#5C8CA8'],bench:['bench','#B4553A'],dead:['dead','#7C9A5E']};
   const [ck,cc]=chartMap[chartKey];
   const recent=[...S.log].sort((a,b)=>a.date<b.date?1:-1).slice(0,7);
+  /* pre-fill from whatever's already saved for today, so re-opening this
+     tab to fix a typo (or just check what's already in) doesn't look like
+     an empty form — the save handler already merges by date, this just
+     makes what it'll merge WITH visible. Only today: nothing re-populates
+     this on a manual date-field edit, so a past date still shows blank. */
+  const todayRec=S.log.find(x=>x.date===T)||{};
+  const pf=(k,cf)=>todayRec[k]!=null?(cf?cf(todayRec[k]):todayRec[k]):'';
 
   return `
     ${sect('plus','LOG A MEASUREMENT')}
-    <div class="hint">Fill in whatever you measured - one field is enough. Saving the same date updates that entry.</div>
+    <div class="hint">Fill in whatever you measured - one field is enough. Saving the same date updates that entry. Fields below are pre-filled with what's already saved for today.</div>
     <div class="panel">
       <div class="grid2">
         <label class="f"><span>Date</span><input type="date" id="f_date" value="${T}"></label>
-        <label class="f"><span>Weight (${wu})</span><input type="number" step="0.1" id="f_weight" inputmode="decimal"></label>
-        <label class="f"><span>Body fat %</span><input type="number" step="0.1" id="f_bf" inputmode="decimal"></label>
-        <label class="f"><span>Waist (${lu})</span><input type="number" step="0.1" id="f_waist" inputmode="decimal"></label>
-        <label class="f"><span>Shoulders (${lu})</span><input type="number" step="0.1" id="f_shoulder" inputmode="decimal"></label>
-        <label class="f"><span>Resting HR</span><input type="number" id="f_rhr" inputmode="numeric"></label>
-        <label class="f"><span>Sleep (h)</span><input type="number" step="0.1" id="f_sleep" inputmode="decimal"></label>
+        <label class="f"><span>Weight (${wu})</span><input type="number" step="0.1" id="f_weight" inputmode="decimal" value="${pf('weight',conv)}"></label>
+        <label class="f"><span>Body fat %</span><input type="number" step="0.1" id="f_bf" inputmode="decimal" value="${pf('bf')}"></label>
+        <label class="f"><span>Waist (${lu})</span><input type="number" step="0.1" id="f_waist" inputmode="decimal" value="${pf('waist',lconv)}"></label>
+        <label class="f"><span>Shoulders (${lu})</span><input type="number" step="0.1" id="f_shoulder" inputmode="decimal" value="${pf('shoulder',lconv)}"></label>
+        <label class="f"><span>Resting HR</span><input type="number" id="f_rhr" inputmode="numeric" value="${pf('rhr')}"></label>
+        <label class="f"><span>Sleep (h)</span><input type="number" step="0.1" id="f_sleep" inputmode="decimal" value="${pf('sleep')}"></label>
       </div>
       <div style="padding:14px 13px 2px;font-size:8.5px;letter-spacing:.12em;color:var(--faint)">TOP SETS - 1RM OR HEAVIEST 5</div>
       <div class="grid2">
-        <label class="f"><span>Squat (${wu})</span><input type="number" step="0.5" id="f_squat" inputmode="decimal"></label>
-        <label class="f"><span>Bench (${wu})</span><input type="number" step="0.5" id="f_bench" inputmode="decimal"></label>
-        <label class="f"><span>Deadlift (${wu})</span><input type="number" step="0.5" id="f_dead" inputmode="decimal"></label>
-        <label class="f"><span>Press (${wu})</span><input type="number" step="0.5" id="f_ohp" inputmode="decimal"></label>
-        <label class="f"><span>Row (${wu})</span><input type="number" step="0.5" id="f_row" inputmode="decimal"></label>
-        <label class="f"><span>Pull-up added (${wu})</span><input type="number" step="0.5" id="f_pullup" inputmode="decimal"></label>
+        <label class="f"><span>Squat (${wu})</span><input type="number" step="0.5" id="f_squat" inputmode="decimal" value="${pf('squat',conv)}"></label>
+        <label class="f"><span>Bench (${wu})</span><input type="number" step="0.5" id="f_bench" inputmode="decimal" value="${pf('bench',conv)}"></label>
+        <label class="f"><span>Deadlift (${wu})</span><input type="number" step="0.5" id="f_dead" inputmode="decimal" value="${pf('dead',conv)}"></label>
+        <label class="f"><span>Press (${wu})</span><input type="number" step="0.5" id="f_ohp" inputmode="decimal" value="${pf('ohp',conv)}"></label>
+        <label class="f"><span>Row (${wu})</span><input type="number" step="0.5" id="f_row" inputmode="decimal" value="${pf('row',conv)}"></label>
+        <label class="f"><span>Pull-up added (${wu})</span><input type="number" step="0.5" id="f_pullup" inputmode="decimal" value="${pf('pullup',conv)}"></label>
       </div>
       <div style="padding:13px"><button class="btn" data-act="savelog">${svg('check',13,'var(--ink)',2.6)} SAVE ENTRY</button></div>
     </div>
@@ -2302,7 +2348,8 @@ function ViewLog(){
 function ViewTarget(){
   const q=physique(), imp=S.profile.unit==='imperial';
   const U=imp?'lb':'kg', lb=x=>x==null?'—':(imp?x*2.20462:x).toFixed(1);
-  const L=latestLog();
+  const L=latestField('weight');
+  const Lsh=latestField('shoulder'), Lwa=latestField('waist');
 
   if (!q) return `
     ${sect('target','THE BUILD')}
@@ -2380,7 +2427,7 @@ function ViewTarget(){
       <p class="t">Also true: the on-screen impression is mostly <b>shoulders, back width and forearms</b> against a small waist. That is why this program pulls as much as it presses, and why the waist measurement matters more than the scale.</p>
     </div></div>
 
-    ${L&&L.shoulder&&L.waist?(()=>{ const r=L.shoulder/L.waist;
+    ${Lsh&&Lwa?(()=>{ const r=Lsh.shoulder/Lwa.waist;
       return `<div class="panel"><div class="stand"><div class="standtop"><span style="font-weight:600">Shoulder : waist</span>
         <span>${r.toFixed(2)} <span style="color:var(--faint)">/ ${ARCH.vTaper} target</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(r/ARCH.vTaper*100,0,100)}%;background:${r>=ARCH.vTaper?'var(--moss)':'var(--steel)'}"></div></div></div>
@@ -2672,9 +2719,16 @@ function ViewCodex(){
       <p class="t">Nothing is uploaded anywhere. Phone and laptop keep separate files.</p>
       <p class="t">Export a backup monthly and before changing phones.</p>
     </div>
-    <div style="padding:0 13px 13px;display:flex;gap:8px">
+    ${importOpen?`<div style="padding:0 13px 13px">
+      <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what EXPORT BACKUP gave you, then RESTORE."></textarea></label>
+      ${importErr?`<div class="note" style="color:var(--rust);border-top:none;padding:8px 0 0">${esc(importErr)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button class="btn" data-act="importgo">RESTORE — REPLACES EVERYTHING STORED</button>
+        <button class="btn ghost" data-act="importcancel" style="max-width:90px">CANCEL</button>
+      </div>
+    </div>`:`<div style="padding:0 13px 13px;display:flex;gap:8px">
       <button class="btn ghost" data-act="export">EXPORT BACKUP</button>
-      <button class="btn ghost" data-act="import">IMPORT</button></div></div>
+      <button class="btn ghost" data-act="import">IMPORT</button></div>`}</div>
 
     <div class="closing">
       The character you're modelling this on is fiction, and the fiction skips the only part that matters: a decade of
@@ -2793,7 +2847,7 @@ document.addEventListener('click', e => {
       if (S.extra[v]){ S.extra[v].splice(+v2,1); if(!S.extra[v].length) delete S.extra[v]; }
       commit(); break;
     }
-    case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
     case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
@@ -2999,12 +3053,20 @@ document.addEventListener('click', e => {
       }catch(err){}
       toast('Backup copied to clipboard'); return;
     }
-    case 'import': {
-      const txt=prompt('Paste a backup here. This replaces everything currently stored.');
-      if(!txt) return;
-      try{ S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(txt)); commit(); render(); toast('Backup restored'); }
-      catch(err){ toast('That file could not be read'); }
-      return;
+    /* in-app textarea instead of prompt() — multi-line paste into prompt()
+       is unreliable on iOS Safari / home-screen PWAs, the app's primary
+       target per the README, and a backup blob is well past one line. */
+    case 'import': importOpen=true; importErr=''; break;
+    case 'importcancel': importOpen=false; importErr=''; break;
+    case 'importgo': {
+      const txt=(document.getElementById('importtxt')||{}).value;
+      if(!txt||!txt.trim()){ importErr='Paste the backup JSON first.'; break; }
+      try{
+        const parsed=JSON.parse(txt);
+        S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
+        importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
+      }catch(err){ importErr="That didn't parse as valid backup JSON — check nothing got cut off in the paste."; }
+      break;
     }
   }
   render();
