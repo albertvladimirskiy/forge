@@ -916,6 +916,121 @@ const FOODS_MORE = [
 ];
 FOODS.push(...FOODS_MORE);
 
+/* ---------------------- restaurant & venue menu items ----------------------
+   Same shape as FOODS: [name, kcal, protein g, carbs g, fat g].
+   Naming convention: "Venue — Item (portion)" so typing the venue name in
+   the food search groups everything from that place together, and typing
+   the item name still finds it on its own. Figures below are sourced from
+   each chain's published nutrition info / public nutrition trackers as a
+   solid starting point for whole, as-served portions — swap in your own
+   numbers if your usual order or location differs.
+   Curation rule: real entrees and sides only — the thing you'd actually
+   build a meal around. Desserts, milkshakes, and pure-sugar drinks are left
+   out on purpose; log those from the base FOODS list if you want them.
+   Add your dining hall, your gym's smoothie spot, whatever you actually
+   eat, the same way: one line, five numbers, done. */
+const FOODS_VENUES = [
+/* -- Panera Bread -- */
+['Panera — Bacon Turkey Bravo sandwich (whole)',770,41,65,37],
+['Panera — Napa Almond Chicken Salad sandwich (whole)',630,30,62,32],
+['Panera — Broccoli Cheddar Soup (bowl)',360,14,30,21],
+['Panera — Chicken Noodle Soup (bowl)',180,14,19,5],
+['Panera — Mac & Cheese (bowl)',960,32,67,64],
+['Panera — Caesar Salad with Chicken (whole)',550,39,25,31],
+['Panera — Fuji Apple Chicken Salad (whole)',550,30,37,32],
+['Panera — Grilled Cheese sandwich (whole)',810,33,72,44],
+['Panera — Plain Bagel',280,10,57,1],
+['Panera — Cinnamon Crunch Bagel',430,13,78,7],
+/* -- Chick-fil-A -- */
+['Chick-fil-A — Chick-fil-A Sandwich (classic)',466,30,39,21],
+['Chick-fil-A — Spicy Chicken Sandwich',450,28,45,19],
+['Chick-fil-A — Grilled Chicken Sandwich',380,28,44,11],
+['Chick-fil-A — Grilled Chicken Club',520,37,45,22],
+['Chick-fil-A — Nuggets, 8-count',250,27,11,11],
+['Chick-fil-A — Grilled Nuggets, 8-count',130,25,1,3],
+['Chick-fil-A — Chick-n-Strips, 4-count',410,39,22,19],
+['Chick-fil-A — Cool Wrap',660,43,32,45],
+/* -- Tropical Smoothie Cafe -- */
+['Tropical Smoothie — Peanut Paradise smoothie, 24oz (w/ protein)',690,22,93,20],
+['Tropical Smoothie — Buffalo Chicken Wrap',620,33,59,27],
+['Tropical Smoothie — Turkey Bacon Ranch Wrap',560,42,59,20],
+['Tropical Smoothie — Chicken Pesto Flatbread',430,28,43,16],
+/* -- UMW Dining, CRUC (Cedric Rucker University Center) --
+   Calories are exact, pulled from the official CRUC lunch menu for
+   8/28/26 (umw.sodexomyway.com/en-us/cruc_menu). Protein/carbs/fat are
+   ESTIMATED from typical macro composition for each dish, NOT read off a
+   Sodexo nutrition label — the label modal needs a click per item and
+   wasn't captured. Skipped on purpose: Bliss (bakery/dessert station —
+   cookies, cupcakes, cheesecake bar, gelatin), fries, chips, and poutine.
+   To upgrade an item to exact numbers: click its calorie figure on the
+   CRUC menu page, screenshot the nutrition label that pops up, and send
+   it over — the estimate here gets replaced. Station rotates, so treat
+   this as a snapshot of what's typically on offer, not a fixed daily menu. */
+['UMW Dining — Adobo Chicken Thighs',144,18,2,7],
+['UMW Dining — Memphis Meatloaf',228,16,9,14],
+['UMW Dining — Mindful Red Curry Chicken Soup',112,9,10,4],
+['UMW Dining — Smash Burger',297,17,22,16],
+['UMW Dining — Fried Chicken Tenders',93,7,5,5],
+['UMW Dining — Ham and Swiss on Wheat',126,10,14,4],
+['UMW Dining — Thick & Zesty Chili',265,18,24,11],
+['UMW Dining — Tuscan White Bean Wrap',209,9,34,5],
+['UMW Dining — Baked Rigatoni with Tomatoes & Italian Cheeses',383,16,55,11],
+['UMW Dining — Rigatoni Pasta (plain)',389,13,75,4],
+['UMW Dining — Cilantro Lime Rice',182,3,36,3],
+['UMW Dining — Steamed White Rice',150,3,33,0],
+['UMW Dining — Black Beans Frijoles Negros',73,5,13,0],
+['UMW Dining — Baked Idaho Potato',195,5,45,0],
+['UMW Dining — Bulgur Wheat Salad',123,3,22,3],
+['UMW Dining — Creamy Broccoli & Cheddar Soup',203,8,16,12],
+['UMW Dining — Santa Fe Roasted Cauliflower Bowl',470,14,65,16],
+['UMW Dining — Southern Style Green Beans',66,2,10,2],
+['UMW Dining — Sauteed Spinach & Caramelized Onions',45,2,6,2],
+/* -- Chipotle Mexican Grill --
+   Exact, not estimated: built from Chipotle's own printed nutrition-facts
+   menu (per-ingredient calories/fat/carbs/fiber/sugar/protein), summed for
+   a realistic single order. Composed meals are one 4oz protein + rice +
+   beans + salsa + a topping or two, matching what actually comes in a
+   normal bowl/burrito. Individual ingredients are also broken out below
+   so you can log a custom build piece by piece and still get exact numbers
+   instead of the generic "Chicken breast" entry in the base FOODS list. */
+['Chipotle — Chicken Burrito Bowl (rice, black beans, salsa, cheese)',655,50,67,21],
+['Chipotle — Steak Burrito (tortilla, rice, pinto beans, salsa, cheese)',945,47,117,29],
+['Chipotle — Barbacoa Bowl (rice, black beans, salsa, guac)',820,41,88,36],
+['Chipotle — Carnitas Bowl (rice, pinto beans, salsa, cheese)',685,41,66,26],
+['Chipotle — Sofritas Bowl (rice, black beans, salsa, guac)',800,25,95,39],
+['Chipotle — Chicken Salad (greens, black beans, salsa, vinaigrette)',645,46,64,26],
+['Chipotle — Veggie Bowl (rice, black beans, pinto beans, fajita veg, cheese)',625,27,93,15],
+['Chipotle — Chicken, 4oz',180,32,0,7],
+['Chipotle — Steak, 4oz',150,21,1,6],
+['Chipotle — Barbacoa, 4oz',170,24,2,7],
+['Chipotle — Carnitas, 4oz',210,23,0,12],
+['Chipotle — Sofritas, 4oz',150,8,9,10],
+['Chipotle — Cilantro-Lime Rice, 4oz',210,4,40,4],
+['Chipotle — Black Beans, 4oz',130,8,22,2],
+['Chipotle — Pinto Beans, 4oz',130,8,21,2],
+['Chipotle — Guacamole, 4oz',230,2,8,22],
+['Chipotle — Queso Blanco, 4oz (side)',240,10,7,18],
+/* -- Domoishi (poké bowl / rice bowl / ramen) --
+   No published nutrition data exists for this one — it's a small chain,
+   not a "print a PDF from the corporate site" situation like the others
+   above. Every number here, calories included, is ESTIMATED by building
+   up the dish from its stated components (base + protein + toppings +
+   sauce) using typical values for each part. Lowest-confidence entries in
+   this file by a wide margin — treat as a rough placeholder, not a label.
+   Ramen and Wings & Appetizers weren't on the printed menu (collapsed
+   sections that didn't expand) — send those over if you want them added. */
+['Domoishi — House Poké Bowl, tuna, white rice',770,37,98,18],
+['Domoishi — Spicy Tuna Poké Bowl, white rice',830,32,93,31],
+['Domoishi — Salmon Poké Bowl, brown rice',780,33,106,23],
+['Domoishi — Shrimp Poké Bowl, white rice',770,37,97,21],
+['Domoishi — Tofu Poké Bowl, brown rice',760,29,122,16],
+['Domoishi — Tokyo Chicken Katsu Bowl, white rice',830,36,110,20],
+['Domoishi — Soy Garlic Chicken Bowl, white rice',820,34,107,20],
+['Domoishi — Beef Curry Bowl, white rice',730,27,95,19],
+['Domoishi — Gyudon Beef Bowl, white rice',720,29,93,18],
+];
+FOODS.push(...FOODS_VENUES);
+
 /* ------------------------------------------- progression exercise map ----- */
 /* inc in kg (1.13=2.5lb, 2.27=5lb, 4.54=10lb). m = standard as multiple of
    bodyweight (only set for the 8 lifts that appear on the standards
