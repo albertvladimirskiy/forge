@@ -33,7 +33,7 @@
   --fs-detail:10.5px;  /* secondary/hint/detail body text — the most common small role */
   --fs-body:11px;      /* paragraph/prose body copy */
   --fs-title:12.5px;   /* row/entry/form title */
-  --fs-form:13px;      /* text inputs and the vitals numeral */
+  --fs-form:13px;      /* the vitals numeral, accordion titles, stat-suffix text — NOT actual <input>/<select>/<textarea> elements, which are hardcoded to 16px to stop iOS's auto-zoom-on-focus (see the input rule below) */
   --fs-headline:14px;  /* accordion/section headers */
   --fs-numeral-md:15px;/* medium-emphasis numeral: streak, kcal/day, day-progress */
   --fs-display:23px;   /* the brand mark */
@@ -54,6 +54,11 @@
   --banner-steel-bg:#0F161C; --banner-steel-border:#1C2A36;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* Kills the double-tap-to-zoom gesture (and the ~300ms tap delay with it)
+   while explicitly leaving pinch-zoom alone — "manipulation" means exactly
+   that combination. A more specific touch-action (.rblk's drag handling)
+   still overrides this for its own element. */
+html{touch-action:manipulation}
 html,body{margin:0;padding:0;background:var(--ink);color:var(--text);
   font-family:var(--mono);font-size:14px;overscroll-behavior-y:none;}
 body{padding-bottom:env(safe-area-inset-bottom)}
@@ -180,9 +185,13 @@ p.t b{color:var(--text);font-weight:700}
 label.f{display:flex;flex-direction:column;gap:5px}
 label.f span{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
 input,select,textarea{background:var(--sunk);border:1px solid var(--rule);padding:10px;
-  font-size:var(--fs-form);width:100%;outline:none;border-radius:0;transition:border-color .2s}
+  /* 16px, not --fs-form: iOS Safari auto-zooms the viewport to fit any focused
+     input whose font-size is under 16px. That zoom-and-snap-back is the "screen
+     shakes while typing" report — the fix is never letting it trigger, not
+     disabling zoom capability app-wide (a real WCAG requirement) to mask it. */
+  font-size:16px;width:100%;outline:none;border-radius:0;transition:border-color .2s}
 input:focus,select:focus,textarea:focus{border-color:var(--amber)}
-textarea{resize:vertical;min-height:54px;line-height:1.5;font-size:var(--fs-title)}
+textarea{resize:vertical;min-height:54px;line-height:1.5;font-size:16px}
 select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
   background-position:calc(100% - 14px) 18px,calc(100% - 9px) 18px;background-size:5px 5px;background-repeat:no-repeat}
 input[type=date],input[type=time]{min-height:40px}
@@ -264,7 +273,7 @@ input[type=date],input[type=time]{min-height:40px}
 .foodlist{border-top:1px solid var(--rule)}
 .foodpick{border-top:1px solid var(--rule);background:#101317}
 .searchrow{display:flex;align-items:center;gap:9px;padding:11px 13px;border-bottom:1px solid var(--rule)}
-.searchrow input{border:none;background:none;padding:2px 0;font-size:var(--fs-form)}
+.searchrow input{border:none;background:none;padding:2px 0;font-size:16px}
 .foodresults{max-height:290px;overflow-y:auto}
 .fres{display:flex;align-items:stretch;border-bottom:1px solid #191D22}
 .fresmain{flex:1;display:flex;align-items:center;gap:8px;padding:11px 8px 11px 13px;font-size:var(--fs-title);min-width:0}
@@ -309,7 +318,7 @@ input[type=date],input[type=time]{min-height:40px}
 .setrow{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:var(--fs-title);border-bottom:1px solid #14181D}
 .setn{width:16px;font-size:var(--fs-caption);color:var(--faint)}
 .setadd{display:flex;align-items:center;gap:8px;margin-top:10px}
-.setadd input{width:76px;padding:9px;font-size:var(--fs-form);text-align:center}
+.setadd input{width:76px;padding:9px;font-size:16px;text-align:center}
 .setx{color:var(--faint);font-size:var(--fs-body)}
 .setadd .chip{white-space:nowrap;padding:9px 13px}
 .flagbtn{display:flex;align-items:center;gap:5px;font-size:var(--fs-caption);color:var(--faint);letter-spacing:.06em;padding:4px 8px;border:1px solid var(--rule)}
