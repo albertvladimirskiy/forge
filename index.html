@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>FORGE</title>
 <meta name="theme-color" content="#0B0C0E">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,16 +16,52 @@
 :root{
   --ink:#0B0C0E; --panel:#131519; --panel2:#181B20; --sunk:#0E1114;
   --rule:#22262D; --rule2:#2C323A;
-  --text:#DDE3EA; --dim:#8A929C; --faint:#5B636D;
+  --text:#DDE3EA; --dim:#8A929C; --faint:#737C86;
   --amber:#E0A03A; --steel:#5C8CA8; --moss:#7C9A5E; --rust:#B4553A; --plum:#8A6FA8;
   --mono:'JetBrains Mono','SF Mono',ui-monospace,'Roboto Mono',Menlo,'Courier New',monospace;
   --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   --pad:14px;
+  /* type scale — 11 deliberate roles replacing ~20 ad hoc pixel values that
+     had drifted into near-duplicate pairs (e.g. 10px next to 10.5px for the
+     same "detail" job). Each step below is reused by 2+ components; a size
+     used exactly once (16/17/19/21px — a macro numeral, a hero-card title, a
+     phase name, a day title) stays a literal, since tokenizing a one-off
+     value adds indirection without a shared role to document. */
+  --fs-nano:7.5px;     /* micro-caption beside a bigger sibling: vitals label, nav label, rail sub-label */
+  --fs-label:8.5px;    /* uppercase structural signage: eyebrows, field labels, badges, table headers */
+  --fs-caption:9px;    /* small secondary tag/count/readout */
+  --fs-detail:10.5px;  /* secondary/hint/detail body text — the most common small role */
+  --fs-body:11px;      /* paragraph/prose body copy */
+  --fs-title:12.5px;   /* row/entry/form title */
+  --fs-form:13px;      /* text inputs and the vitals numeral */
+  --fs-headline:14px;  /* accordion/section headers */
+  --fs-numeral-md:15px;/* medium-emphasis numeral: streak, kcal/day, day-progress */
+  --fs-display:23px;   /* the brand mark */
+  --fs-numeral-lg:25px;/* the largest numeral: stat tiles */
+  /* machined-edge material pair: a hairline-thin highlight/shadow straddling a
+     surface's top/bottom border, standing in for a bevel with zero elevation —
+     border-color only, no box-shadow, so surfaces read as machined metal
+     without breaking the flat-at-rest rule. */
+  --edge-hi:#2C323C; --edge-lo:#050608;
+  /* note/banner backgrounds — each a very-dark tint of its matching domain
+     color, one pair per note type. These existed as literal hex values with
+     no shared name; documented here as what they already were, not changed. */
+  --note-warn-bg:#241B10;
+  --note-prog-bg:#151208;    --note-prog-border:#2A2210;
+  --note-pain-bg:#1E1210;    --note-pain-border:#3A2018;
+  --banner-amber-bg:#1D1608; --banner-amber-border:#3A2E10;
+  --banner-moss-bg:#121A0F;  --banner-moss-border:#243318;
+  --banner-steel-bg:#0F161C; --banner-steel-border:#1C2A36;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--ink);color:var(--text);
   font-family:var(--mono);font-size:14px;overscroll-behavior-y:none;}
 body{padding-bottom:env(safe-area-inset-bottom)}
+/* faint machined-steel grain — a fixed, ultra-low-opacity noise layer over the
+   whole app. Material presence, not decoration: invisible until you look for it. */
+body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  opacity:.035;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
 button,input,select,textarea{font-family:inherit;color:inherit}
 button{background:none;border:none;padding:0;cursor:pointer}
 button:active{transform:scale(.99)}
@@ -34,7 +70,7 @@ button:active{transform:scale(.99)}
 
 /* ---------- type ---------- */
 .disp{font-family:var(--sans);font-weight:800;letter-spacing:.02em;text-transform:uppercase}
-.eyebrow{font-size:8.5px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+.eyebrow{font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
 
 /* ---------- shell ---------- */
 #app{min-height:100vh;min-height:100dvh}
@@ -44,45 +80,49 @@ button:active{transform:scale(.99)}
 
 /* ---------- header ---------- */
 header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--ink) 78%,rgba(11,12,14,.86));
-  padding:calc(12px + env(safe-area-inset-top)) var(--pad) 0;border-bottom:1px solid var(--rule);
+  padding:calc(12px + env(safe-area-inset-top)) var(--pad) 0;border-bottom:2px solid var(--edge-lo);
   backdrop-filter:blur(8px)}
 .hrow{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.brand{font-family:var(--sans);font-weight:800;font-size:23px;letter-spacing:.22em;line-height:1}
-.subline{font-size:9.5px;letter-spacing:.12em;color:var(--dim);margin-top:6px}
-.streak{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;padding-top:2px}
+.brand{font-family:var(--sans);font-weight:800;font-size:var(--fs-display);letter-spacing:.22em;line-height:1}
+.subline{font-size:var(--fs-caption);letter-spacing:.12em;color:var(--dim);margin-top:6px}
+.streak{display:flex;align-items:center;gap:6px;font-size:var(--fs-numeral-md);font-weight:700;padding-top:2px}
 .gear{padding:6px;margin:-6px -4px -6px 0;color:var(--faint)}
 
 /* vitals — signature element */
 .vitals{display:flex;gap:5px;margin-top:13px;padding-bottom:11px}
-.vital{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
-.vtrack{width:100%;height:28px;background:#15181C;border:1px solid var(--rule);
+.vital{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.vval{font-family:var(--sans);font-weight:800;font-size:var(--fs-form);line-height:1}
+.vtrack{width:100%;height:34px;background:#15181C;border:1px solid var(--rule);
+  border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);
   display:flex;align-items:flex-end;overflow:hidden}
 .vfill{width:100%;transition:height .7s cubic-bezier(.2,.8,.2,1)}
-.vlab{font-size:7px;letter-spacing:.13em;color:var(--faint)}
+.vlab{font-size:var(--fs-nano);letter-spacing:.13em;color:var(--faint)}
 
 /* ---------- nav ---------- */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
-  background:rgba(11,12,14,.94);backdrop-filter:blur(14px);border-top:1px solid var(--rule);
+  background:rgba(11,12,14,.94);backdrop-filter:blur(14px);border-top:2px solid var(--edge-hi);
   padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:11px 0 10px;position:relative;color:var(--faint);transition:color .2s}
 nav button.on{color:var(--text)}
-nav button .nl{font-size:7.5px;letter-spacing:.11em;font-weight:700}
+nav button .nl{font-size:var(--fs-nano);letter-spacing:.11em;font-weight:700}
 nav button .mark{position:absolute;top:0;left:28%;right:28%;height:2px;background:transparent;transition:background .25s}
 nav button.on .mark{background:var(--amber)}
 nav button.on svg{color:var(--amber)}
 
 /* ---------- primitives ---------- */
 .sect{display:flex;align-items:center;gap:9px;margin:20px 0 11px;
-  font-size:9px;letter-spacing:.2em;font-weight:700;color:var(--dim)}
+  font-size:var(--fs-caption);letter-spacing:.2em;font-weight:700;color:var(--dim)}
+.sect h2{margin:0;font:inherit;letter-spacing:inherit;color:inherit}
 .sect .line{flex:1;height:1px;background:var(--rule)}
-.panel{background:var(--panel);border:1px solid var(--rule);position:relative;overflow:hidden;margin-bottom:13px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);
+  position:relative;overflow:hidden;margin-bottom:13px}
 .panel.acc{padding-left:3px}
 .acc-bar{position:absolute;left:0;top:0;bottom:0;width:3px}
-.hint{font-size:10.5px;color:var(--faint);line-height:1.55;margin:0 0 12px}
-.note{padding:12px 13px;font-size:10.5px;color:var(--faint);line-height:1.55;border-top:1px solid var(--rule)}
-.empty{padding:20px 14px;font-size:11px;color:var(--faint);line-height:1.6;text-align:center}
-p.t{font-size:11.5px;color:var(--dim);line-height:1.65;margin:0 0 9px}
+.hint{font-size:var(--fs-detail);color:var(--faint);line-height:1.55;margin:0 0 12px}
+.note{padding:12px 13px;font-size:var(--fs-detail);color:var(--faint);line-height:1.55;border-top:1px solid var(--rule)}
+.empty{padding:20px 14px;font-size:var(--fs-body);color:var(--faint);line-height:1.6;text-align:center}
+p.t{font-size:var(--fs-body);color:var(--dim);line-height:1.65;margin:0 0 9px}
 p.t b{color:var(--text);font-weight:700}
 
 /* rows */
@@ -93,32 +133,32 @@ p.t b{color:var(--text);font-weight:700}
 .box{width:18px;height:18px;min-width:18px;border:1.5px solid #3C424A;margin-top:1px;
   display:flex;align-items:center;justify-content:center;transition:background .18s,border-color .18s}
 .row.done .lab{text-decoration:line-through}
-.lab{font-size:12.5px;font-weight:600;line-height:1.35;margin-bottom:3px}
-.det{font-size:10.5px;color:var(--dim);line-height:1.5}
+.lab{font-size:var(--fs-title);font-weight:600;line-height:1.35;margin-bottom:3px}
+.det{font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
 
 /* ---------- timeline ---------- */
 .tl{position:relative;padding:4px 0}
 .tl:before{content:'';position:absolute;left:57px;top:10px;bottom:10px;width:1px;background:var(--rule)}
 .ent{display:flex;gap:0;width:100%;text-align:left;padding:0;position:relative}
-.ent .time{width:46px;min-width:46px;padding:11px 0 0 13px;font-size:10px;font-weight:700;
+.ent .time{width:46px;min-width:46px;padding:11px 0 0 13px;font-size:var(--fs-detail);font-weight:700;
   color:var(--faint);letter-spacing:-.02em}
 .ent .pip{width:22px;min-width:22px;display:flex;justify-content:center;padding-top:15px;position:relative;z-index:1}
 .pipdot{width:9px;height:9px;border:1.5px solid var(--rule2);background:var(--ink);transition:all .2s}
 .ent .meat{flex:1;padding:10px 13px 12px 4px;border-bottom:1px solid var(--rule);min-width:0}
 .ent:last-child .meat{border-bottom:none}
-.ent .etitle{font-size:12.5px;font-weight:600;line-height:1.3}
-.ent .esub{font-size:10px;color:var(--faint);margin-top:3px;line-height:1.45}
+.ent .etitle{font-size:var(--fs-title);font-weight:600;line-height:1.3}
+.ent .esub{font-size:var(--fs-detail);color:var(--faint);margin-top:3px;line-height:1.45}
 .ent.locked .etitle{color:var(--dim);font-weight:500}
 .ent.locked .pipdot{background:repeating-linear-gradient(45deg,var(--rule2),var(--rule2) 2px,transparent 2px,transparent 4px);border-color:var(--rule2)}
 .ent.done .etitle{text-decoration:line-through;opacity:.5}
 .ent.done .esub{opacity:.5}
-.dur{font-size:9px;color:var(--faint);letter-spacing:.06em}
-.chev{padding:12px 12px 0 0;color:var(--faint);transition:transform .25s}
+.dur{font-size:var(--fs-caption);color:var(--faint);letter-spacing:.06em}
+.chev{padding:12px;display:flex;align-items:center;justify-content:center;color:var(--faint);transition:transform .25s}
 .chev.open{transform:rotate(90deg)}
 .subblocks{background:var(--sunk);border-bottom:1px solid var(--rule);overflow:hidden}
 .subblocks .row{padding-left:57px;border-bottom:1px solid #191D22}
-.warn{margin:0;padding:11px 13px;background:#241B10;border-top:1px solid var(--rule);
-  font-size:10.5px;color:var(--amber);line-height:1.5}
+.warn{margin:0;padding:11px 13px;background:var(--note-warn-bg);border-top:1px solid var(--rule);
+  font-size:var(--fs-detail);color:var(--amber);line-height:1.5}
 
 /* ---------- habits ---------- */
 .habits{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule)}
@@ -126,7 +166,7 @@ p.t b{color:var(--text);font-weight:700}
   align-items:center;gap:7px;transition:background .2s}
 .hab.on{background:var(--panel2)}
 .habdot{width:20px;height:20px;border:1.5px solid #3C424A;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.hab .hl{font-size:8.5px;letter-spacing:.06em;color:var(--faint);text-align:center;line-height:1.3}
+.hab .hl{font-size:var(--fs-label);letter-spacing:.06em;color:var(--faint);text-align:center;line-height:1.3}
 .hab.on .hl{color:var(--text)}
 
 /* ---------- heat strip ---------- */
@@ -138,42 +178,43 @@ p.t b{color:var(--text);font-weight:700}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:13px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:13px}
 label.f{display:flex;flex-direction:column;gap:5px}
-label.f span{font-size:8.5px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
+label.f span{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
 input,select,textarea{background:var(--sunk);border:1px solid var(--rule);padding:10px;
-  font-size:13px;width:100%;outline:none;border-radius:0;transition:border-color .2s}
+  font-size:var(--fs-form);width:100%;outline:none;border-radius:0;transition:border-color .2s}
 input:focus,select:focus,textarea:focus{border-color:var(--amber)}
-textarea{resize:vertical;min-height:54px;line-height:1.5;font-size:12px}
+textarea{resize:vertical;min-height:54px;line-height:1.5;font-size:var(--fs-title)}
 select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
   background-position:calc(100% - 14px) 18px,calc(100% - 9px) 18px;background-size:5px 5px;background-repeat:no-repeat}
 input[type=date],input[type=time]{min-height:40px}
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;
-  background:var(--amber);color:var(--ink);font-size:10.5px;font-weight:700;letter-spacing:.14em}
+  background:var(--amber);color:var(--ink);font-size:var(--fs-detail);font-weight:700;letter-spacing:.14em}
 .btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--rule)}
 .btn.ghost:active{background:var(--panel2)}
 .chips{display:flex;gap:6px;padding:12px 13px 2px;flex-wrap:wrap}
-.chip{padding:7px 12px;border:1px solid var(--rule);font-size:10.5px;color:var(--faint);letter-spacing:.05em;transition:all .2s}
+.chip{padding:7px 12px;border:1px solid var(--rule);font-size:var(--fs-detail);color:var(--faint);letter-spacing:.05em;transition:all .2s}
 .chip.on{border-color:var(--amber);color:var(--text);background:var(--panel2)}
 
 /* ---------- bars / stats ---------- */
 .stand{padding:12px 13px;border-bottom:1px solid var(--rule)}
 .stand:last-of-type{border-bottom:none}
-.standtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:11.5px}
+.standtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:var(--fs-body)}
 .bar{height:5px;background:var(--sunk);border:1px solid var(--rule)}
 .barfill{height:100%;transition:width .7s cubic-bezier(.2,.8,.2,1)}
-.stats{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:14px}
+.stats{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule);
+  border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);margin-bottom:14px}
 .stat{flex:1;background:var(--panel);padding:15px 6px;text-align:center}
-.stat .v{font-family:var(--sans);font-weight:800;font-size:25px;line-height:1;margin-bottom:6px}
-.stat .l{font-size:7.5px;letter-spacing:.11em;color:var(--faint)}
+.stat .v{font-family:var(--sans);font-weight:800;font-size:var(--fs-numeral-lg);line-height:1;margin-bottom:6px}
+.stat .l{font-size:var(--fs-nano);letter-spacing:.11em;color:var(--faint)}
 .macros{display:flex;gap:1px;background:var(--rule);border-top:1px solid var(--rule)}
 .macro{flex:1;background:var(--panel);padding:14px 3px;text-align:center}
 .macro .v{font-size:16px;font-weight:700;margin-bottom:4px}
-.macro .l{font-size:7.5px;letter-spacing:.11em;color:var(--faint)}
+.macro .l{font-size:var(--fs-nano);letter-spacing:.11em;color:var(--faint)}
 
 /* ---------- accordions ---------- */
 .ahead{display:flex;align-items:center;gap:11px;width:100%;padding:13px;background:var(--panel);
-  border:1px solid var(--rule);text-align:left}
-.ahead .an{flex:1;font-family:var(--sans);font-weight:800;font-size:14px;letter-spacing:.1em;text-transform:uppercase}
-.abody{border:1px solid var(--rule);border-top:none;background:#101317}
+  border:1px solid var(--rule);border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);text-align:left}
+.ahead .an{flex:1;font-family:var(--sans);font-weight:800;font-size:var(--fs-headline);letter-spacing:.1em;text-transform:uppercase}
+.abody{border:1px solid var(--rule);border-top:none;border-bottom-color:var(--edge-lo);background:#101317}
 .acc-group{margin-bottom:9px}
 
 /* books */
@@ -181,10 +222,10 @@ input[type=date],input[type=time]{min-height:40px}
 .book:last-child{border-bottom:none}
 .pip{width:16px;height:16px;min-width:16px;border:1.5px solid var(--faint);margin-top:2px;
   display:flex;align-items:center;justify-content:center;transition:all .2s}
-.bt{font-size:12.5px;font-weight:600;line-height:1.3}
-.ba{font-size:10px;color:var(--faint);margin:3px 0 5px}
-.bw{font-size:10.5px;color:var(--dim);line-height:1.5;margin-bottom:6px}
-.bm{font-size:8px;letter-spacing:.11em}
+.bt{font-size:var(--fs-title);font-weight:600;line-height:1.3}
+.ba{font-size:var(--fs-detail);color:var(--faint);margin:3px 0 5px}
+.bw{font-size:var(--fs-detail);color:var(--dim);line-height:1.5;margin-bottom:6px}
+.bm{font-size:var(--fs-label);letter-spacing:.11em}
 
 /* skills */
 .tiers{display:flex;gap:3px;padding:0 13px}
@@ -194,16 +235,16 @@ input[type=date],input[type=time]{min-height:40px}
 /* misc */
 .orders .o{display:flex;gap:13px;padding:13px;border-bottom:1px solid var(--rule)}
 .orders .o:last-child{border-bottom:none}
-.onum{font-family:var(--sans);font-weight:800;font-size:15px;color:var(--faint);min-width:20px}
+.onum{font-family:var(--sans);font-weight:800;font-size:var(--fs-numeral-md);color:var(--faint);min-width:20px}
 .closing{padding:16px 15px;background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--amber);
-  font-size:11.5px;color:var(--dim);line-height:1.75;margin-bottom:14px}
-.cmt{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--rule);font-size:11.5px}
+  font-size:var(--fs-body);color:var(--dim);line-height:1.75;margin-bottom:14px}
+.cmt{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--rule);font-size:var(--fs-body)}
 .cmt:last-child{border-bottom:none}
-.cmt .x{color:var(--faint);padding:4px;margin:-4px}
+.cmt .x{color:var(--faint);padding:8px;margin:-8px;display:flex;align-items:center;justify-content:center}
 .spark{display:block;width:100%;height:120px}
-.badge{font-size:8px;letter-spacing:.1em;padding:3px 6px;border:1px solid var(--rule);color:var(--faint)}
+.badge{font-size:var(--fs-label);letter-spacing:.1em;padding:3px 6px;border:1px solid var(--rule);color:var(--faint)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom));
-  background:var(--panel2);border:1px solid var(--rule2);padding:10px 16px;font-size:11px;z-index:50;
+  background:var(--panel2);border:1px solid var(--rule2);padding:10px 16px;font-size:var(--fs-body);z-index:50;
   animation:fade .2s ease both;pointer-events:none}
 
 /* ---------- drill-through steps ---------- */
@@ -213,22 +254,22 @@ input[type=date],input[type=time]{min-height:40px}
 .bmain{flex:1;display:flex;gap:11px;align-items:flex-start;padding:12px 4px 12px 57px;text-align:left;min-width:0}
 .chev.sm{padding:12px 14px;display:flex;align-items:center}
 .steps{background:#0A0D10;border-bottom:1px solid #191D22;padding:11px 15px 13px 57px}
-.step{display:flex;gap:10px;padding:5px 0;font-size:11px;color:var(--dim);line-height:1.55}
+.step{display:flex;gap:10px;padding:5px 0;font-size:var(--fs-body);color:var(--dim);line-height:1.55}
 .stepdot{width:5px;height:5px;min-width:5px;background:var(--rule2);margin-top:6px}
-.prognote{display:flex;gap:8px;margin-top:9px;padding:9px 11px;background:#151208;border:1px solid #2A2210;font-size:10.5px;color:var(--amber);line-height:1.5;align-items:flex-start}
+.prognote{display:flex;gap:8px;margin-top:9px;padding:9px 11px;background:var(--note-prog-bg);border:1px solid var(--note-prog-border);font-size:var(--fs-detail);color:var(--amber);line-height:1.5;align-items:flex-start}
 
 /* ---------- food ---------- */
 .fuelbar{display:flex;flex-direction:column;gap:9px;padding:13px}
-.fb .fbtop{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-bottom:4px}
+.fb .fbtop{display:flex;justify-content:space-between;font-size:var(--fs-detail);color:var(--faint);margin-bottom:4px}
 .foodlist{border-top:1px solid var(--rule)}
 .foodpick{border-top:1px solid var(--rule);background:#101317}
 .searchrow{display:flex;align-items:center;gap:9px;padding:11px 13px;border-bottom:1px solid var(--rule)}
-.searchrow input{border:none;background:none;padding:2px 0;font-size:13px}
+.searchrow input{border:none;background:none;padding:2px 0;font-size:var(--fs-form)}
 .foodresults{max-height:290px;overflow-y:auto}
 .fres{display:flex;align-items:stretch;border-bottom:1px solid #191D22}
-.fresmain{flex:1;display:flex;align-items:center;gap:8px;padding:11px 8px 11px 13px;font-size:12px;min-width:0}
+.fresmain{flex:1;display:flex;align-items:center;gap:8px;padding:11px 8px 11px 13px;font-size:var(--fs-title);min-width:0}
 .fresmain:active{background:var(--panel2)}
-.fresq{padding:0 13px;font-size:11px;color:var(--faint);border-left:1px solid #191D22}
+.fresq{padding:0 13px;font-size:var(--fs-body);color:var(--faint);border-left:1px solid #191D22}
 .fresq:active{color:var(--amber)}
 
 /* ---------- week map ---------- */
@@ -236,25 +277,25 @@ input[type=date],input[type=time]{min-height:40px}
 .wcol{flex:1;background:var(--panel);padding:9px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:background .2s}
 .wcol.on{background:var(--panel2)}
 .wcol.on .wlab{color:var(--amber)}
-.wlab{font-size:8px;letter-spacing:.09em;color:var(--faint);font-weight:700}
+.wlab{font-size:var(--fs-label);letter-spacing:.09em;color:var(--faint);font-weight:700}
 .wtrack{position:relative;width:100%;max-width:22px;height:64px;background:var(--sunk);border:1px solid var(--rule)}
 .wcol.on .wtrack{border-color:var(--rule2)}
 .wbar{position:absolute;left:2px;right:2px;background:var(--steel);opacity:.85;min-height:3px}
-.wnum{font-size:8.5px;color:var(--faint);height:10px}
+.wnum{font-size:var(--fs-label);color:var(--faint);height:10px}
 .daylist{min-height:10px}
 .cmt.tap{width:100%;text-align:left}
 .cmt.tap:active{background:var(--panel2)}
-.cmttime{color:var(--faint);min-width:104px;font-size:11px}
+.cmttime{color:var(--faint);min-width:104px;font-size:var(--fs-body)}
 .editrow{background:#101317;border-bottom:1px solid var(--rule)}
 .addzone{border-top:1px solid var(--rule)}
 .copyzone{border-top:1px solid var(--rule)}
 
 /* ---------- recent entries table ---------- */
-.tbl{font-size:11px}
+.tbl{font-size:var(--fs-body)}
 .tr{display:grid;grid-template-columns:1.3fr 1fr .9fr .9fr .9fr .9fr 34px;align-items:center;padding:9px 13px;border-bottom:1px solid #191D22}
 .tr:last-child{border-bottom:none}
-.tr.th{font-size:8.5px;letter-spacing:.1em;color:var(--faint);border-bottom:1px solid var(--rule)}
-.tr .x{justify-self:end}
+.tr.th{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);border-bottom:1px solid var(--rule)}
+.tr .x{justify-self:end;padding:8px;margin:-8px;display:flex;align-items:center;justify-content:center}
 
 /* ---------- toast upgrade ---------- */
 .toast{opacity:0;transition:opacity .25s;animation:none}
@@ -262,31 +303,32 @@ input[type=date],input[type=time]{min-height:40px}
 
 
 /* ---------- progression ---------- */
-.rx{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:9.5px;font-weight:700;letter-spacing:.06em}
+.rx{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-caption);font-weight:700;letter-spacing:.06em}
 .rx.dim{color:var(--faint);font-weight:500}
 .setlog{background:#0C0F13;border-bottom:1px solid #191D22;padding:12px 15px 13px 57px}
-.setrow{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12px;border-bottom:1px solid #14181D}
-.setn{width:16px;font-size:9px;color:var(--faint)}
+.setrow{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:var(--fs-title);border-bottom:1px solid #14181D}
+.setn{width:16px;font-size:var(--fs-caption);color:var(--faint)}
 .setadd{display:flex;align-items:center;gap:8px;margin-top:10px}
-.setadd input{width:76px;padding:9px;font-size:13px;text-align:center}
-.setx{color:var(--faint);font-size:11px}
+.setadd input{width:76px;padding:9px;font-size:var(--fs-form);text-align:center}
+.setx{color:var(--faint);font-size:var(--fs-body)}
 .setadd .chip{white-space:nowrap;padding:9px 13px}
-.flagbtn{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--faint);letter-spacing:.06em;padding:4px 8px;border:1px solid var(--rule)}
-.painnote{display:flex;gap:9px;padding:10px 11px;margin-bottom:11px;background:#1E1210;border:1px solid #3A2018;font-size:10.5px;color:var(--text);line-height:1.5;align-items:flex-start}
-.unflag{display:block;margin-top:5px;font-size:9px;color:var(--rust);letter-spacing:.08em;text-decoration:underline}
+.flagbtn{display:flex;align-items:center;gap:5px;font-size:var(--fs-caption);color:var(--faint);letter-spacing:.06em;padding:4px 8px;border:1px solid var(--rule)}
+.painnote{display:flex;gap:9px;padding:10px 11px;margin-bottom:11px;background:var(--note-pain-bg);border:1px solid var(--note-pain-border);font-size:var(--fs-detail);color:var(--text);line-height:1.5;align-items:flex-start}
+.unflag{display:block;margin-top:5px;font-size:var(--fs-caption);color:var(--rust);letter-spacing:.08em;text-decoration:underline}
 
 /* ---------- banners ---------- */
-.banner{display:flex;gap:11px;align-items:flex-start;background:#1D1608;border:1px solid #3A2E10;padding:13px;margin-bottom:13px;font-size:11px;line-height:1.55;color:var(--dim)}
+.banner{display:flex;gap:11px;align-items:flex-start;background:var(--banner-amber-bg);border:1px solid var(--banner-amber-border);padding:13px;margin-bottom:13px;font-size:var(--fs-body);line-height:1.55;color:var(--dim)}
 .banner b{color:var(--text)}
-.banner.moss{background:#121A0F;border-color:#243318}
-.banner.steel{background:#0F161C;border-color:#1C2A36}
+.banner.moss{background:var(--banner-moss-bg);border-color:var(--banner-moss-border)}
+.banner.steel{background:var(--banner-steel-bg);border-color:var(--banner-steel-border)}
 
 
 /* ---------- day rail (drag calendar) ---------- */
-.railwrap{position:relative;overflow:hidden;border:1px solid var(--rule);background:var(--panel);margin-bottom:2px}
+.railwrap{position:relative;overflow:hidden;border:1px solid var(--rule);
+  border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);background:var(--panel);margin-bottom:2px}
 .rail{position:relative;margin:10px 12px 10px 50px}
 .rhour{position:absolute;left:-46px;right:0;border-top:1px solid #1B1E23;height:0}
-.rhour span{position:absolute;left:0;top:-6px;width:40px;text-align:right;font-size:8px;color:var(--faint);padding-right:6px}
+.rhour span{position:absolute;left:0;top:-6px;width:40px;text-align:right;font-size:var(--fs-label);color:var(--faint);padding-right:6px}
 .rnow{position:absolute;left:-46px;right:0;height:1px;background:var(--amber);z-index:6}
 .rnow:before{content:'';position:absolute;left:-3px;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
 .rblk{position:absolute;left:2px;right:2px;background:var(--panel2);border-left:3px solid var(--rule2);
@@ -294,9 +336,9 @@ input[type=date],input[type=time]{min-height:40px}
 .rblk.lock{opacity:.5;background:repeating-linear-gradient(135deg,#181B20,#181B20 5px,#121417 5px,#121417 10px)}
 .rblk.drag{cursor:grab}
 .rblk.dragging{box-shadow:0 8px 22px rgba(0,0,0,.55);z-index:10;cursor:grabbing;opacity:.96}
-.rblkT{font-size:9.5px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
-.rblkS{font-size:7.5px;color:var(--faint);margin-top:2px}
-.railhint{display:flex;align-items:center;gap:6px;padding:8px 2px 15px;font-size:9.5px;color:var(--faint)}
+.rblkT{font-size:var(--fs-caption);font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.rblkS{font-size:var(--fs-nano);color:var(--faint);margin-top:2px}
+.railhint{display:flex;align-items:center;gap:6px;padding:8px 2px 15px;font-size:var(--fs-caption);color:var(--faint)}
 
 /* ---------- commitment tag dots ---------- */
 .tagdot{width:7px;height:7px;min-width:7px;border-radius:50%;margin-right:2px}
@@ -308,10 +350,10 @@ input[type=date],input[type=time]{min-height:40px}
 /* ---------- week load overview ---------- */
 .wload{display:flex;gap:6px;padding:13px 13px 8px}
 .wlcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
-.wllab{font-size:8px;letter-spacing:.1em;color:var(--faint);font-weight:700}
+.wllab{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);font-weight:700}
 .wlbar{width:100%;height:52px;background:var(--ink);border:1px solid var(--rule);display:flex;align-items:flex-end}
 .wlfill{width:100%;transition:height .25s}
-.wlhrs{font-size:8.5px;font-weight:700;letter-spacing:.03em}
+.wlhrs{font-size:var(--fs-label);font-weight:700;letter-spacing:.03em}
 .btn.ghost{background:transparent;border:1px solid var(--rule2);color:var(--dim)}
 
 /* ---------- week strip ---------- */
@@ -323,8 +365,8 @@ input[type=date],input[type=time]{min-height:40px}
   background:var(--panel);border:1px solid var(--rule);transition:all .18s}
 .dcell.sel{background:var(--panel2);border-color:var(--amber)}
 .dcell.today .dnum{color:var(--amber)}
-.dlab{font-size:8px;letter-spacing:.1em;color:var(--faint);font-weight:700}
-.dnum{font-family:var(--sans);font-weight:800;font-size:15px;line-height:1;color:var(--dim)}
+.dlab{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);font-weight:700}
+.dnum{font-family:var(--sans);font-weight:800;font-size:var(--fs-numeral-md);line-height:1;color:var(--dim)}
 .dcell.sel .dnum{color:var(--text)}
 .ddot{width:4px;height:4px;border-radius:50%}
 
@@ -332,15 +374,15 @@ input[type=date],input[type=time]{min-height:40px}
 .dayhead{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px}
 .nextup{background:linear-gradient(135deg,#16191E,#121417);border:1px solid var(--rule2);
   border-left:3px solid var(--amber);padding:14px 15px;margin-bottom:14px}
-.nueyebrow{font-size:8px;letter-spacing:.2em;color:var(--amber);font-weight:700}
+.nueyebrow{font-size:var(--fs-label);letter-spacing:.2em;color:var(--amber);font-weight:700}
 .nutitle{font-family:var(--sans);font-weight:800;font-size:17px;letter-spacing:.01em;margin-top:7px;line-height:1.15}
-.nusub{font-size:11px;color:var(--dim);line-height:1.5;margin-top:6px}
-.nuprog{font-size:9.5px;color:var(--faint);letter-spacing:.06em;margin-top:8px}
+.nusub{font-size:var(--fs-body);color:var(--dim);line-height:1.5;margin-top:6px}
+.nuprog{font-size:var(--fs-caption);color:var(--faint);letter-spacing:.06em;margin-top:8px}
 
 /* ---------- segmented control ---------- */
 .segwrap{margin:15px 0 4px}
 .seg{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule)}
-.segbtn{flex:1;padding:11px 0;background:var(--panel);font-size:9.5px;font-weight:700;
+.segbtn{flex:1;padding:11px 0;background:var(--panel);font-size:var(--fs-caption);font-weight:700;
   letter-spacing:.13em;color:var(--faint);transition:all .18s}
 .segbtn.on{background:var(--panel2);color:var(--amber)}
 
@@ -348,18 +390,18 @@ input[type=date],input[type=time]{min-height:40px}
 .cmp{display:flex;align-items:stretch;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:13px}
 .cmpcol{flex:1;background:var(--panel);padding:13px 12px}
 .cmpcol.tgt{background:var(--panel2)}
-.cmphead{font-size:8px;letter-spacing:.2em;color:var(--faint);font-weight:700;margin-bottom:10px}
-.cmprow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:10.5px;color:var(--dim)}
-.cmprow b{font-size:12.5px;color:var(--text);font-weight:700}
+.cmphead{font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);font-weight:700;margin-bottom:10px}
+.cmprow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:var(--fs-detail);color:var(--dim)}
+.cmprow b{font-size:var(--fs-title);color:var(--text);font-weight:700}
 .cmparrow{display:flex;align-items:center;padding:0 3px;background:var(--panel)}
 
 /* ---------- meal plans ---------- */
 .mslot{border-bottom:1px solid #191D22;padding:11px 13px}
 .mslot:last-of-type{border-bottom:none}
 .mslothead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.mslothead span{font-size:8.5px;letter-spacing:.15em;color:var(--amber);font-weight:700}
-.mslothead .chip{padding:5px 10px;font-size:9px}
-.mitem{display:flex;gap:8px;padding:4px 0;font-size:11.5px;color:var(--dim);line-height:1.4}
+.mslothead span{font-size:var(--fs-label);letter-spacing:.15em;color:var(--amber);font-weight:700}
+.mslothead .chip{padding:5px 10px;font-size:var(--fs-caption)}
+.mitem{display:flex;gap:8px;padding:4px 0;font-size:var(--fs-body);color:var(--dim);line-height:1.4}
 .mitem b{color:var(--text)}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -765,16 +807,16 @@ const SKILLS = [
 ];
 
 const CAPITAL = [
-  {id:'c1',l:'One month of expenses in cash',w:'Stops small emergencies becoming debt'},
-  {id:'c2',l:'All high-interest debt cleared',w:'Nothing compounds against you faster than a credit card'},
-  {id:'c3',l:'Savings rate above 25%, automated',w:'Automation beats willpower over a decade. Set it and stop thinking about it.'},
-  {id:'c4',l:'Retirement account open and funded',w:'The employer match is free money most people leave on the table'},
-  {id:'c5',l:'Six months of expenses banked',w:'This one buys the ability to say no. It is the real milestone in the list.'},
-  {id:'c6',l:'A skill that pays outside your job',w:'One employer is a single point of failure'},
-  {id:'c7',l:'First $25k invested and untouched',w:'Where compounding stops being theoretical'},
-  {id:'c8',l:'Second income at 25% of primary',w:'Structural independence starts here'},
-  {id:'c9',l:'Twelve months of runway',w:'You can now take a two-year bet on anything you want'},
-  {id:'c10',l:'Equity in something productive',w:'Ownership, not wages. The step almost nobody takes.'},
+  {id:'c1',l:'One month of expenses in cash',w:'Stops small emergencies becoming debt',tier:'Foundation'},
+  {id:'c2',l:'All high-interest debt cleared',w:'Nothing compounds against you faster than a credit card',tier:'Foundation'},
+  {id:'c3',l:'Savings rate above 25%, automated',w:'Automation beats willpower over a decade. Set it and stop thinking about it.',tier:'Foundation'},
+  {id:'c4',l:'Retirement account open and funded',w:'The employer match is free money most people leave on the table',tier:'Foundation'},
+  {id:'c5',l:'Six months of expenses banked',w:'This one buys the ability to say no. It is the real milestone in the list.',tier:'Foundation'},
+  {id:'c6',l:'A skill that pays outside your job',w:'One employer is a single point of failure',tier:'Growth'},
+  {id:'c7',l:'First $25k invested and untouched',w:'Where compounding stops being theoretical',tier:'Growth'},
+  {id:'c8',l:'Second income at 25% of primary',w:'Structural independence starts here',tier:'Growth'},
+  {id:'c9',l:'Twelve months of runway',w:'You can now take a two-year bet on anything you want',tier:'Independence'},
+  {id:'c10',l:'Equity in something productive',w:'Ownership, not wages. The step almost nobody takes.',tier:'Independence'},
 ];
 
 const HABITS = [
@@ -1351,6 +1393,7 @@ function toast(m){
 /* =============================================================== utils == */
 const DOW = ['mon','tue','wed','thu','fri','sat','sun'];
 const DOWL = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DOWFULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const pad = n => String(n).padStart(2,'0');
 function dkey(off=0){ const d=new Date(); d.setDate(d.getDate()+off); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function dowIdx(key){ const [y,m,d]=key.split('-').map(Number); const js=new Date(y,m-1,d).getDay(); return js===0?6:js-1; }
@@ -1553,7 +1596,11 @@ function nutrition(k){
 }
 function foodTotals(k){
   const f=day(k).food;
-  return f.reduce((a,x)=>({kcal:a.kcal+x.kcal*x.q,p:a.p+x.p*x.q,c:a.c+x.c*x.q,f:a.f+x.f*x.q}),{kcal:0,p:0,c:0,f:0});
+  // Both real add-paths (addfood, addcustomfood) always supply p/c/f, but one
+  // malformed entry — a hand-edited localStorage value, an older backup schema —
+  // would otherwise poison the whole day's totals: undefined*q is NaN, and NaN
+  // stays NaN through every subsequent addition in the reduce.
+  return f.reduce((a,x)=>({kcal:a.kcal+(x.kcal||0)*x.q,p:a.p+(x.p||0)*x.q,c:a.c+(x.c||0)*x.q,f:a.f+(x.f||0)*x.q}),{kcal:0,p:0,c:0,f:0});
 }
 
 /* ========================================================== progression == */
@@ -1721,12 +1768,19 @@ function weekStats(){
     wDelta, booksFin };
 }
 function skipPattern(){
+  // The copy below claims "over the last four weeks" — don't make that claim
+  // until four real weeks of history actually exist. Before that, every day
+  // predating S.meta.start would otherwise read as a missed session (trainRatio
+  // returns 0 for a day with no logged data at all, start date or not) and
+  // skew every weekday's average toward a false "slipping" verdict on a
+  // profile that's simply new.
+  if (daysSinceStart()<28) return null;
   const by=Array.from({length:7},()=>[]);
   for(let i=1;i<=28;i++){ const k=dkey(-i); by[dowIdx(k)].push(trainRatio(k)); }
   let worst=null,wv=2;
   by.forEach((a,i)=>{ if(a.length<2)return; const avg=a.reduce((x,y)=>x+y,0)/a.length;
     if(avg<wv){wv=avg;worst=i;} });
-  return worst!=null&&wv<0.5 ? {day:DOWL[worst], pct:Math.round(wv*100)} : null;
+  return worst!=null&&wv<0.5 ? {day:DOWL[worst], dayFull:DOWFULL[worst], pct:Math.round(wv*100)} : null;
 }
 function monthAvg(off){
   const dse=daysSinceStart();
@@ -1875,10 +1929,10 @@ function sparkline(vals,color,h=110){
       <stop offset="0%" stop-color="${color}" stop-opacity=".22"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
     <path d="${d} L100,100 L0,100 Z" fill="url(#g${color.replace(/[^a-z]/gi,'')})"/>
     <path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>
-  <div style="display:flex;justify-content:space-between;padding:0 13px 12px;font-size:9.5px;color:var(--faint)">
+  <div style="display:flex;justify-content:space-between;padding:0 13px 12px;font-size:var(--fs-caption);color:var(--faint)">
     <span>low ${Math.round(min*10)/10}</span><span>${pts.length} entries</span><span>high ${Math.round(max*10)/10}</span></div>`;
 }
-const sect=(ico,t)=>`<div class="sect">${svg(ico,13,'var(--amber)')}<span>${t}</span><div class="line"></div></div>`;
+const sect=(ico,t)=>`<div class="sect">${svg(ico,13,'var(--amber)')}<h2>${t}</h2><div class="line"></div></div>`;
 const chk=(on,c)=>`<div class="box" style="${on?`background:${c||'var(--amber)'};border-color:${c||'var(--amber)'}`:''}">${on?svg('check',12,'var(--ink)',3):''}</div>`;
 
 
@@ -1915,9 +1969,9 @@ function exGymHTML(ex,label){
     <div class="eyebrow" style="margin-bottom:8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
     ${sets.map((s,i)=>{ const isPR = pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r;
       return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
-      <span style="flex:1">${dispExact(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:9px;letter-spacing:.08em\">PR</span>':''}</span>
-      ${s.r>=EXS[ex].reps?svg('check',12,'var(--moss)',3):`<span style="font-size:9px;color:var(--rust)">-${EXS[ex].reps-s.r}</span>`}
-      <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}">${svg('x',12)}</button></div>`;}).join('')}
+      <span style="flex:1">${dispExact(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</span>
+      ${s.r>=EXS[ex].reps?svg('check',12,'var(--moss)',3):`<span style="font-size:var(--fs-caption);color:var(--rust)">-${EXS[ex].reps-s.r}</span>`}
+      <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`;}).join('')}
     <div class="setadd">
       <input type="number" step="0.5" id="sw_${ex}" inputmode="decimal" placeholder="${rx&&rx.w?dispLoad(rx.w,ex).replace(' ','&nbsp;'):'weight'}">
       <span class="setx">×</span>
@@ -1925,7 +1979,7 @@ function exGymHTML(ex,label){
       <button class="chip on" data-act="addset" data-v="${ex}">LOG SET</button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-      <span style="font-size:9px;color:var(--faint)">Blank weight = prescribed. Blank reps = target.</span>
+      <span style="font-size:var(--fs-caption);color:var(--faint)">Blank weight = prescribed. Blank reps = target.</span>
       ${!flagged?`<button class="flagbtn" data-act="painflag" data-v="${ex}">${svg('shield',10)} pain?</button>`:''}
     </div>
   </div>`;
@@ -1945,11 +1999,12 @@ function Header(){
       <div style="display:flex;align-items:center;gap:14px">
         <div class="streak">${svg('flame',15,st>0?'var(--amber)':'var(--faint)',2.4)}
           <span style="color:${st>0?'var(--text)':'var(--faint)'}">${st}</span></div>
-        <button class="gear" data-act="view" data-v="plan">${svg('gear',17)}</button>
+        <button class="gear" data-act="view" data-v="plan" aria-label="Plan and settings">${svg('gear',17)}</button>
       </div>
     </div>
     <div class="vitals">${P.map(p=>`
-      <div class="vital"><div class="vtrack"><div class="vfill" style="height:${clamp(p.v,2,100)}%;background:${p.c}"></div></div>
+      <div class="vital"><div class="vval" style="color:${p.c}">${Math.round(p.v)}</div>
+      <div class="vtrack"><div class="vfill" style="height:${clamp(p.v,4,100)}%;background:${p.c}"></div></div>
       <div class="vlab">${p.k}</div></div>`).join('')}</div>
   </header>`;
 }
@@ -1979,9 +2034,26 @@ function DayRail(plan){
   let hours='';
   for (let h=hourStart; h<=hourEnd; h++)
     hours+=`<div class="rhour" style="top:${(h*60-wake)*px}px"><span>${s2disp(h*60)}</span></div>`;
-  const blocks = entries.map(e=>{
-    const top=clamp((e.s-wake)*px,0,RH-16);
-    const h=Math.max(17,(e.e-e.s)*px);
+
+  /* Pack top-to-bottom (entries arrive sorted by start time) so blocks scheduled
+     close together never visually collide: each block starts at its true time
+     position unless that would land it closer than MINH+GAP to the block above,
+     in which case it's nudged down just enough to stay legible. This can desync
+     a block's pixel position from literal time-proportionality during a dense
+     stretch of the day — an accepted trade for two-line labels never overlapping.
+     Drag math (below) reads time from data-s/data-e, never from this top, so the
+     desync never leaks into the reschedule flow. */
+  const MINH=32, GAP=3;
+  let prevBottom=-Infinity, railBottom=RH;
+  const positioned = entries.map(e=>{
+    const idealTop=clamp((e.s-wake)*px,0,RH-MINH);
+    const top=Math.max(idealTop, prevBottom+GAP);
+    const h=Math.max(MINH,(e.e-e.s)*px);
+    prevBottom=top+h; railBottom=Math.max(railBottom,prevBottom);
+    return {e,top,h};
+  });
+
+  const blocks = positioned.map(({e,top,h})=>{
     const movable=!e.fixed;
     const col = e.fixed?'var(--rule2)': e.id==='train'?DTYPE[def.type].c : e.kind==='mind'?'var(--plum)':e.kind==='meal'?'var(--moss)':'var(--amber)';
     return `<div class="rblk ${e.fixed?'lock':'drag'}" data-id="${e.id}" data-s="${e.s}" data-e="${e.e}"
@@ -1989,7 +2061,7 @@ function DayRail(plan){
       <div class="rblkT">${esc(e.l)}</div><div class="rblkS">${s2disp(e.s)}${movable?'':' · fixed'}</div>
     </div>`;
   }).join('');
-  return `<div class="railwrap"><div class="rail" id="rail" data-wake="${wake}" data-span="${span}" data-px="${px}" style="height:${RH}px">
+  return `<div class="railwrap"><div class="rail" id="rail" data-wake="${wake}" data-span="${span}" data-px="${px}" style="height:${railBottom}px">
     <div class="rnow" id="rnow"></div>${hours}${blocks}</div></div>
     <div class="railhint">${svg('rot',11,'var(--faint)')} Drag a block to reschedule it. Locked blocks are fixed commitments.</div>`;
 }
@@ -2023,7 +2095,9 @@ function ViewToday(){
       <button class="meat" data-act="${isTrain?'traintoggle':'block'}" data-v="${e.id}">
         <div class="etitle">${esc(e.l)}${isTrain?` <span class="dur">${trainDone}/${plan.def.blocks.length}</span>`:''}</div>
         <div class="esub">${esc(e.sub||'')}</div></button>
-      <button class="chev ${isTrain&&openBlock==='train'?'open':''}" data-act="shift" data-v="${e.id}">
+      <button class="chev ${isTrain&&openBlock==='train'?'open':''}" data-act="shift" data-v="${e.id}"
+        aria-label="${isTrain?`${openBlock==='train'?'Collapse':'Expand'} today's training blocks`:`Reschedule ${esc(e.l)}`}"
+        ${isTrain?`aria-expanded="${openBlock==='train'}"`:`aria-expanded="${shiftId===e.id}"`}>
         ${isTrain?svg('chev',15):svg('clock',13)}</button>
     </div>
     ${isTrain&&openBlock==='train'?`<div class="subblocks">${plan.def.blocks.map(b=>{
@@ -2032,7 +2106,7 @@ function ViewToday(){
         <button class="bmain" data-act="block" data-v="${b.id}">
           ${chk(!!d.blocks[b.id],meta.c)}
           <div style="flex:1"><div class="lab">${esc(b.l)}</div><div class="det">${esc(b.d)}</div>${rxLine(b)}</div></button>
-        ${b.steps?`<button class="chev sm ${bo?'open':''}" data-act="drill" data-v="${b.id}">${svg('chev',14)}</button>`:''}
+        ${b.steps?`<button class="chev sm ${bo?'open':''}" data-act="drill" data-v="${b.id}" aria-label="${bo?'Collapse':'Expand'} details for ${esc(b.l)}" aria-expanded="${bo}">${svg('chev',14)}</button>`:''}
       </div>${bo?(stepsHTML(b)+gymHTML(b)):''}`;}).join('')}</div>`:''}
     ${shiftId===e.id?`<div class="chips" style="padding:10px 13px 12px 57px;border-bottom:1px solid var(--rule)">
       ${[-60,-30,-15,15,30,60].map(n=>`<button class="chip" data-act="nudge" data-v="${e.id}" data-v2="${n}">${n>0?'+':''}${n}m</button>`).join('')}
@@ -2073,9 +2147,8 @@ function ViewToday(){
 
     ${vd===T?(()=>{ const dsw=daysSinceWeight(), neverLogged=dsw==null, stale=dsw!=null&&dsw>=7;
       if (!neverLogged&&!stale) return '';
-      if (neverLogged&&daysSinceStart()<3) return '';   // let brand-new users settle in first
       const msg = neverLogged
-        ? `No weight logged yet — Fuel and Target can't compute your numbers without one.`
+        ? `Log a weight to unlock Fuel and Target — one number, right on the LOG tab.`
         : `${dsw} days since your last weigh-in. Log one so Fuel and Target stay accurate.`;
       return `<button class="banner" data-act="golog" style="width:100%;text-align:left">${svg('trend',14,'var(--amber)')}<div>${msg}</div></button>`; })():''}
 
@@ -2112,11 +2185,11 @@ function ViewToday(){
       </div>
       ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}
       ${vd===T&&new Date().getHours()>=18&&N.protein>0&&ft.p<N.protein*0.5?`<div class="note" style="color:var(--amber);border-top:none;padding-top:0">${svg('target',10,'var(--amber)')} Only ${Math.round(ft.p)}g protein logged with evening here — most of that gap won't get made up after tonight. Front-load the next meal.</div>`:''}`
-      :'<div class="note" style="border-top:none">Log a weight on Build → Log and targets appear here.</div>'}
+      :`<button class="note" data-act="golog" style="border-top:none;width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on Build → Log and targets appear here. Tap to go there now.</span></button>`}
       ${d.food.length?`<div class="foodlist">${d.food.map((f,i)=>`
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
-          <span style="color:var(--dim);font-size:10.5px">${Math.round(f.kcal*f.q)} kcal</span>
-          <button class="x" data-act="delfood" data-v="${i}">${svg('x',13)}</button></div>`).join('')}</div>`:''}
+          <span style="color:var(--dim);font-size:var(--fs-detail)">${Math.round(f.kcal*f.q)} kcal</span>
+          <button class="x" data-act="delfood" data-v="${i}" aria-label="Remove ${esc(f.n)}">${svg('x',13)}</button></div>`).join('')}</div>`:''}
       <button class="btn ghost" data-act="foodopen" style="border:none;border-top:1px solid var(--rule)">${svg('plus',13)} ADD FOOD</button>
       ${foodOpen?`<div class="foodpick">
         <div class="searchrow">${svg('search',14,'var(--faint)')}
@@ -2124,7 +2197,7 @@ function ViewToday(){
         <div class="foodresults">${foodSearch(foodQ).slice(0,24).map(([f,idx])=>{
           return `<div class="fres"><button class="fresmain" data-act="addfood" data-v="${idx}" data-v2="1">
             <span style="flex:1;text-align:left">${esc(f[0])}</span>
-            <span style="color:var(--faint);font-size:10px">${f[1]} kcal · ${f[2]}p</span></button>
+            <span style="color:var(--faint);font-size:var(--fs-detail)">${f[1]} kcal · ${f[2]}p</span></button>
             <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="0.5">½</button>
             <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="2">2×</button></div>`;}).join('')||'<div class="empty">No match - use custom below.</div>'}
         </div>
@@ -2194,9 +2267,9 @@ function ViewPlan(){
     ${sect('dumb','TRAINING PROGRAM')}
     <div class="panel">
       ${Object.entries(PROGRAMS).map(([k,pr])=>`
-        <button class="ahead" data-act="setprog" data-v="${k}" style="border-left:3px solid ${S.profile.program===k?'var(--amber)':'var(--rule)'}">
+        <button class="ahead" data-act="setprog" data-v="${k}" aria-pressed="${S.profile.program===k}" style="border-left:3px solid ${S.profile.program===k?'var(--amber)':'var(--rule)'}">
           <div style="flex:1">
-            <div class="an" style="font-size:13px">${pr.n}${S.profile.program===k?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">ACTIVE</span>':''}</div>
+            <div class="an" style="font-size:var(--fs-form)">${pr.n}${S.profile.program===k?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">ACTIVE</span>':''}</div>
             <div class="det" style="margin-top:4px">${pr.d}</div>
           </div>${chk(S.profile.program===k)}</button>`).join('')}
       <div class="note">Switching applies from today. Lift progressions carry across programs — squat history is squat history regardless of which week structure you run.</div>
@@ -2228,7 +2301,7 @@ function ViewPlan(){
               <div class="grid2" style="padding-top:0">${sportField('et','esp',c.t||'',c.sp||'')}</div>
               <div style="display:flex;gap:8px;padding:0 13px 12px">
                 <button class="btn" data-act="saveedit" data-v="${i}">SAVE</button>
-                <button class="btn ghost" data-act="deledit" data-v="${i}" style="max-width:64px">${svg('trash',14)}</button>
+                <button class="btn ghost" data-act="deledit" data-v="${i}" style="max-width:64px" aria-label="Delete ${esc(c.l)}">${svg('trash',14)}</button>
               </div></div>`
           :`<button class="cmt tap" data-act="editcmt" data-v="${i}">
               <span class="tagdot" style="background:${TAGCOLOR[c.t||'']}"></span>
@@ -2285,7 +2358,7 @@ function ViewPlan(){
     ${(()=>{ const ups=Object.keys(S.extra).filter(k=>k>=T).sort().slice(0,8);
       return ups.length?`<div class="foodlist">${ups.map(k=>S.extra[k].map((c,i)=>`
         <div class="cmt"><span style="flex:1"><b>${longDate(k)}</b> · ${s2disp(m2s(c.s))}–${s2disp(m2s(c.e))} ${esc(c.l)}${c.t?` <span class="badge" style="border-color:${TAGCOLOR[c.t]};color:${TAGCOLOR[c.t]}">${c.t}${c.sp?' · '+SPORTLABEL[c.sp]:''}</span>`:''}</span>
-        <button class="x" data-act="deloneoff" data-v="${k}" data-v2="${i}">${svg('trash',12,'var(--rust)')}</button></div>`).join('')).join('')}</div>`:'';})()}
+        <button class="x" data-act="deloneoff" data-v="${k}" data-v2="${i}" aria-label="Delete ${esc(c.l)} on ${longDate(k)}">${svg('trash',12,'var(--rust)')}</button></div>`).join('')).join('')}</div>`:'';})()}
     </div>
 
     ${sect('clock','BOUNDARIES')}
@@ -2348,7 +2421,7 @@ function ViewLog(){
         <label class="f"><span>Resting HR</span><input type="number" id="f_rhr" inputmode="numeric" value="${pf('rhr')}"></label>
         <label class="f"><span>Sleep (h)</span><input type="number" step="0.1" id="f_sleep" inputmode="decimal" value="${pf('sleep')}"></label>
       </div>
-      <div style="padding:14px 13px 2px;font-size:8.5px;letter-spacing:.12em;color:var(--faint)">TOP SETS - 1RM OR HEAVIEST 5</div>
+      <div style="padding:14px 13px 2px;font-size:var(--fs-label);letter-spacing:.12em;color:var(--faint)">TOP SETS - 1RM OR HEAVIEST 5</div>
       <div class="grid2">
         <label class="f"><span>Squat (${wu})</span><input type="number" step="0.5" id="f_squat" inputmode="decimal" value="${pf('squat',conv)}"></label>
         <label class="f"><span>Bench (${wu})</span><input type="number" step="0.5" id="f_bench" inputmode="decimal" value="${pf('bench',conv)}"></label>
@@ -2368,7 +2441,7 @@ function ViewLog(){
         <span>${e.squat!=null?Math.round(conv(e.squat)):'·'}</span>
         <span>${e.bench!=null?Math.round(conv(e.bench)):'·'}</span>
         <span>${e.dead!=null?Math.round(conv(e.dead)):'·'}</span>
-        <button class="x" data-act="dellog" data-v="${e.date}">${svg('x',12)}</button></div>`).join('')}
+        <button class="x" data-act="dellog" data-v="${e.date}" aria-label="Delete log entry for ${e.date}">${svg('x',12)}</button></div>`).join('')}
     </div><div class="note">Latest entry drives your standards and fuel targets below.</div></div>`:''}
 
     ${S.log.length?`${sect('trend','TREND')}
@@ -2401,8 +2474,23 @@ function ViewTarget(){
     ${sect('target','THE BUILD')}
     <div class="panel"><div style="padding:15px 13px">
       <p class="t"><b>${esc(ARCH.note)}</b></p>
-      <p class="t">Log your height in Plan and a weight on the Log tab, and this becomes a specific set of numbers with a timeline attached.</p>
-    </div></div>`;
+    </div>
+    <button class="note" data-act="golog" style="border-top:1px solid var(--rule);width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on the LOG tab and this becomes a specific set of numbers with a timeline attached.</span></button></div>
+
+    <div class="panel" style="margin-top:13px">
+      <div class="eyebrow" style="padding:11px 13px 9px">ONCE LOGGED, YOU'LL SEE</div>
+      <div style="padding:0 13px 15px;display:flex;flex-direction:column;gap:13px">
+        <div style="display:flex;gap:10px;align-items:flex-start">${svg('target',13,'var(--faint)')}
+          <div><div class="lab" style="color:var(--dim)">A current directive</div>
+          <div class="det">Measure, cut, recomp, build, or maintain — read off your actual numbers, not a guess.</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start">${svg('flame',13,'var(--faint)')}
+          <div><div class="lab" style="color:var(--dim)">A goal you can steer</div>
+          <div class="det">Three chips — cut, recomp, build — with the one your numbers recommend marked ★.</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start">${svg('trend',13,'var(--faint)')}
+          <div><div class="lab" style="color:var(--dim)">Exact calorie &amp; macro targets</div>
+          <div class="det">On the FUEL tab, tied to your goal and recalculated as your weight moves.</div></div></div>
+      </div>
+    </div>`;
 
   const phaseMap={
     measure:['MEASURE FIRST','var(--faint)'], lean:['LEAN OUT','var(--rust)'],
@@ -2432,10 +2520,10 @@ function ViewTarget(){
       const diff=N.kcal-N.tdee;
       return `<div class="panel" style="margin:0 13px 13px;background:var(--ink);padding:11px 12px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <span style="font-size:9px;letter-spacing:.1em;color:var(--faint)">AT THIS SETTING</span>
-          <span style="font-size:15px;font-weight:700;color:var(--amber)">${N.kcal} kcal/day</span>
+          <span style="font-size:var(--fs-caption);letter-spacing:.1em;color:var(--faint)">AT THIS SETTING</span>
+          <span style="font-size:var(--fs-numeral-md);font-weight:700;color:var(--amber)">${N.kcal} kcal/day</span>
         </div>
-        <div style="font-size:10.5px;color:var(--dim);margin-top:3px">${diff===0?'Right at maintenance':`${diff>0?'+':''}${diff} kcal vs your ${N.tdee} kcal maintenance`} — this is the exact number driving FUEL and every meal template below.</div>
+        <div style="font-size:var(--fs-detail);color:var(--dim);margin-top:3px">${diff===0?'Right at maintenance':`${diff>0?'+':''}${diff} kcal vs your ${N.tdee} kcal maintenance`} — this is the exact number driving FUEL and every meal template below.</div>
       </div>`;})()}
     ${misaligned?`<button class="banner steel" data-act="setgoal" data-v="${recGoal}" style="width:calc(100% - 26px);margin:0 13px 13px;text-align:left">
       ${svg('target',13,'var(--steel)')}<div>Your goal is set to <b>${S.profile.goal.toUpperCase()}</b> but your current numbers point to <b>${recGoal.toUpperCase()}</b> — that mismatch is why food targets can contradict the plan. Tap to align.</div></button>`:''}
@@ -2499,10 +2587,10 @@ function MealSection(N){
       const t=scaledTotals(m,f), open=openMeal===m.id, best=N&&m.id===match;
       const diff=N?t.kcal-N.kcal:null;
       return `<div class="acc-group">
-        <button class="ahead" data-act="meal" data-v="${m.id}" style="border-left:3px solid ${best?'var(--amber)':'var(--rule)'}">
+        <button class="ahead" data-act="meal" data-v="${m.id}" aria-expanded="${open}" style="border-left:3px solid ${best?'var(--amber)':'var(--rule)'}">
           <div style="flex:1">
-            <div class="an" style="font-size:13px">${esc(m.name)}${best?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">BEST FIT</span>':''}</div>
-            <div style="font-size:9.5px;color:var(--faint);letter-spacing:.05em;margin-top:4px">
+            <div class="an" style="font-size:var(--fs-form)">${esc(m.name)}${best?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">BEST FIT</span>':''}</div>
+            <div style="font-size:var(--fs-caption);color:var(--faint);letter-spacing:.05em;margin-top:4px">
               ${t.kcal} kcal · ${t.p}g protein${diff!=null?` · ${diff>0?'+':''}${diff} vs target`:''}</div>
           </div>
           ${open?svg('chevD',14,'var(--faint)'):svg('chev',14,'var(--faint)')}</button>
@@ -2512,7 +2600,7 @@ function MealSection(N){
               <button class="chip" data-act="logslot" data-v="${m.id}" data-v2="${si}">LOG</button></div>
             ${s.items.map(([n,qq0])=>{ const it=FOODIDX[n]; const qq=scaleQ(qq0,f);
               return `<div class="mitem"><span style="flex:1">${qq!==1?`<b>${qq}×</b> `:''}${esc(n)}</span>
-                <span style="color:var(--faint);font-size:10px">${it?Math.round(it[1]*qq):'?'} kcal</span></div>`;}).join('')}
+                <span style="color:var(--faint);font-size:var(--fs-detail)">${it?Math.round(it[1]*qq):'?'} kcal</span></div>`;}).join('')}
           </div>`).join('')}
           <div style="padding:12px 13px;display:flex;flex-direction:column;gap:9px">
             ${N&&Math.abs(mealTotals(m).kcal-N.kcal)>150?`<button class="btn ghost" data-act="mealscale">${f!==1?'SHOW ORIGINAL PORTIONS':'SCALE PORTIONS TO MY TARGET ('+N.kcal+' KCAL)'}</button>`:''}
@@ -2530,7 +2618,7 @@ function ViewFuel(){
   const ftoday=foodTotals(T);
 
   if(!N) return `${sect('flame','DAILY TARGETS')}
-    <div class="panel"><div class="empty">Log a weight on the <b>LOG</b> tab and your exact calorie and macro targets appear here.</div></div>
+    <div class="panel"><button class="empty" data-act="golog" style="width:100%">Log a weight on the <b>LOG</b> tab and your exact calorie and macro targets appear here.</button></div>
     ${MealSection(null)}
     ${SuppSection()}`;
 
@@ -2546,7 +2634,7 @@ function ViewFuel(){
       <div class="macro"><div class="v" style="color:var(--steel)">${N.carbs}g</div><div class="l">CARBS</div></div>
       <div class="macro"><div class="v" style="color:var(--moss)">${N.fat}g</div><div class="l">FAT</div></div>
     </div>
-    <div class="panel"><div style="padding:13px">
+    <div class="panel"><div class="fb" style="padding:13px">
       <div class="fbtop" style="margin-bottom:5px"><span>LOGGED TODAY</span><span style="color:var(--text)">${Math.round(ftoday.kcal)} / ${N.kcal}</span></div>
       <div class="bar"><div class="barfill" style="width:${clamp(ftoday.kcal/N.kcal*100,0,100)}%;background:var(--amber)"></div></div>
     </div>
@@ -2581,7 +2669,7 @@ function SuppSection(){
         <div class="eyebrow" style="padding:12px 13px 2px;color:${head[1]}">${head[0]}</div>
         ${list.map(s=>`<div class="stand">
           <div class="standtop"><span style="font-weight:600">${esc(s.n)}</span>
-            <span style="font-size:10px;color:var(--faint)">${esc(s.d)}</span></div>
+            <span style="font-size:var(--fs-detail);color:var(--faint)">${esc(s.d)}</span></div>
           <div class="det" style="margin-top:2px">${esc(s.w)}</div></div>`).join('')}
       </div>`;}).join('')}
     <div class="panel"><div class="note" style="border-top:none">
@@ -2612,7 +2700,7 @@ function ViewMind(){
         <div style="flex:1"><div class="lab">Mark today's read complete</div>
         <div class="det">Streak matters more than depth on any single day</div></div></button>
       ${NEWS.map(n=>`<div class="row" style="opacity:.9;pointer-events:none"><div style="width:18px;min-width:18px;color:var(--faint);text-align:center">·</div>
-        <div class="det" style="flex:1;font-size:11.5px">${esc(n)}</div></div>`).join('')}
+        <div class="det" style="flex:1;font-size:var(--fs-body)">${esc(n)}</div></div>`).join('')}
       <div class="note">Cancel one scrolling habit to pay for this. Swap the feed for the front page and the time is free.</div>
     </div>
 
@@ -2624,9 +2712,9 @@ function ViewMind(){
     ${Object.entries(TRACKS).map(([tk,t])=>{
       const list=BOOKS.filter(b=>b.tr===tk),dn=list.filter(b=>S.books[b.id]===2).length,open=openTrack===tk;
       return `<div class="acc-group">
-        <button class="ahead" data-act="track" data-v="${tk}" style="border-left:3px solid ${t.c}">
+        <button class="ahead" data-act="track" data-v="${tk}" aria-expanded="${open}" style="border-left:3px solid ${t.c}">
           ${svg(t.ico,15,t.c)}<span class="an">${t.name}</span>
-          <span style="font-size:11px;color:var(--faint)">${dn}/${list.length}</span>
+          <span style="font-size:var(--fs-body);color:var(--faint)">${dn}/${list.length}</span>
           ${open?svg('chevD',14,'var(--faint)'):svg('chev',14,'var(--faint)')}</button>
         ${open?`<div class="abody">${list.map(b=>{
           const st=S.books[b.id]??0,cols=['var(--faint)','var(--amber)','var(--moss)'],labs=['QUEUED','READING','FINISHED'];
@@ -2658,30 +2746,40 @@ function ViewLedger(){
       <div class="stat"><div class="v">${totalSessions()}</div><div class="l">SESSIONS</div></div>
       <div class="stat"><div class="v" style="color:var(--moss)">${Object.keys(S.prs).length}</div><div class="l">LIFTS TRACKED</div></div>
     </div>
-    <div class="panel">${Object.keys(EXS).map(ex=>{ const pr=S.prs[ex], E=EXS[ex];
-      return `<div class="stand"><div class="standtop"><span style="font-weight:600">${E.n}</span>
-        <span>${pr?`${dispExact(pr.w)} × ${pr.r}${E.added?'':' · est '+dispExact(pr.e1rm)+' 1RM'}`:'—'}</span></div>
-        <div style="font-size:9.5px;color:var(--faint)">${pr?longDate(pr.date):'Not logged yet — log a set on Today'}</div></div>`;}).join('')}
-      <div class="note">PRs update automatically the moment a logged set beats your best. Estimated 1RM uses the Epley formula from your top set.</div></div>
+    ${(()=>{ const entries=Object.entries(EXS);
+      const main=entries.filter(([,E])=>E.m!=null), acc=entries.filter(([,E])=>E.m==null);
+      const rows=list=>list.map(([ex,E])=>{ const pr=S.prs[ex];
+        return `<div class="stand"><div class="standtop"><span style="font-weight:600">${E.n}</span>
+          <span>${pr?`${dispExact(pr.w)} × ${pr.r}${E.added?'':' · est '+dispExact(pr.e1rm)+' 1RM'}`:'—'}</span></div>
+          <div style="font-size:var(--fs-caption);color:var(--faint)">${pr?longDate(pr.date):'Not logged yet — log a set on Today'}</div></div>`;}).join('');
+      return `<div class="panel">
+        <div class="eyebrow" style="padding:11px 13px 6px">MAIN LIFTS</div>
+        ${rows(main)}
+        <div class="eyebrow" style="padding:11px 13px 6px;border-top:1px solid var(--rule)">ACCESSORIES</div>
+        ${rows(acc)}
+        <div class="note">PRs update automatically the moment a logged set beats your best. Estimated 1RM uses the Epley formula from your top set.</div></div>`; })()}
 
     ${sect('target','CAPABILITY')}
     <div class="hint">Set your honest current level. Under-rate rather than over-rate - this only works if the numbers are true.</div>
     ${SKILLS.map(s=>{ const cur=S.tiers[s.id]??0; return `
       <div class="panel acc"><div class="acc-bar" style="background:${s.c}"></div>
         <div style="display:flex;align-items:center;gap:10px;padding:13px 13px 11px">
-          ${svg(s.ico,16,s.c)}<span class="disp" style="flex:1;font-size:13px;letter-spacing:.09em">${s.n}</span>
-          <span style="font-size:10px;font-weight:700;color:${s.c}">TIER ${cur}</span></div>
+          ${svg(s.ico,16,s.c)}<span class="disp" style="flex:1;font-size:var(--fs-form);letter-spacing:.09em">${s.n}</span>
+          <span style="font-size:var(--fs-detail);font-weight:700;color:${s.c}">TIER ${cur}</span></div>
         <div class="tiers">${s.t.map((_,i)=>`<button class="${i<=cur?'on':''}" data-act="tier" data-v="${s.id}" data-v2="${i}" style="background:${i<=cur?s.c:'var(--rule)'}"></button>`).join('')}</div>
-        <div style="padding:11px 13px 0;font-size:12px">${esc(s.t[cur])}</div>
-        ${cur<4?`<div style="padding:5px 13px 13px;font-size:10.5px;color:var(--dim)"><span style="color:var(--faint)">Next: </span>${esc(s.t[cur+1])}</div>`:'<div style="height:13px"></div>'}
+        <div style="padding:11px 13px 0;font-size:var(--fs-title)">${esc(s.t[cur])}</div>
+        ${cur<4?`<div style="padding:5px 13px 13px;font-size:var(--fs-detail);color:var(--dim)"><span style="color:var(--faint)">Next: </span>${esc(s.t[cur+1])}</div>`:'<div style="height:13px"></div>'}
       </div>`;}).join('')}
 
     ${sect('coins','CAPITAL LADDER')}
     <div class="hint">The least romantic pillar, and the one that pays for the other four. ${capDone} of ${CAPITAL.length} cleared.</div>
-    <div class="panel">${CAPITAL.map(c=>`
-      <button class="row ${S.capital[c.id]?'done':''}" data-act="cap" data-v="${c.id}">
+    <div class="panel">${(()=>{ let lastTier=null;
+      return CAPITAL.map(c=>{
+        const tierHead = c.tier!==lastTier ? `<div class="eyebrow" style="padding:11px 13px 6px${lastTier?';border-top:1px solid var(--rule)':''}">${c.tier.toUpperCase()}</div>` : '';
+        lastTier=c.tier;
+        return `${tierHead}<button class="row ${S.capital[c.id]?'done':''}" data-act="cap" data-v="${c.id}">
         ${chk(!!S.capital[c.id],'var(--moss)')}
-        <div style="flex:1"><div class="lab">${esc(c.l)}</div><div class="det">${esc(c.w)}</div></div></button>`).join('')}</div>
+        <div style="flex:1"><div class="lab">${esc(c.l)}</div><div class="det">${esc(c.w)}</div></div></button>`; }).join(''); })()}</div>
 
     ${sect('trend','NET WORTH')}
     <div class="panel">
@@ -2718,9 +2816,9 @@ function ViewCodex(){
       const wd=W.wDelta!=null?`${W.wDelta>0?'+':''}${(imp?W.wDelta*2.20462:W.wDelta).toFixed(1)} ${imp?'lb':'kg'}`:null;
       return `${sect('trend','THIS WEEK')}
     <div class="stats">
-      <div class="stat"><div class="v" style="color:${W.hit>=5?'var(--moss)':W.hit>=3?'var(--amber)':'var(--rust)'}">${W.hit}<span style="font-size:13px;color:var(--faint)">/7</span></div><div class="l">SESSIONS</div></div>
+      <div class="stat"><div class="v" style="color:${W.hit>=5?'var(--moss)':W.hit>=3?'var(--amber)':'var(--rust)'}">${W.hit}<span style="font-size:var(--fs-form);color:var(--faint)">/7</span></div><div class="l">SESSIONS</div></div>
       <div class="stat"><div class="v">${W.habPct}%</div><div class="l">HABITS</div></div>
-      <div class="stat"><div class="v">${W.news}<span style="font-size:13px;color:var(--faint)">/7</span></div><div class="l">INTEL</div></div>
+      <div class="stat"><div class="v">${W.news}<span style="font-size:var(--fs-form);color:var(--faint)">/7</span></div><div class="l">INTEL</div></div>
       <div class="stat"><div class="v" style="color:${W.reach>=3?'var(--moss)':'var(--amber)'}">${W.reach}</div><div class="l">OUTREACH</div></div>
     </div>
     <div class="panel"><div style="padding:14px 13px 4px">
@@ -2728,21 +2826,21 @@ function ViewCodex(){
         :W.avgK?`<p class="t">Averaged <b>${W.avgK} kcal</b> and <b>${W.avgP}g protein</b> on ${W.fdays} logged days. No two weigh-ins this week to compare - log weight twice next week.</p>`
         :`<p class="t">No food or weight logged this week. The review gets sharper the more you feed it.</p>`}
       ${W.booksFin?`<p class="t"><b>${W.booksFin} book${W.booksFin>1?'s':''} finished.</b> Write the from-memory summary before starting the next.</p>`:''}
-      ${sp?`<p class="t" style="color:var(--amber)"><b>Pattern: ${sp.day}s keep slipping</b> - ${sp.pct}% completion over the last four weeks. Either move that session earlier, shrink it, or change what ${sp.day} looks like. Wishing harder is not a plan.</p>`:''}
+      ${sp?`<p class="t" style="color:var(--amber)"><b>Pattern: ${sp.dayFull}s keep slipping</b> - ${sp.pct}% completion over the last four weeks. Either move that session earlier, shrink it, or change what ${sp.dayFull} looks like. Wishing harder is not a plan.</p>`:''}
       ${dir!=null&&Math.abs(dir)>=8?`<p class="t">Overall execution is ${dir>0?`<b style="color:var(--moss)">up ${dir}%</b>`:`<b style="color:var(--rust)">down ${Math.abs(dir)}%`+'</b>'} versus the previous month.</p>`:''}
     </div><div class="note">Auto-generated from your logs, refreshed live. Sundays: read it, adjust one thing, plan the week.</div></div>`;})()}
 
     ${sect('cal','THE ARC')}
     ${PHASES.map((p,i)=>{ const on=i===pi,open=openPhase===i; return `
       <div class="acc-group">
-        <button class="ahead" data-act="phase" data-v="${i}" style="border-left:3px solid ${on?'var(--amber)':'var(--rule)'};${on?'background:var(--panel2)':''}">
+        <button class="ahead" data-act="phase" data-v="${i}" aria-expanded="${open}" style="border-left:3px solid ${on?'var(--amber)':'var(--rule)'};${on?'background:var(--panel2)':''}">
           <span class="disp" style="font-size:19px;color:${on?'var(--amber)':'var(--faint)'}">${p.n}</span>
-          <div style="flex:1"><div class="an" style="font-size:14px;color:${on?'var(--text)':'var(--dim)'}">${p.name}</div>
-            <div style="font-size:9px;color:var(--faint);letter-spacing:.07em;margin-top:3px">${p.span}${on?' · CURRENT':''}</div></div>
+          <div style="flex:1"><div class="an" style="font-size:var(--fs-headline);color:${on?'var(--text)':'var(--dim)'}">${p.name}</div>
+            <div style="font-size:var(--fs-caption);color:var(--faint);letter-spacing:.07em;margin-top:3px">${p.span}${on?' · CURRENT':''}</div></div>
           ${open?svg('chevD',14,'var(--faint)'):svg('chev',14,'var(--faint)')}</button>
         ${open?`<div class="abody" style="padding:14px 13px 4px">
           <p class="t" style="color:var(--text)">${p.thesis}</p>
-          <div style="font-size:8.5px;letter-spacing:.17em;color:var(--amber);margin:13px 0 7px">MOVE ON WHEN</div>
+          <div style="font-size:var(--fs-label);letter-spacing:.17em;color:var(--amber);margin:13px 0 7px">MOVE ON WHEN</div>
           <p class="t">${p.exit}</p></div>`:''}</div>`;}).join('')}
 
     ${sect('shield','STANDING ORDERS')}
@@ -2801,6 +2899,12 @@ function Nav(){
 let lastRenderedView=null;
 function render(){
   const y=window.scrollY;
+  // The food-search field re-renders on every keystroke (it must, to filter live),
+  // which tears down and rebuilds the <input> itself — capture where the cursor
+  // actually was before that happens, or every keystroke would otherwise snap it
+  // back to the end of the text, breaking mid-string edits.
+  const oldFq=document.getElementById('foodq');
+  const fqSel=(oldFq&&document.activeElement===oldFq)?[oldFq.selectionStart,oldFq.selectionEnd]:null;
   let body=view==='today'?ViewToday():view==='plan'?ViewPlan():(view==='build'||view==='body')?ViewBuild()
     :view==='mind'?ViewMind():view==='ledger'?ViewLedger():ViewCodex();
   /* Every click/keystroke re-renders by replacing the whole #app tree — cheap and simple,
@@ -2811,7 +2915,7 @@ function render(){
      itself just changed; every other re-render of the same tab skips it. */
   if (view!==lastRenderedView) body=body.replace('class="view wrap"','class="view wrap enter"');
   lastRenderedView=view;
-  document.getElementById('app').innerHTML=Header()+body+Nav()+`<div class="toast ${toastMsg?'show':''}">${esc(toastMsg||'')}</div>`;
+  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+Nav()+`<div class="toast ${toastMsg?'show':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
   const strip=document.getElementById('strip');
   if (strip){
@@ -2825,7 +2929,12 @@ function render(){
     rnow.style.top=clamp((mins-wake)*px,0,rail.offsetHeight)+'px';
   }
   const fq=document.getElementById('foodq');
-  if (fq && foodFocus){ fq.focus(); const l=fq.value.length; fq.setSelectionRange(l,l); }
+  if (fq && foodFocus){
+    fq.focus();
+    const l=fq.value.length;
+    const [s,e]=fqSel?[Math.min(fqSel[0],l),Math.min(fqSel[1],l)]:[l,l];
+    fq.setSelectionRange(s,e);
+  }
 }
 let foodFocus=false;
 
@@ -2836,7 +2945,7 @@ document.addEventListener('pointerdown', e=>{
   const blk=e.target.closest('.rblk.drag[data-draggable="1"]'); if(!blk) return;
   const rail=document.getElementById('rail'); if(!rail) return;
   dragState={
-    id:blk.dataset.id, startY:e.clientY, origTop:parseFloat(blk.style.top),
+    id:blk.dataset.id, startY:e.clientY, origTop:parseFloat(blk.style.top), origS:+blk.dataset.s,
     px:+rail.dataset.px, wake:+rail.dataset.wake, railH:rail.offsetHeight, el:blk
   };
   try{ blk.setPointerCapture(e.pointerId); }catch(err){}
@@ -2845,16 +2954,20 @@ document.addEventListener('pointerdown', e=>{
 document.addEventListener('pointermove', e=>{
   if(!dragState) return;
   const dy=e.clientY-dragState.startY;
-  const top=clamp(dragState.origTop+dy,0,dragState.railH-16);
+  // Visual position tracks the finger 1:1; the committed time is always derived
+  // from the block's true original start (data-s) plus the dragged delta, never
+  // from this pixel top — so a block nudged for legibility in DayRail's packing
+  // pass can't desync from the time it actually shows once you start dragging it.
+  const top=clamp(dragState.origTop+dy,0,dragState.railH-32);
   dragState.el.style.top=top+'px';
-  const mins=clamp(Math.round((dragState.wake+top/dragState.px)/5)*5,0,1439);
+  const mins=clamp(Math.round((dragState.origS+dy/dragState.px)/5)*5,0,1439);
   const lab=dragState.el.querySelector('.rblkS');
   if (lab) lab.textContent=s2disp(mins);
 });
 function endDrag(){
   if(!dragState) return;
-  const top=parseFloat(dragState.el.style.top);
-  const mins=clamp(Math.round((dragState.wake+top/dragState.px)/5)*5,0,1439);
+  const dy=parseFloat(dragState.el.style.top)-dragState.origTop;
+  const mins=clamp(Math.round((dragState.origS+dy/dragState.px)/5)*5,0,1439);
   dragState.el.classList.remove('dragging');
   day(VD()).nudge[dragState.id]=mins;
   commit();
@@ -3012,13 +3125,29 @@ document.addEventListener('click', e => {
       const g=id=>num((document.getElementById('f_'+id)||{}).value);
       const date=document.getElementById('f_date').value||T;
       const rec={...(S.log.find(x=>x.date===date)||{}),date};
-      let any=false;
-      ['weight','squat','bench','dead','ohp','row','pullup'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=imp?Math.round(x/2.20462*100)/100:x; any=true;}});
+      let any=false, rejected=[];
+      // Weight and body-fat% feed physique()'s math directly (lean-mass and FFMI
+      // targets, then every Fuel calorie/macro number) with no downstream guard
+      // of their own — a mistyped weight doesn't just record wrong, it silently
+      // breaks two other screens with numbers that look plausible but aren't.
+      // Range-check here, once, rather than everywhere it's consumed.
+      ['weight','squat','bench','dead','ohp','row','pullup'].forEach(k=>{
+        const x=g(k); if(x==null) return;
+        if(k==='weight'){ const kg=imp?x/2.20462:x; if(!(kg>10&&kg<400)){ rejected.push('weight'); return; } }
+        rec[k]=imp?Math.round(x/2.20462*100)/100:x; any=true;
+      });
       ['waist','shoulder'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=imp?Math.round(x*2.54*10)/10:x; any=true;}});
-      ['bf','rhr','sleep'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=x; any=true;}});
-      if(!any){ toast('Nothing entered yet'); return; }
+      ['bf','rhr','sleep'].forEach(k=>{
+        const x=g(k); if(x==null) return;
+        if(k==='bf'&&!(x>=0&&x<=70)){ rejected.push('body fat %'); return; }
+        rec[k]=x; any=true;
+      });
+      if(!any&&!rejected.length){ toast('Nothing entered yet'); return; }
+      if(!any){ toast(`${rejected.join(' and ')} looked out of range for a real human value — nothing saved`); return; }
       S.log=[...S.log.filter(x=>x.date!==date),rec].sort((x,y)=>x.date>y.date?1:-1);
-      commit(); render(); toast('Saved - see Recent Entries'); return;
+      commit(); render();
+      toast(rejected.length ? `Saved the rest — ${rejected.join(' and ')} looked out of range and was skipped` : 'Saved - see Recent Entries');
+      return;
     }
     case 'dellog': S.log=S.log.filter(x=>x.date!==v); commit(); render(); toast('Entry removed'); return;
 
@@ -3107,12 +3236,20 @@ document.addEventListener('click', e => {
     case 'importgo': {
       const txt=(document.getElementById('importtxt')||{}).value;
       if(!txt||!txt.trim()){ importErr='Paste the backup JSON first.'; break; }
-      try{
-        const parsed=JSON.parse(txt);
-        S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
-        importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
-      }catch(err){ importErr="That didn't parse as valid backup JSON — check nothing got cut off in the paste."; }
-      break;
+      let parsed;
+      try{ parsed=JSON.parse(txt); }
+      catch(err){ importErr="That didn't parse as valid backup JSON — check nothing got cut off in the paste."; break; }
+      // Valid JSON isn't the same as a valid backup: check the shape everything
+      // else in the app depends on before overwriting live data with it. This
+      // runs before S is touched, so a bad paste can never corrupt what's
+      // already saved — only a shape check that passes gets to that line.
+      const shapeOk = parsed && typeof parsed==='object' && !Array.isArray(parsed)
+        && parsed.profile && typeof parsed.profile==='object' && typeof parsed.profile.height!=='undefined'
+        && parsed.days && typeof parsed.days==='object' && !Array.isArray(parsed.days)
+        && Array.isArray(parsed.log);
+      if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
+      S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
+      importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
     }
   }
   render();
