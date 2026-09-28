@@ -34,7 +34,7 @@ fully close the app and reopen, or reopen twice.
 
 ## Customizing
 
-All content is plain data at the top of the script in `index.html`: `WEEK` (training days,
+All content is plain data at the top of the script in `index.html`: `WEEK_STD` and the program variants `D8`/`D9` (training days — the Forge Builder program is the Mon/Tue/Thu/Fri Lower A / Upper A / Lower B / Upper B split,
 blocks, `steps`, `prog` rules), `FOODS` (the calorie database — add your staples),
 `BOOKS`, `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`, `SPORTS` (the MET value
 per sport used to cost calendar commitments tagged Physical — add a sport your gym does that

@@ -508,45 +508,46 @@ const DTYPE = {
 const LIFT_WARMUP = ['Empty bar x 10 slow reps','40% of work weight x 5','60% x 3','80% x 1, then rest 2 min','Start work sets'];
 
 const WEEK_STD = [
-{ id:'d1', short:'MON', type:'strength', dur:85, title:'Strength A — Squat',
-  aim:'The heaviest lower-body day of the week. Everything else you can do physically sits on top of this.',
+{ id:'d1', short:'MON', type:'strength', dur:85, title:'Lower A',
+  aim:'Explosive first, then heavy. Box jumps while fresh, back squat as the main lift, single-leg and hinge work behind it.',
   blocks:[
-   {id:'d1a',l:'Prep — 10 min',d:'Do not skip this and then wonder why the first sets feel awful',steps:[
-     '5 min bike or rower, easy, just to raise temperature.',
-     'Deep squat hold 2 x 45s, elbows prying the knees out.',
-     'Ankle rocks x15/side against a wall. Restricted ankles are the #1 cause of ugly squats.',
-     'Glute bridge x15, hip circles x10/side.']},
-   {id:'d1b',l:'Back squat — 5 x 5',d:'Main lift. Rest 3 min between work sets.',steps:[
+   {id:'d1a',l:'Box jumps — 4 x 3',d:'First, while fresh. Power before fatigue.',steps:[
+     '5 min bike or rower, easy, then ankle rocks x15/side and glute bridge x15.',
+     'Box at a height you can land on softly with a full foot. Higher is not better.',
+     'Swing the arms, jump, land quiet in a quarter squat. Step down, never jump down.',
+     'Rest 60-90s between sets. Each rep is max intent; stop the set if it turns sloppy.']},
+   {id:'d1b',l:'Back squat — 4 x 5 @ RPE 8',d:'Main lift. Two reps left in the tank on every set. Rest 3 min.',steps:[
      ...LIFT_WARMUP,
      'Bar on upper traps, hands as close as the shoulders allow, elbows down and under.',
      'Big breath into the belly, brace like taking a punch, sit down between the heels.',
      'Depth: hip crease below the knee. Unsure? Film one set from the side at 45 degrees.',
-     'Drive through mid-foot, exhale at the top. Full 3 min rest — this is a strength set, not cardio.',
-     'FINAL SET OPTION: once all 5 sets feel controlled, take set 5 to a hard AMRAP. Stop with 1 rep left in the tank, never to true failure under a bar.'],
-   prog:'All 25 reps clean -> +5 lb. Miss reps -> repeat the weight. Miss 3 sessions running -> drop 10% and climb back. FORGE tracks this for you.'},
+     'RPE 8 means you could have done 2 more reps. Never grind to failure under a bar.'],
+   prog:'All 20 reps clean -> +5 lb. Miss reps -> repeat the weight. Miss 3 sessions running -> drop 10% and climb back. FORGE tracks this for you.'},
    {id:'d1c',l:'Romanian deadlift — 3 x 8',d:'Superset with the split squat below',steps:[
      'Start standing, soft knees, push the hips BACK, chest proud.',
      'Bar slides down the thighs and stays touching. Stop when the hamstrings scream — mid-shin for most.',
      'Squeeze the glutes to stand. Hamstrings and glutes should burn, never the lower back.',
      'Rest only 60s here — superset it with the Bulgarian split squat to compress the session.'],
    prog:'+5 lb when all 24 reps hold a flat back.'},
-   {id:'d1d',l:'Bulgarian split squat — 3 x 10/leg',d:'Superset partner. Brutal, and the reason knees survive.',steps:[
+   {id:'d1d',l:'Bulgarian split squat — 3 x 8/leg',d:'Superset partner. Brutal, and the reason knees survive.',steps:[
      'Rear foot on a bench, front foot far enough forward that the knee tracks over the toes.',
      'Drop straight down, back knee toward the floor, torso tall.',
      'Weaker leg goes first and the strong leg only matches its reps. Always.',
-     'Hold dumbbells once bodyweight 10s stop being hard.']},
+     'Hold dumbbells once bodyweight 8s stop being hard.']},
    {id:'d1e',l:'Loaded carry — 4 x 40m',d:'Grip, trunk, and mental toughness in one movement',steps:[
      'Heaviest dumbbells or trap bar you can hold. Stand tall, shoulders back, ribs down.',
      'Walk 40m controlled, no leaning, no rushing. Set down with a flat back.',
      'Rest 90s. If your grip fails before the distance, that IS the training effect.'],
    prog:'Target by month 6: half your bodyweight per hand.'},
-   {id:'d1f',l:'Conditioning finisher — 8 min',d:'Short, nasty, non-negotiable',steps:[
-     'EMOM (every minute on the minute) for 8 minutes:',
-     'Odd minutes: 12 kettlebell swings.',
-     'Even minutes: 10 goblet squats or 200m row.',
-     'Whatever time is left in the minute is your rest. If you finish in 30s, you rest 30s.',
-     'This is where the engine gets built without needing a separate cardio day.']},
-   {id:'d1g',l:'Cooldown — 5 min',d:'Down-regulate',steps:['Couch stretch 60s/side','Pigeon 60s/side','5 slow nasal breaths, done.']}]},
+   {id:'d1f',l:'Pallof press — 3 x 10/side',d:'Anti-rotation. The trunk resists, the arms just press.',steps:[
+     'Cable or band at chest height, stand side-on, hands at the sternum.',
+     'Press straight out, hold 2s, return. Do not let the torso turn toward the anchor.',
+     'Ribs down, glutes tight. Step further from the anchor to make it harder.']},
+   {id:'d1g',l:'Finisher — 8 min rope or shadowboxing',d:'Short, nasty, and it keeps the boxing engine warm',steps:[
+     'Pick one: jump rope or shadowboxing, 8 minutes total.',
+     'Rope: 40s on, 20s off, x8. Shadowbox: 2 min rounds, 30s off, keep the hands up.',
+     'Pace it so the last round looks like the first. Log it as done, not as a max.']},
+   {id:'d1h',l:'Cooldown — 5 min',d:'Down-regulate',steps:['Couch stretch 60s/side','Pigeon 60s/side','5 slow nasal breaths, done.']}]},
 
 { id:'d2', short:'TUE', type:'strike', dur:90, title:'Striking',
   aim:'Get comfortable with someone trying to hit you. Everything else in combat is downstream of that.',
@@ -581,41 +582,41 @@ const WEEK_STD = [
      'Hanging knee raise x10, slow down phase']},
    {id:'d2f',l:'Cooldown',d:'10 min',steps:['Doorway chest stretch 45s/side','Couch stretch 60s/side','Calf stretch on a step 45s/side','5 slow nasal breaths, done']}]},
 
-{ id:'d3', short:'WED', type:'strength', dur:85, title:'Strength B — Press & Pull',
-  aim:'Upper-body strength and shoulder durability. Pull at least as much as you press, every single week.',
+{ id:'d3', short:'WED', type:'strength', dur:85, title:'Upper A',
+  aim:'Heavy pressing and pulling. Pull at least as much as you press, and keep the lower back out of it.',
   blocks:[
    {id:'d3a',l:'Prep — 10 min',d:'Shoulders first',steps:[
      'Band pull-aparts x20, band dislocates x10.',
      'Scap push-ups x10, scap pull-ups x10 (hang, shrug down, no elbow bend).',
      'Thoracic rotations x10/side. Push-ups x10 to finish.']},
-   {id:'d3b',l:'Bench press — 5 x 5',d:'Main lift. Pause on the chest. Rest 3 min.',steps:[
+   {id:'d3b',l:'Pause bench press — 4 x 5 @ RPE 8',d:'Main lift. 1s dead pause on the chest. Rest 3 min.',steps:[
      ...LIFT_WARMUP,
      'Grip so the forearms are vertical at the bottom. Shoulder blades pinched and DOWN into the bench.',
-     'Bar to lower chest, 1s pause, press slightly back toward the face.',
+     'Bar to lower chest, hold a full 1s pause with no sinking, then press slightly back toward the face.',
      'Feet planted, glutes stay on the bench. Never bounce.',
-     'Use a spotter or safety pins on the last two sets. Always.'],
-   prog:'All 25 clean -> +5 lb. FORGE handles the tracking.'},
-   {id:'d3c',l:'Weighted pull-up — 5 x 5',d:'Superset with the press below',steps:[
+     'RPE 8: two reps left in the tank. Use a spotter or safety pins on the last two sets. Always.'],
+   prog:'All 20 clean -> +5 lb. Paused reps are harder, so expect to load 5-10% lighter than touch-and-go. FORGE handles the tracking.'},
+   {id:'d3c',l:'Weighted pull-up — 4 x 5',d:'Superset with the landmine press below',steps:[
      'Dead hang start, chin clearly over the bar, full lower. No kipping.',
-     'Under 5 clean bodyweight reps? Do 5 x 5 negatives: jump up, lower for 5 full seconds.',
+     'Under 5 clean bodyweight reps? Do 4 x 5 negatives: jump up, lower for 5 full seconds.',
      'Over 12 clean? Add weight on a belt and go back to fives.'],
-   prog:'Milestone: 5 x 5 with 25 lb hanging off you.'},
-   {id:'d3d',l:'Overhead press — 3 x 8',d:'Strict. Superset partner with pull-ups.',steps:[
-     'Bar at the collarbone, forearms vertical, ribs down, glutes squeezed.',
-     'Press up and slightly back; head moves through at the top. Ears past arms = lockout.',
-     'No leg drive. If it needs legs, it is too heavy.',
+   prog:'Milestone: 4 x 5 with 25 lb hanging off you.'},
+   {id:'d3d',l:'Landmine press — 3 x 8/side',d:'Replaces the strict barbell overhead press. Superset partner with pull-ups.',steps:[
+     'Bar end in a corner or landmine sleeve, held at the shoulder, staggered stance.',
+     'Press up and forward along the arc of the bar, ribs down, glutes squeezed.',
+     'The angle spares the shoulder. Full lockout at the top, slow on the way down.',
      'Rest 90s between supersets.']},
-   {id:'d3e',l:'Barbell row — 3 x 8',d:'Pull what you press',steps:[
-     'Hinge to about 45 degrees, flat back, bar to the lower ribs, elbows tight.',
-     'Squeeze the shoulder blades for a full second at the top. No body English.',
-     'If the torso is rising to move the bar, drop the weight.']},
+   {id:'d3e',l:'Chest-supported row — 3 x 8',d:'Pull what you press, and spare the lower back',steps:[
+     'Chest on the pad, feet planted, neck long.',
+     'Pull the elbows toward the back pockets, squeeze the shoulder blades for a full second.',
+     'No body English possible here, so make the load honest.']},
    {id:'d3f',l:'Arms + grip — 10 min',d:'The visible stuff, and the useful stuff',steps:[
      'Superset: barbell curl 3 x 10 with overhead tricep extension 3 x 12.',
      'Then: 3 x max dead hang, 90s rest. Log the seconds — this is a real Phase 1 milestone.',
      'Forearms and grip are the most-seen and least-trained muscles on a man.'],
    prog:'Phase 1 exit: a single 2-minute dead hang.'},
-   {id:'d3g',l:'Core circuit x 3',d:'Anti-rotation, not crunches',steps:[
-     'Plank 60s -> Pallof press 12/side -> hollow hold 30s -> back extension x15.',
+   {id:'d3g',l:'Anti-rotation core circuit x 3',d:'Resist the twist, not crunches',steps:[
+     'Pallof press 12/side -> plank 60s -> hollow hold 30s -> suitcase carry 20m/side.',
      'Minimal rest inside a round, 90s between rounds.']}]},
 
 { id:'d4', short:'THU', type:'ground', dur:90, title:'Brazilian Jiu-Jitsu',
@@ -643,40 +644,38 @@ const WEEK_STD = [
      'One thing that worked. One thing that got you caught. The name of one technique to look up.',
      'Put it in the After-Action box on Today. Ninety days of these is a private textbook.']}]},
 
-{ id:'d5', short:'FRI', type:'strength', dur:85, title:'Strength C — Pull from the Floor',
-  aim:'The heaviest thing you do all week. Posterior chain, raw pulling power, and the lift that carries over to everything.',
+{ id:'d5', short:'FRI', type:'strength', dur:85, title:'Lower B — Power',
+  aim:'Rotational and explosive power first, then a heavy pull from the floor. Trap bar in place of conventional to keep the back happy.',
   blocks:[
-   {id:'d5a',l:'Prep — 10 min',d:'Hips and hamstrings',steps:[
-     '5 min easy row — the closest warmup to a hinge pattern there is.',
-     'Cat-cow x10, bird dog x10/side, glute bridge x20.',
-     'Empty-bar RDL x10 to groove the hinge before loading it.']},
-   {id:'d5b',l:'Deadlift — 3 x 5',d:'Main lift. Rest 3-4 min. Reset every rep.',steps:[
+   {id:'d5a',l:'Med ball rotational throws — 4 x 5/side',d:'First. Power comes before fatigue.',steps:[
+     '5 min easy row or bike, then hip circles, cat-cow, glute bridge x20.',
+     'Side-on to a wall, load the back hip, rotate and throw through the wall as hard as you can.',
+     'Power comes from the hips, not the arms. Catch, reset, repeat.',
+     'Rest 60-90s. Every rep max intent.']},
+   {id:'d5b',l:'Trap bar deadlift — 3 x 5',d:'Main lift. Replaces conventional. Rest 3-4 min. Reset every rep.',steps:[
      ...LIFT_WARMUP,
-     'Bar over mid-foot, shins touching the bar, hips higher than a squat but lower than a stiff-leg.',
-     'Flat back, chest up, big brace, lats squeezed as if crushing oranges in the armpits.',
-     'Push the floor away. The bar stays in contact with the legs the whole way up.',
+     'Stand in the middle of the bar, hinge and squat down, neutral spine, grip the handles.',
+     'Big brace, lats tight, push the floor away. Stand tall without leaning back.',
      'Reset fully every rep. No touch-and-go, no bouncing off the floor, ever.',
-     'Only 3 work sets — this lift takes more out of you than anything else. Quality over quantity.'],
+     'Only 3 work sets — quality over quantity.'],
    prog:'All 15 reps clean -> +10 lb while it moves fast, then +5. FORGE tracks it.'},
    {id:'d5c',l:'Front squat — 3 x 5',d:'Quads and upper back, and it fixes your back squat',steps:[
      'Bar in the front rack, elbows HIGH, fingertips only under the bar is fine.',
      'Torso stays vertical. The moment the elbows drop, the bar dumps forward — that is the feedback.',
      'Start light. Front squats humble everyone the first month.'],
    prog:'Roughly 70-80% of your back squat when both are trained.'},
-   {id:'d5d',l:'Weighted dip — 3 x 8',d:'The most underrated upper-body builder',steps:[
-     'Lean slightly forward, elbows tracking back, lower until the upper arm is parallel.',
-     'Shoulder pain at the bottom? Cut the depth. Do not push through joint pain here.',
-     'Add weight on a belt once 12 clean bodyweight reps are easy.',
-     'Cannot do dips yet? Bench dips or a push-up progression instead.']},
-   {id:'d5e',l:'Chin-up + face pull — 3 rounds',d:'Superset. Shoulder insurance.',steps:[
+   {id:'d5d',l:'Kettlebell swings — 4 x 10',d:'Hip snap, not a squat',steps:[
+     'Hinge back, hike the bell, snap the hips, let the arms float it to chest height.',
+     'Arms are ropes. Glutes and hamstrings do the work, the bell never goes overhead.',
+     'Heavy enough that the last two reps slow down, light enough that the back stays flat.']},
+   {id:'d5e',l:'Sprints — 6 x 20m',d:'Full rest, full effort',steps:[
+     'Walk back for recovery, roughly 60-90s between reps. This is speed work, not conditioning.',
+     'Lean on the first 5 steps, then rise tall. Relax the face and hands.',
+     'Stop when speed drops. Quality over quantity, and warm up the hamstrings first.']},
+   {id:'d5f',l:'Chin-up + face pull — 3 rounds',d:'Superset. Shoulder insurance.',steps:[
      'Chin-up (palms toward you) x max, then face pull x20 immediately after.',
      'Face pulls are the single best exercise for keeping shoulders healthy under all this pressing.',
-     'Rest 90s between rounds.']},
-   {id:'d5f',l:'Conditioning finisher — 10 min',d:'Finish the week emptied',steps:[
-     '5 rounds, as fast as form allows:',
-     '10 kettlebell swings, 10 push-ups, 200m row or 40m sled push.',
-     'Rest exactly 60s between rounds. Log your total time and try to beat it in 4 weeks.',
-     'If your form degrades, slow down. Speed is a reward for competence, not a substitute.']}]},
+     'Rest 90s between rounds.']}]},
 
 { id:'d6', short:'SAT', type:'craft', dur:120, title:'Craft Day',
   aim:'The unglamorous competencies almost nobody builds. Rotate through each track weekly.',
@@ -1140,18 +1139,19 @@ FOODS.push(...FOODS_VENUES);
    screens — accessories below intentionally don't have one).
    added:true means the logged weight is ADDED load (pull-ups, dips).       */
 const EXS = {
-  squat: {n:'Back squat',      inc:2.27, sets:5, reps:5, m:2.0},
-  bench: {n:'Bench press',     inc:2.27, sets:5, reps:5, m:1.5},
+  squat: {n:'Back squat',      inc:2.27, sets:4, reps:5, m:2.0},
+  bench: {n:'Bench press',     inc:2.27, sets:4, reps:5, m:1.5},
   dead:  {n:'Deadlift',        inc:4.54, sets:3, reps:5, m:2.5},
   ohp:   {n:'Overhead press',  inc:2.27, sets:3, reps:8, m:1.0},
-  row:   {n:'Barbell row',     inc:2.27, sets:3, reps:8, m:0.9},
-  pullup:{n:'Weighted pull-up',inc:2.27, sets:5, reps:5, m:0.4, added:true},
+  row:   {n:'Chest-supported row',inc:2.27, sets:3, reps:8, m:0.9},
+  pullup:{n:'Weighted pull-up',inc:2.27, sets:4, reps:5, m:0.4, added:true},
   rdl:   {n:'Romanian deadlift',inc:2.27, sets:3, reps:8, m:1.5},
   frontsq:{n:'Front squat',    inc:2.27, sets:3, reps:5, m:1.5},
   dip:   {n:'Weighted dip',    inc:2.27, sets:3, reps:8, m:0.5, added:true},
   /* accessories — same progression engine, just not tracked as a bodyweight standard */
-  rowvol:     {n:'Barbell row (volume)',       inc:2.27, sets:4, reps:10},
-  splitsq:    {n:'Bulgarian split squat',      inc:2.27, sets:3, reps:10},
+  rowvol:     {n:'Row (volume)',                inc:2.27, sets:4, reps:10},
+  splitsq:    {n:'Bulgarian split squat',      inc:2.27, sets:3, reps:8},
+  landmine:   {n:'Landmine press (per side)',  inc:2.27, sets:3, reps:8},
   curl:       {n:'Barbell curl',               inc:2.27, sets:3, reps:10},
   triceps:    {n:'Overhead tricep extension',  inc:2.27, sets:3, reps:12},
   facepull:   {n:'Face pull',                  inc:2.27, sets:3, reps:20},
@@ -1168,8 +1168,8 @@ const EXS = {
    stay plain checkboxes rather than forcing a fake number into a field.    */
 const BLOCKEX = {
   d1b:['squat'], d1c:['rdl'], d1d:['splitsq'],
-  d3b:['bench'], d3c:['pullup'], d3d:['ohp'], d3e:['row'], d3f:['curl','triceps'],
-  d5b:['dead'],  d5c:['frontsq'], d5d:['dip'], d5e:['facepull'],
+  d3b:['bench'], d3c:['pullup'], d3d:['landmine'], d3e:['row'], d3f:['curl','triceps'],
+  d5b:['dead'],  d5c:['frontsq'], d5f:['facepull'],
   d8b:['inclinepress'], d8c:['rowvol'], d8d:['lateral','reardelt'], d8e:['inclinecurl','pushdown'],
   d9b:['dead'],
 };
@@ -1181,7 +1181,8 @@ const PAINSWAP = {
   dead:'Swap: trap-bar deadlift or hip thrust. No pain through the entire range.',
   ohp:'Swap: landmine press. The angle spares most cranky shoulders.',
   pullup:'Swap: lat pulldown or ring row. Full range, zero pain.',
-  row:'Swap: chest-supported row. Takes the lower back out of it.',
+  row:'Swap: single-arm dumbbell row braced on a bench. Same pull, easier on the neck and lower back.',
+  landmine:'Swap: half-kneeling single-arm dumbbell press, or push-ups. Keep the range pain-free.',
   rowvol:'Swap: chest-supported row. Takes the lower back out of it.',
   rdl:'Swap: back extension or hip thrust. Loads the same chain without the spinal demand.',
   frontsq:'Swap: goblet squat or leg press, pain-free range only.',
@@ -1309,8 +1310,8 @@ const MEALS = [
 ];
 
 /* ============================================ program variant day defs ==== */
-const D8 = { id:'d8', short:'FRI', type:'strength', dur:80, title:'Strength D — Upper Volume',
-  aim:'The fourth lifting day. Pure hypertrophy for shoulders, back and arms — the muscles that build the silhouette.',
+const D8 = { id:'d8', short:'FRI', type:'strength', dur:80, title:'Upper B',
+  aim:'Volume day for chest, back, delts and arms. Higher reps, controlled tempo, and the delt work stays exactly as written.',
   blocks:[
    {id:'d8a',l:'Prep — 8 min',d:'Shoulders and elbows',steps:[
      'Band pull-aparts x20, band dislocates x10, scap push-ups x10.',
@@ -1319,10 +1320,11 @@ const D8 = { id:'d8', short:'FRI', type:'strength', dur:80, title:'Strength D �
      'Bench at 30 degrees. Dumbbells start at the shoulders, press up and slightly together.',
      'Lower for a full 2 seconds. The lowering IS the hypertrophy stimulus.',
      'Rest 2 min. Leave 1-2 reps in the tank every set until the last, which goes near-failure.']},
-   {id:'d8c',l:'Barbell row — 4 x 10',d:'Volume back work',steps:[
-     'Same setup as Wednesday but lighter and stricter: 45-degree hinge, bar to lower ribs.',
+   {id:'d8c',l:'Row — 4 x 10',d:'Chest-supported or barbell. Volume back work.',steps:[
+     'Chest-supported is the default and spares the lower back. Barbell row is fine if the back feels good.',
+     'Barbell version: 45-degree hinge, bar to lower ribs. Chest-supported: elbows to back pockets.',
      'Full 1s squeeze at the top of every rep. No momentum whatsoever at these loads.'],
-   prog:'Tracked as its own progression, separate from Wednesday\'s row — same movement, different rep range, so the two numbers don\'t need to match.'},
+   prog:'Tracked as its own progression, separate from Upper A\'s row — same movement, different rep range, so the two numbers don\'t need to match.'},
    {id:'d8d',l:'Lateral raise + rear delt — 4 x 15 each',d:'Superset. Width lives here.',steps:[
      'Lateral raise: lead with the elbows, stop at shoulder height, no swinging.',
      'Rear delt fly immediately after, chest supported on an incline bench.',
@@ -1332,7 +1334,11 @@ const D8 = { id:'d8', short:'FRI', type:'strength', dur:80, title:'Strength D �
      'Then 2 x max-rep chin-up hold at the top, just hanging with chin over the bar.']},
    {id:'d8f',l:'Carry + core — 10 min',d:'Finish heavy',steps:[
      'Farmer carry 4 x 40m, heaviest handles available.',
-     'Hanging leg raise 3 x 10 between carries.']}]};
+     'Hanging leg raise 3 x 10 between carries.']},
+   {id:'d8g',l:'Ring or neutral-grip dips — 3 x 8',d:'Bodyweight. Only if your shoulders feel fine.',steps:[
+     'Swaps out weighted dips. Rings or parallel neutral-grip handles, bodyweight only.',
+     'Lean slightly forward, lower until the upper arm is parallel, no deeper.',
+     'Any front-of-shoulder pinch at the bottom? Skip the set and do close-grip push-ups instead.']}]};
 
 const D9 = { id:'d9', short:'THU', type:'engine', dur:75, title:'Fight Engine',
   aim:'The gap between rounds one and three is decided here. Fight-specific conditioning plus the one heavy pull that keeps you strong.',
@@ -3179,6 +3185,7 @@ document.addEventListener('click', e => {
       if (r==null) r = E.reps;
       if (w==null&&!E.added){ toast('Enter a weight'); return; }
       if (w==null) w=0;
+      if (w<0 || r<1){ toast('Weight and reps must be positive'); return; }
       if (!S.gym[VD()]) S.gym[VD()]={};
       if (!S.gym[VD()][ex]) S.gym[VD()][ex]=[];
       S.gym[VD()][ex].push({w:Math.round(w*100)/100, r:Math.round(r)});
@@ -3202,7 +3209,6 @@ document.addEventListener('click', e => {
 
     /* ---- deload ---- */
     case 'deloadgo': {
-      const [y,m,dd]=mondayOf(-1).split('-').map(Number);
       S.deload.until=mondayOf(-1);
       commit(); render(); toast('Deload week started - 60% loads'); return;
     }
@@ -3352,17 +3358,20 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
        under 'row' on a Friday (the only weekday d8c can appear on) over to rowvol so
        it doesn't just vanish from the page it was actually logged on. */
     let rowMigrated=false;
-    for (const k in S.gym){
+    if (!S.meta.rowSplit) for (const k in S.gym){
       if (S.gym[k]&&S.gym[k].row&&dowIdx(k)===4){
         S.gym[k].rowvol=(S.gym[k].rowvol||[]).concat(S.gym[k].row);
         delete S.gym[k].row;
         rowMigrated=true;
       }
     }
-    if (S.prs.row && dowIdx(S.prs.row.date)===4 &&
+    if (!S.meta.rowSplit && S.prs.row && dowIdx(S.prs.row.date)===4 &&
         (!S.prs.rowvol || S.prs.row.e1rm>S.prs.rowvol.e1rm)){
       S.prs.rowvol=S.prs.row; delete S.prs.row; rowMigrated=true;
     }
+    /* run once only: the row exercise can now legitimately be logged on a Friday
+       (swapped days, other programs), and re-running would keep moving it. */
+    if (!S.meta.rowSplit){ S.meta.rowSplit=true; rowMigrated=true; }
     if (rowMigrated) commit();
   }
   if (!S.meta.start){
