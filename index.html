@@ -1178,7 +1178,7 @@ const BLOCKEX = {
 const PAINSWAP = {
   squat:'Swap: box squat to a high box, or leg press. Light, pain-free range only.',
   bench:'Swap: floor press or push-ups. If pressing hurts at all ranges, row instead.',
-  dead:'Swap: trap-bar deadlift or hip thrust. No pain through the entire range.',
+  dead:'Swap: hip thrust or a light Romanian deadlift. No pain through the entire range.',
   ohp:'Swap: landmine press. The angle spares most cranky shoulders.',
   pullup:'Swap: lat pulldown or ring row. Full range, zero pain.',
   row:'Swap: single-arm dumbbell row braced on a bench. Same pull, easier on the neck and lower back.',
@@ -1625,14 +1625,16 @@ function gymSessions(ex){
 }
 function sessionWork(ex,k){
   const E=EXS[ex], sets=S.gym[k][ex];
-  const byW={};
-  sets.forEach(s=>{ const key=Math.round(s.w*100)/100; (byW[key]=byW[key]||[]).push(s); });
+  /* Sets count toward the same working weight if they're within WTOL kg of each
+     other. Typed lb values and auto-filled blanks can land a cent or two apart
+     after the kg conversion (e.g. 72.57 vs 72.58), and an exact match would split
+     one 4-set session into groups that each fall short of the target. */
+  const WTOL=0.3;
   let qualW=null, overallTop=-Infinity;
-  Object.keys(byW).forEach(key=>{
-    const arr=byW[key], w=arr[0].w;
-    if (w>overallTop) overallTop=w;
-    const cnt=arr.filter(s=>s.r>=E.reps).length;
-    if (cnt>=E.sets && (qualW==null||w>qualW)) qualW=w;
+  sets.forEach(c=>{
+    if (c.w>overallTop) overallTop=c.w;
+    const cnt=sets.filter(s=>Math.abs(s.w-c.w)<=WTOL && s.r>=E.reps).length;
+    if (cnt>=E.sets && (qualW==null||c.w>qualW)) qualW=c.w;
   });
   return { top: qualW!=null?qualW:overallTop, ok: qualW!=null };
 }
@@ -1719,6 +1721,12 @@ function dispExact(kg){
   if (kg<0.5) return 'bodyweight';
   const imp=S.profile.unit==='imperial';
   return imp ? `${Math.round(kg*2.20462*2)/2} lb` : `${Math.round(kg*4)/4} kg`;
+}
+function snapLoadKg(kg,ex){
+  const imp=S.profile.unit==='imperial';
+  const incKg=(ex&&EXS[ex]&&EXS[ex].inc)||2.27;
+  if (imp){ const incLb=Math.round(incKg*2.20462*2)/2; return Math.round(kg*2.20462/incLb)*incLb/2.20462; }
+  return Math.round(kg/incKg)*incKg;
 }
 /* suggested: a next-weight recommendation or an aspirational target, snapped to
    a loadable increment — the exercise's own progression step (EXS[ex].inc) when
@@ -3181,7 +3189,7 @@ document.addEventListener('click', e => {
       const ex=v, E=EXS[ex], rx=prescribe(ex);
       let w=inLoad((document.getElementById('sw_'+ex)||{}).value);
       let r=num((document.getElementById('sr_'+ex)||{}).value);
-      if (w==null) w = rx&&rx.w!=null ? rx.w : null;
+      if (w==null) w = rx&&rx.w!=null ? snapLoadKg(rx.w,ex) : null;   // log what the placeholder shows
       if (r==null) r = E.reps;
       if (w==null&&!E.added){ toast('Enter a weight'); return; }
       if (w==null) w=0;
