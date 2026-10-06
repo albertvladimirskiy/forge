@@ -1,11 +1,11 @@
 # FORGE — deploy + data guide
 
-Five files, no build step. `index.html` is the entire app.
+Six files, no build step. `index.html` is the app; `foods-db.js` is the big food library it loads.
 
 ## Deploy (GitHub Pages, ~4 min)
 
 1. New public repo, e.g. `forge`.
-2. Upload all five files to the root.
+2. Upload all six files to the root.
 3. Settings → Pages → Deploy from a branch → `main` / `(root)` → Save.
 4. Open `https://<username>.github.io/forge/` on your phone.
 
@@ -44,3 +44,15 @@ a dining hall, a restaurant chain — so you can log "the whole sandwich" instea
 ingredients. Same `[name, kcal, protein, carbs, fat]` shape as `FOODS`; name it
 `"Venue — Item (portion)"` so searching the venue groups its items together. A Panera starter
 set is in there now — add your own cafeteria/restaurants the same way, one line per item.
+
+### The extended food library (`foods-db.js`)
+
+About 7,000 more foods on top of the hand-written lists above, in three arrays that `index.html`
+merges into `FOODS` at load: `FOODS_CHAINS` (fast food, coffee, pizza, sit-down chains),
+`FOODS_GROCERY` (packaged products, bars/shakes, cereal, drinks and alcohol, condiments, and
+common home/restaurant dishes at normal servings) and `FOODS_USDA` (generic foods per 100 g, from
+USDA FoodData Central SR Legacy, public domain — those rows have a 6th element, `100`, and the
+picker's "amount" box scales them by grams or ounces). The chain and grocery numbers were written
+from published nutrition info as remembered, not scraped, so treat them as roughly ±10% and
+overwrite anything you have the label for. Search matches every word you type in any order.
+To add your own, append `['Name',kcal,p,c,f]` to any array in that file (or to `FOODS_VENUES`).
