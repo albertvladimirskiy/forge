@@ -2300,7 +2300,6 @@ function exHist(id){
   out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
   return out;
 }
-const hasHist = id => exHist(id).length>0;
 function lastBefore(id,date){ const h=exHist(id).filter(x=>x.date<date); return h.length?h[h.length-1]:null; }
 function bestSet(id,before){
   const E=exInfo(id); let best=null,bs=-1;
@@ -2367,8 +2366,23 @@ function exSearch(q,mu,eq){
 let exPickOpen=false, exQ='', exMu='', exEq='', exCreate=false, exFocus=false,
     cwOpen=null, cwHist=null, armDiscard=false, armRm=null,
     fightOpen=false, fightEdit=null, fdraft=null,
-    wlSub='workouts', wlOpenEx=null, wlOpenDay=null, cdraft={}, rest=null, restIv=null;
+    armFight=null, wlSub='workouts', wlOpenEx=null, wlOpenDay=null, cdraft={}, rest=null, restIv=null;
 
+/* backups from before this feature, or a hand-edited one, can lack these keys or have the wrong shapes */
+function normalizeCustom(){
+  S.cpref = Object.assign({rest:90,fav:{},recent:[]}, S.cpref||{});
+  if (!S.cpref.fav || typeof S.cpref.fav!=='object') S.cpref.fav={};
+  if (!Array.isArray(S.cpref.recent)) S.cpref.recent=[];
+  ['cust','fights'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
+  ['routines','myex'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
+  for (const k in S.cust){
+    const c=Object.assign(newCW('with'),S.cust[k]);
+    if (!Array.isArray(c.items)) c.items=[];
+    if (!c.sets||typeof c.sets!=='object'||Array.isArray(c.sets)) c.sets={};
+    S.cust[k]=c;
+  }
+  for (const k in S.fights) if (!Array.isArray(S.fights[k])) delete S.fights[k];
+}
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
 function cwStats(cw){
@@ -2462,7 +2476,13 @@ function restTick(){
     if (t) t.textContent='GO'; if (f) f.style.width='100%';
     return;
   }
-  if (rest.done){ if (Date.now()-rest.doneAt>6000){ rest=null; clearInterval(restIv); render(); } return; }
+  if (rest.done){
+    if (Date.now()-rest.doneAt>6000){          // drop the bar in place: a full render here would steal focus from a set being typed
+      rest=null; clearInterval(restIv); if (b) b.remove();
+      const tt=document.querySelector('.toast'); if (tt) tt.style.bottom='';
+    }
+    return;
+  }
   if (t) t.textContent=fmtDur(left);
   if (f) f.style.width=clamp((1-left/rest.total)*100,0,100)+'%';
 }
@@ -2717,7 +2737,7 @@ function ViewWorkoutLog(){
 function wlWorkouts(){
   const ks=Object.keys(S.cust).filter(k=>S.cust[k].items.length).sort().reverse();
   const wkStart=dkey(-dowIdx(T)); let wkN=0,wkSets=0,wkVol=0;
-  for (const k of ks) if (k>=wkStart){ const st=cwStats(S.cust[k]); if (st.sets){ wkN++; wkSets+=st.sets; wkVol+=st.vol; } }
+  for (const k of ks) if (k>=wkStart && k<=T){ const st=cwStats(S.cust[k]); if (st.sets){ wkN++; wkSets+=st.sets; wkVol+=st.vol; } }
   const all=ks.filter(k=>cwStats(S.cust[k]).sets>0);
   let h=`${sect('trend','THIS WEEK')}<div class="stats">
     <div class="stat"><div class="v">${wkN}</div><div class="l">WORKOUTS</div></div>
@@ -2758,10 +2778,10 @@ function wlFights(){
   const all=[]; for (const k of Object.keys(S.fights)) for (const f of S.fights[k]) all.push({k,f});
   if (!all.length) return `<div class="panel" style="margin-top:14px"><div class="empty">Log a fighting session from Today and your mat time builds up here.</div></div>`;
   all.sort((a,b)=>a.k<b.k?1:-1);
-  const wkStart=dkey(-dowIdx(T)), wk=all.filter(x=>x.k>=wkStart);
+  const wkStart=dkey(-dowIdx(T)), wk=all.filter(x=>x.k>=wkStart && x.k<=T);
   const min=a=>a.reduce((s,x)=>s+(+x.f.min||0),0);
   const by={}; for (const x of all) by[x.f.disc]=(by[x.f.disc]||0)+(+x.f.min||0);
-  const d28=dkey(-27), m28=all.filter(x=>x.k>=d28);
+  const d28=dkey(-27), m28=all.filter(x=>x.k>=d28 && x.k<=T);
   return `${sect('swords','MAT + RING TIME')}<div class="stats">
     <div class="stat"><div class="v">${wk.length}</div><div class="l">THIS WEEK</div></div>
     <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${esc(fmtMin(min(wk)))}</div><div class="l">TIME THIS WEEK</div></div>
@@ -2787,7 +2807,7 @@ function wlRoutines(){
 function wAct(a,v,v2,el){
   const vd=VD();
   const cw=S.cust[vd];
-  const touch=()=>{ armDiscard=false; armRm=null; };
+  const touch=()=>{ armDiscard=false; armRm=null; armFight=null; };
   switch(a){
     case 'w-new': {
       if (!S.cust[vd]) S.cust[vd]=newCW(v==='replace'?'replace':'with');
@@ -2951,14 +2971,15 @@ function wAct(a,v,v2,el){
       return;
     }
     case 'f-del': {
-      if (S.fights[vd]){ S.fights[vd].splice(+v,1); if (!S.fights[vd].length) delete S.fights[vd]; commit(); }
-      return;
+      if (!S.fights[vd]) return;
+      if (armFight!==+v){ armFight=+v; toast('Tap the X again to delete this session'); return 'norender'; }
+      S.fights[vd].splice(+v,1); if (!S.fights[vd].length) delete S.fights[vd]; armFight=null; commit(); return;
     }
 
     /* ---- history screen ---- */
-    case 'wl-sub': wlSub=v; wlOpenEx=null; wlOpenDay=null; window.scrollTo(0,0); return;
-    case 'wl-day': wlOpenDay=wlOpenDay===v?null:v; return;
-    case 'wl-ex': wlOpenEx=wlOpenEx===v?null:v; return;
+    case 'wl-sub': wlSub=v; wlOpenEx=null; wlOpenDay=null; armDiscard=false; window.scrollTo(0,0); return;
+    case 'wl-day': wlOpenDay=wlOpenDay===v?null:v; armDiscard=false; return;
+    case 'wl-ex': wlOpenEx=wlOpenEx===v?null:v; armDiscard=false; return;
     case 'wl-repeat': {
       const src=S.cust[v]; if (!src) return;
       if (!S.cust[vd]) S.cust[vd]=newCW('with');
@@ -4026,7 +4047,7 @@ document.addEventListener('click', e => {
       if (S.extra[v]){ S.extra[v].splice(+v2,1); if(!S.extra[v].length) delete S.extra[v]; }
       commit(); break;
     }
-    case 'view': view=v; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
     case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
@@ -4278,6 +4299,7 @@ document.addEventListener('click', e => {
         && Array.isArray(parsed.log);
       if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
       S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
+      normalizeCustom();
       importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
     }
   }
@@ -4369,11 +4391,7 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     Store.save(S);                                      // migrate old key forward
   }
   WEEK = WEEKS[S.profile.program] || WEEK_STD;
-  S.cpref = Object.assign({rest:90,fav:{},recent:[]}, S.cpref||{});
-  ['cust','fights'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
-  ['routines','myex'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
-  for (const k in S.cust){ const c=S.cust[k];
-    S.cust[k]=Object.assign(newCW('with'),c); if (!Array.isArray(S.cust[k].items)) S.cust[k].items=[]; if (!S.cust[k].sets||typeof S.cust[k].sets!=='object') S.cust[k].sets={}; }
+  normalizeCustom();
   { /* one-time migration: S.swap used to store a position in the active WEEK array,
        which meant a swap could silently resolve to a different workout after switching
        programs. Convert any leftover numeric values to the stable day id instead. */
