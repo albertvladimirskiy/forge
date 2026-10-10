@@ -1,11 +1,11 @@
 # FORGE — deploy + data guide
 
-Six files, no build step. `index.html` is the app; `foods-db.js` is the big food library it loads.
+Seven files, no build step. `index.html` is the app; `foods-db.js` is the big food library and `exercises-db.js` the exercise library it loads.
 
 ## Deploy (GitHub Pages, ~4 min)
 
 1. New public repo, e.g. `forge`.
-2. Upload all six files to the root.
+2. Upload all seven files to the root.
 3. Settings → Pages → Deploy from a branch → `main` / `(root)` → Save.
 4. Open `https://<username>.github.io/forge/` on your phone.
 
@@ -56,3 +56,18 @@ picker's "amount" box scales them by grams or ounces). The chain and grocery num
 from published nutrition info as remembered, not scraped, so treat them as roughly ±10% and
 overwrite anything you have the label for. Search matches every word you type in any order.
 To add your own, append `['Name',kcal,p,c,f]` to any array in that file (or to `FOODS_VENUES`).
+
+### Custom workouts, fighting and the exercise library (`exercises-db.js`)
+
+About 6,500 movements in `EXLIB`, grouped as `[muscle, equipment, kind, [names]]` (barbell/dumbbell/machine/cable/bodyweight
+lifts, carries, plyos, cardio, sports, combat drills, mobility). The kind decides what a set records: weight x reps,
+bodyweight reps (+ optional added weight), timed holds, cardio time + distance, or loaded carries. Append a name to a group to
+add one, or use CREATE EXERCISE in the picker (stored in your backup, not the file).
+
+On **Today**, every day has ADD WORKOUT (lift days say EDIT WORKOUT and set the planned session aside, which leaves the
+program's progression untouched; KEEP BOTH shows the plan too) and ADD FIGHTING (discipline, minutes, rounds, effort, what
+worked / got you caught). Nothing is prescribed in a custom workout: each exercise shows what you did the last time you logged it
+anywhere (30 push-ups last week means 30 is the benchmark and the prefill), flags PRs, and sets from the program's own lifts count
+as history for the matching library exercise (`EXLINK`). Rest timer, plate math for barbell lifts, favorites, routines and a
+history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) are included. Custom data lives in `S.cust`,
+`S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
