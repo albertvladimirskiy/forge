@@ -1774,7 +1774,7 @@ const DEFAULTS = {
   routines:[],        // [{ id, name, items:[exerciseId] }]
   myfoods:[],         // custom foods you chose to keep: [{ n, kcal, p, c, f }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
-  cpref:{ rest:90, fav:{}, recent:[], restEx:{}, restSound:true },
+  cpref:{ rest:90, fav:{}, recent:[], restEx:{}, restSound:true, bar:{}, plates:{}, barEx:{} },
   motiv:{ why:'', quotes:[], links:[], qmode:'mix', qoff:[], qsolid:false },   // daily briefing: your why, your own lines, your play buttons
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
@@ -2550,7 +2550,7 @@ const workSets = sets => sets.filter(x=>!x.wu);
 /* ramp up to a working weight, in display units: [[weight, reps], ...]. The bar first (barbell lifts), then about
    50/70/85% rounded to the smallest loadable jump. Nothing at or above the working weight. */
 function warmupRamp(target,E,id){
-  const imp=isImp(), step=imp?5:2.5, bar=imp?45:20, rnd=x=>Math.round(x/step)*step;
+  const bar=barFor(id), step=Math.min(...platesAvail())*2, rnd=x=>Math.round(x/step)*step;
   const list=[];
   if (E.eq==='barbell'){
     if (target>=bar*1.6) list.push([bar,8]);
@@ -2663,7 +2663,8 @@ let exPickOpen=false, exQ='', exMu='', exEq='', exCreate=false, exFocus=false,
 
 /* backups from before this feature, or a hand-edited one, can lack these keys or have the wrong shapes */
 function normalizeCustom(){
-  S.cpref = Object.assign({rest:90,fav:{},recent:[],restEx:{},restSound:true}, S.cpref||{});
+  S.cpref = Object.assign({rest:90,fav:{},recent:[],restEx:{},restSound:true,bar:{},plates:{},barEx:{}}, S.cpref||{});
+  ['bar','plates','barEx'].forEach(k=>{ if (!S.cpref[k] || typeof S.cpref[k]!=='object' || Array.isArray(S.cpref[k])) S.cpref[k]={}; });
   if (!S.cpref.restEx || typeof S.cpref.restEx!=='object' || Array.isArray(S.cpref.restEx)) S.cpref.restEx={};
   if (!S.cpref.fav || typeof S.cpref.fav!=='object') S.cpref.fav={};
   if (!Array.isArray(S.cpref.recent)) S.cpref.recent=[];
@@ -2933,7 +2934,7 @@ function setEntryHTML(id,vd,E){
   else if (E.k==='time') fields=fld('tm','MIN','','0')+fld('ts','SEC','','0');
   else if (E.k==='carry') fields=fld('w','WEIGHT',wUnit(),'0')+fld('d','DISTANCE','m','0');
   else fields=fld('tm','MIN','','0')+fld('ts','SEC','','0')+fld('d','DISTANCE',dUnit(E.k)+' · optional','');
-  const plates = E.eq==='barbell' && (E.k==='wr') ? `<div class="platehint" id="plate_${id}">${platesText(num(val('w')))}</div>` : '';
+  const plates = E.eq==='barbell' && (E.k==='wr') ? `<div class="platehint" id="plate_${id}">${platesText(num(val('w')),id)}</div>` : '';
   const ed=editSet&&editSet.id===id&&editSet.vd===vd?editSet:null;
   return `${ed?`<div class="note" style="border:1px solid var(--amber);color:var(--amber);margin-top:12px">EDITING SET ${ed.i+1} · change the numbers, then save</div>`:''}
     <div class="setadd2 ${E.k==='cardio'?'three':''}">${fields}</div>${plates}
@@ -2941,16 +2942,41 @@ function setEntryHTML(id,vd,E){
     <div style="display:flex;gap:8px;margin-top:9px"><button class="btn" data-act="w-log" data-v="${id}" style="flex:2">${ed?`SAVE SET ${ed.i+1}`:'LOG SET'}</button>
       ${ed?`<button class="btn ghost" data-act="w-editcancel" style="flex:1">CANCEL</button>`:''}</div>`;
 }
-/* plates per side for a barbell load (20 kg / 45 lb bar) */
-function platesText(w){
+/* ---------- barbell + plates ---------- */
+/* The bar and the plates a gym actually has vary (35 lb women's bar, EZ-curl bar, no 35s, a 15 kg plate pair...), so
+   both are settings: one default bar and plate set per unit system, plus an optional bar for a single exercise. */
+const PLATE_ALL = {imperial:[100,55,45,35,25,15,10,5,2.5,1.25], metric:[25,20,15,10,5,2.5,1.25,0.5]};
+const PLATE_DEF = {imperial:[45,35,25,10,5,2.5], metric:[25,20,15,10,5,2.5,1.25]};
+const BAR_CHOICES = {imperial:[45,35,25,15], metric:[20,15,10,25]};
+const BAR_DEF = {imperial:45, metric:20};
+const unitKey = () => isImp()?'imperial':'metric';
+function barFor(id){
+  const u=unitKey(), ex=id&&(S.cpref.barEx||{})[id]&&S.cpref.barEx[id][u];
+  if (ex>0) return ex;
+  const b=(S.cpref.bar||{})[u]; return b>0?b:BAR_DEF[u];
+}
+function platesAvail(){
+  const u=unitKey(), p=(S.cpref.plates||{})[u];
+  return (Array.isArray(p)&&p.length?p:PLATE_DEF[u]).filter(x=>x>0).slice().sort((a,b)=>b-a);
+}
+/* fewest plates that make `side` exactly, or the heaviest load under it that the plates can reach (a greedy pass
+   gets e.g. 50 per side wrong when the gym has 25s but no 10s) */
+function platePlan(side,plates){
+  const sc=4, top=Math.floor(side*sc+1e-6), ps=plates.map(x=>Math.round(x*sc));
+  const dp=new Array(top+1).fill(Infinity), from=new Array(top+1).fill(-1); dp[0]=0;
+  for (let i=1;i<=top;i++) for (let j=0;j<ps.length;j++){ const q=ps[j]; if (q>0 && q<=i && dp[i-q]+1<dp[i]){ dp[i]=dp[i-q]+1; from[i]=j; } }
+  let best=top; while (best>0 && dp[best]===Infinity) best--;
+  const used=[]; for (let i=best;i>0;i-=ps[from[i]]) used.push(plates[from[i]]);
+  return {used:used.sort((a,b)=>b-a), loaded:best/sc};
+}
+function platesText(w,id){
   if (w==null || w<=0) return '';
-  const imp=isImp(), bar=imp?45:20, plates=imp?[45,35,25,10,5,2.5]:[25,20,15,10,5,2.5,1.25];
-  let side=(w-bar)/2; if (side<0) return `Under bar weight (${bar} ${wUnit()}).`;
-  const out=[]; let loaded=0;
-  for (const p of plates){ while (side>=p-1e-9){ out.push(p); side-=p; loaded+=p; } }
-  if (!out.length) return side>0.01 ? `Just the bar (${bar} ${wUnit()}) + ${trimNum(side)} per side, smaller than any plate.` : `Just the bar (${bar} ${wUnit()}).`;
+  const bar=barFor(id), u=wUnit();
+  const side=(w-bar)/2; if (side<0) return `Under bar weight (${trimNum(bar)} ${u}).`;
+  const {used,loaded}=platePlan(side,platesAvail()), short=side-loaded;
+  if (!used.length) return short>0.01 ? `Just the bar (${trimNum(bar)} ${u}) + ${trimNum(short)} per side, smaller than any plate you have.` : `Just the bar (${trimNum(bar)} ${u}).`;
   /* spell out the sum so it can be checked at a glance: bar + 2 x one side = the weight typed */
-  return `${bar} ${wUnit()} bar + ${out.join(' + ')} per side = ${trimNum(bar+2*loaded)} ${wUnit()}${side>0.01?` (${trimNum(side)} per side short of ${trimNum(w)})`:''}`;
+  return `${trimNum(bar)} ${u} bar + ${used.join(' + ')} per side = ${trimNum(bar+2*loaded)} ${u}${short>0.01?` (${trimNum(short)} per side short of ${trimNum(w)})`:''}`;
 }
 function exCardHTML(cw,id,idx,vd){
   const E=exInfo(id), sets=cw.sets[id]||[], open=cwOpen===id;
@@ -2982,6 +3008,7 @@ function exCardHTML(cw,id,idx,vd){
       <div class="xtools">
         <button data-act="w-fav" data-v="${id}">${svg('star',11,fav?'var(--amber)':'var(--faint)').replace('fill="none"',fav?'fill="var(--amber)"':'fill="none"')} ${fav?'FAVORITED':'FAVORITE'}</button>
         ${E.k==='wr'?`<button data-act="w-ramp" data-v="${id}">${svg('trend',11)} WARM-UP RAMP</button>`:''}
+        ${E.eq==='barbell'&&E.k==='wr'?`<button data-act="w-exbar" data-v="${id}">${svg('dumb',11)} BAR: ${trimNum(barFor(id))} ${wUnit()}${(S.cpref.barEx[id]||{})[unitKey()]>0?' (THIS LIFT)':''}</button>`:''}
         <button data-act="w-hist" data-v="${id}">${svg('trend',11)} HISTORY</button>
         <button data-act="w-exrest" data-v="${id}" aria-label="Rest after this exercise: ${restLabel((S.cpref.restEx||{})[id])}. Tap to change.">${svg('clock',11)} REST: ${restLabel((S.cpref.restEx||{})[id])}</button>
         ${(E.k==='time'||E.k==='cardio')&&(E.mu==='combat'||/round|shadow|bag|spar|roll|mitt|pad|tabata|rope/i.test(E.n))?`<button data-act="t-openex" data-v="${id}">${svg('clock',11)} ROUND TIMER</button>`:''}
@@ -3223,6 +3250,13 @@ function wAct(a,v,v2,el){
     }
     case 'w-mode': if (cw){ cw.mode=v==='replace'?'replace':'with'; commit(); } return;
     case 'w-rest': S.cpref.rest=+v||0; commit(); return;
+    case 'w-exbar': {
+      const u=unitKey(), ch=BAR_CHOICES[u].filter(x=>x!==barFor()), o=S.cpref.barEx[v]=S.cpref.barEx[v]||{}, cur=o[u]>0?o[u]:null;
+      const nx=cur==null?ch[0]:ch[ch.indexOf(cur)+1];             // default -> each other bar in turn -> back to default
+      if (nx==null) delete o[u]; else o[u]=nx;
+      if (!Object.keys(o).length) delete S.cpref.barEx[v];
+      commit(); return;
+    }
     case 'w-restsound': S.cpref.restSound=(v!=='off'); commit(); if (S.cpref.restSound) tmrBell(1); return;      // the tap that turns it on also proves it works (and unlocks audio on iOS)
     case 'w-exrest': {
       const cur=(S.cpref.restEx||{})[v], i=REST_CHOICES.indexOf(cur==null?null:cur);
@@ -3275,7 +3309,7 @@ function wAct(a,v,v2,el){
       let nv=Math.max(0,Math.round((cur+step)*100)/100);
       if (f==='ts' && nv>=60) nv=59;
       cdraft[dk][f]=trimNum(nv); if (inp) inp.value=cdraft[dk][f];
-      if (f==='w' && E.eq==='barbell'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(nv); }
+      if (f==='w' && E.eq==='barbell'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(nv,id); }
       return 'norender';
     }
     case 'w-log': {
@@ -5172,6 +5206,15 @@ function ViewPlan(){
       <label class="f"><span>Travel buffer (min)</span><input type="number" data-in="profile.commute" value="${p.commute}" inputmode="numeric"></label>
     </div><div class="note">The buffer pads every fixed commitment so nothing lands the minute a class ends.</div></div>
 
+    ${sect('dumb','BARBELL + PLATES')}
+    <div class="panel"><div style="padding:13px">
+      <div class="lab">Bar</div>
+      <div class="seg2" style="margin-top:8px">${BAR_CHOICES[unitKey()].map(b=>`<button class="${barFor()===b?'on':''}" data-act="gearbar" data-v="${b}">${b} ${wUnit()}</button>`).join('')}</div>
+      <div class="lab" style="margin-top:14px">Plates you have <span style="color:var(--faint)">(pairs, per side)</span></div>
+      <div class="chips" style="padding:8px 0 0">${PLATE_ALL[unitKey()].map(x=>`<button class="chip ${platesAvail().includes(x)?'on':''}" data-act="gearplate" data-v="${x}" aria-pressed="${platesAvail().includes(x)}">${x}</button>`).join('')}</div>
+      <button class="linkbtn" data-act="gearreset">Reset to standard</button>
+    </div><div class="note">Feeds the plate line under the weight box and the warm-up ramp. An EZ-curl or trap bar? Change the bar for just that lift with its BAR button.</div></div>
+
     ${sect('gear','BODY PROFILE')}
     <div class="panel"><div class="grid2">
       <label class="f"><span>Units</span><select data-in="profile.unit">
@@ -5869,6 +5912,14 @@ document.addEventListener('click', e => {
     case 'meal': openMeal = openMeal===v?null:v; mealScale=true; break;
     case 'mealscale': mealScale=!mealScale; break;
     case 'setgoal': S.profile.goal=v; commit(); break;
+    case 'gearbar': S.cpref.bar[unitKey()]=+v; commit(); break;
+    case 'gearplate': {
+      const u=unitKey(), cur=platesAvail(), x=+v;
+      const next=cur.includes(x)?cur.filter(p=>p!==x):cur.concat(x);
+      if (!next.length){ toast('Keep at least one plate'); return; }
+      S.cpref.plates[u]=next.sort((a,b)=>b-a); commit(); break;
+    }
+    case 'gearreset': delete S.cpref.bar[unitKey()]; delete S.cpref.plates[unitKey()]; commit(); toast('Bar and plates reset'); return;
     case 'setprog': S.profile.program=v; WEEK=WEEKS[v]||WEEK_STD; commit(); toast(PROGRAMS[v].n+' active from today'); break;
     case 'logmeal': {
       const m=MEALS.find(x=>x.id===v); if(!m){ toast('Meal not found'); return; }
@@ -6151,7 +6202,7 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.dr){                     // a set being typed: remember it, no re-render
     const [id,f]=t.dataset.dr.split('|'), dk=VD()+'|'+id;
     (cdraft[dk]=cdraft[dk]||{})[f]=t.value;
-    if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value)); }
+    if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value),id); }
     return;
   }
   if (t.dataset && t.dataset.ob){ if (obD) obD[t.dataset.ob]=t.value; return; }
