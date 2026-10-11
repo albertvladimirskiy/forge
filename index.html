@@ -2533,6 +2533,7 @@ function fmtSet(k,s){
 /* a whole session's sets as one compact line: "135 lb × 8, 8, 6" / "30 · 25 · 20 reps" */
 function fmtSets(k,sets){
   if (!sets.length) return '';
+  if (workSets(sets).length) sets=workSets(sets);
   if (k==='wr' || k==='bw'){
     const groups=[];
     for (const s of sets){
@@ -2543,6 +2544,25 @@ function fmtSets(k,sets){
     return groups.map(g=> g.key ? `${k==='bw'?'+':''}${g.key} × ${g.reps.join(', ')}` : `${g.reps.join(' · ')} reps`).join('  ·  ');
   }
   return sets.map(s=>fmtSet(k,s)).join('  ·  ');
+}
+/* a warm-up set (s.wu) is logged like any other but never counts toward PRs, benchmarks, volume or set counts */
+const workSets = sets => sets.filter(x=>!x.wu);
+/* ramp up to a working weight, in display units: [[weight, reps], ...]. The bar first (barbell lifts), then about
+   50/70/85% rounded to the smallest loadable jump. Nothing at or above the working weight. */
+function warmupRamp(target,E,id){
+  const imp=isImp(), step=imp?5:2.5, bar=imp?45:20, rnd=x=>Math.round(x/step)*step;
+  const list=[];
+  if (E.eq==='barbell'){
+    if (target>=bar*1.6) list.push([bar,8]);
+    [[.5,5],[.7,3],[.85,1]].forEach(([p,r])=>list.push([Math.max(bar,rnd(target*p)),r]));
+  } else [[.4,8],[.6,5],[.8,3]].forEach(([p,r])=>list.push([rnd(target*p),r]));
+  const out=[];
+  for (const [w,r] of list){
+    if (w<=0 || w>=target*0.97) continue;
+    if (out.length && w<out[out.length-1][0]+step*2) continue;      // a jump smaller than two steps isn't a different warm-up
+    out.push([w,r]);
+  }
+  return target<bar*1.3 && E.eq==='barbell' ? [] : out;
 }
 /* how "good" a set is, for PR detection and for the progress line */
 function exScore(k,s){
@@ -2576,14 +2596,14 @@ function exHist(id){
 function lastBefore(id,date){ const h=exHist(id).filter(x=>x.date<date); return h.length?h[h.length-1]:null; }
 function bestSet(id,before){
   const E=exInfo(id); let best=null,bs=-1;
-  for (const h of exHist(id)) if (!before || h.date<before) for (const s of h.sets){ const sc=exScore(E.k,s); if (sc>bs){ bs=sc; best=s; } }
+  for (const h of exHist(id)) if (!before || h.date<before) for (const s of workSets(h.sets)){ const sc=exScore(E.k,s); if (sc>bs){ bs=sc; best=s; } }
   return best;
 }
 /* which of today's sets beat everything logged before them (needs some history, so a first-ever set isn't a "PR") */
 function prFlags(id,date,sets){
   const E=exInfo(id); let best=0;
-  for (const h of exHist(id)) if (h.date<date) for (const s of h.sets) best=Math.max(best,exScore(E.k,s));
-  return sets.map(s=>{ const sc=exScore(E.k,s); const pr=best>0 && sc>best+1e-6; if (sc>best) best=sc; return pr; });
+  for (const h of exHist(id)) if (h.date<date) for (const s of workSets(h.sets)) best=Math.max(best,exScore(E.k,s));
+  return sets.map(s=>{ if (s.wu) return false; const sc=exScore(E.k,s); const pr=best>0 && sc>best+1e-6; if (sc>best) best=sc; return pr; });
 }
 
 /* ---------- search ---------- */
@@ -2678,7 +2698,7 @@ function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:''
 function cwStats(cw){
   let sets=0, ex=0, vol=0;
   for (const id of cw.items){
-    const s=cw.sets[id]||[]; if (s.length) ex++; sets+=s.length;
+    const s=workSets(cw.sets[id]||[]); if (s.length) ex++; sets+=s.length;
     const E=exInfo(id);
     if (E.k==='wr'||E.k==='bw') for (const x of s) vol+=(x.w||0)*(x.r||0);
   }
@@ -2693,7 +2713,7 @@ function cwDone(cw){
 /* how much custom training happened on a date, in "blocks" so the heat map / streak / deload logic can use it */
 function extraTrain(k){
   const cw=S.cust&&S.cust[k]; let n=0;
-  if (cw) for (const id of cw.items) if ((cw.sets[id]||[]).length) n++;
+  if (cw) for (const id of cw.items) if (workSets(cw.sets[id]||[]).length) n++;
   return Math.min(n,7)+((S.fights&&S.fights[k])||[]).length*4;
 }
 function custRatio(k){
@@ -2718,8 +2738,9 @@ function lastCustBefore(date){
 /* ---------- set entry: drafts + prefill ---------- */
 function prefill(id,vd){
   const E=exInfo(id), cw=S.cust[vd], today=(cw&&cw.sets[id])||[];
-  let src=today.length?today[today.length-1]:null;
-  if (!src){ const l=lastBefore(id,vd); if (l) src=l.sets[0]; }
+  const tw=workSets(today);
+  let src=tw.length?tw[tw.length-1]:null;
+  if (!src){ const l=lastBefore(id,vd); if (l) src=workSets(l.sets)[0]||l.sets[0]; }
   if (!src) return {};
   const o={};
   if (E.k==='wr'||E.k==='carry'||(E.k==='bw'&&src.w>0)) o.w=wIn(src.w);
@@ -2916,6 +2937,7 @@ function setEntryHTML(id,vd,E){
   const ed=editSet&&editSet.id===id&&editSet.vd===vd?editSet:null;
   return `${ed?`<div class="note" style="border:1px solid var(--amber);color:var(--amber);margin-top:12px">EDITING SET ${ed.i+1} · change the numbers, then save</div>`:''}
     <div class="setadd2 ${E.k==='cardio'?'three':''}">${fields}</div>${plates}
+    ${(E.k==='wr'||E.k==='bw')?`<div style="margin-top:9px"><button class="chip ${dr.wu?'on':''}" data-act="w-wu" data-v="${id}" aria-pressed="${!!dr.wu}">WARM-UP SET</button></div>`:''}
     <div style="display:flex;gap:8px;margin-top:9px"><button class="btn" data-act="w-log" data-v="${id}" style="flex:2">${ed?`SAVE SET ${ed.i+1}`:'LOG SET'}</button>
       ${ed?`<button class="btn ghost" data-act="w-editcancel" style="flex:1">CANCEL</button>`:''}</div>`;
 }
@@ -2935,21 +2957,21 @@ function exCardHTML(cw,id,idx,vd){
   const last=lastBefore(id,vd), fav=(S.cpref.fav||{})[id];
   const prs=prFlags(id,vd,sets);
   const head=`<div class="xhead"><button class="xmain" data-act="w-open" data-v="${id}" aria-expanded="${open}">
-      <span class="xdot ${sets.length?'on':''}">${sets.length?svg('check',9,'var(--ink)',3.5):''}</span>
+      <span class="xdot ${workSets(sets).length?'on':''}">${workSets(sets).length?svg('check',9,'var(--ink)',3.5):''}</span>
       <span class="xt"><b>${esc(E.n)}</b><i>${esc(EX_MUL[E.mu]||'')} · ${esc(EX_EQL[E.eq]||'')}</i>
         ${last&&!open?`<em>LAST ${esc(shortDate(last.date))} · ${esc(fmtSets(E.k,last.sets))}</em>`:''}</span>
-      <span class="xs">${sets.length?sets.length+' set'+(sets.length>1?'s':''):''}</span></button>
+      <span class="xs">${workSets(sets).length?workSets(sets).length+' set'+(workSets(sets).length>1?'s':''):''}</span></button>
     <button class="chev ${open?'open':''}" data-act="w-open" data-v="${id}" aria-label="${open?'Collapse':'Expand'} ${esc(E.n)}">${svg('chev',14)}</button></div>`;
   if (!open) return `<div class="xc ${sets.length?'has':''}">${head}</div>`;
   const best=bestSet(id), bestHere=best?bestLabel(E.k,best):null;
   const bench=last
     ? `<div class="bench"><div class="benchl">${svg('rot',10,'var(--steel)')} LAST TIME · ${esc(shortDate(last.date))}</div>
-        <div class="benchv">${last.sets.map((s,i)=>`<span class="${i===sets.length?'cur':''}">${esc(fmtSet(E.k,s))}</span>`).join('')}</div>
+        <div class="benchv">${(workSets(last.sets).length?workSets(last.sets):last.sets).map((s,i)=>`<span class="${i===workSets(sets).length?'cur':''}">${esc(fmtSet(E.k,s))}</span>`).join('')}</div>
         ${bestHere?`<div class="benchb">BEST · ${esc(bestHere)}</div>`:''}</div>`
     : `<div class="bench"><div class="benchl">${svg('target',10,'var(--amber)')} FIRST TIME</div>
         <div class="benchv"><span>Whatever you log here becomes the benchmark next time.</span></div></div>`;
-  const rows=sets.map((s,i)=>`<div class="setrow">${prs[i]?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
-      <button class="setedit" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${esc(fmtSet(E.k,s))}${prs[i]?' <span class="prtag">PR</span>':''}${(E.k==='wr'&&s.r>1)?` <span class="e1">≈${e1Txt(s.w,s.r)} 1RM</span>`:''}</button>
+  const rows=sets.map((s,i)=>`<div class="setrow">${prs[i]?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':i+1}</span>`}
+      <button class="setedit" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${esc(fmtSet(E.k,s))}${s.wu?' <span class="e1" style="color:var(--steel)">WARM-UP</span>':''}${prs[i]?' <span class="prtag">PR</span>':''}${(E.k==='wr'&&!s.wu&&s.r>1)?` <span class="e1">≈${e1Txt(s.w,s.r)} 1RM</span>`:''}</button>
       <button class="x" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="w-del" data-v="${id}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`).join('');
   const hist=cwHist===id ? histHTML(id,vd,E) : '';
@@ -2959,6 +2981,7 @@ function exCardHTML(cw,id,idx,vd){
       ${setEntryHTML(id,vd,E)}
       <div class="xtools">
         <button data-act="w-fav" data-v="${id}">${svg('star',11,fav?'var(--amber)':'var(--faint)').replace('fill="none"',fav?'fill="var(--amber)"':'fill="none"')} ${fav?'FAVORITED':'FAVORITE'}</button>
+        ${E.k==='wr'?`<button data-act="w-ramp" data-v="${id}">${svg('trend',11)} WARM-UP RAMP</button>`:''}
         <button data-act="w-hist" data-v="${id}">${svg('trend',11)} HISTORY</button>
         <button data-act="w-exrest" data-v="${id}" aria-label="Rest after this exercise: ${restLabel((S.cpref.restEx||{})[id])}. Tap to change.">${svg('clock',11)} REST: ${restLabel((S.cpref.restEx||{})[id])}</button>
         ${(E.k==='time'||E.k==='cardio')&&(E.mu==='combat'||/round|shadow|bag|spar|roll|mitt|pad|tabata|rope/i.test(E.n))?`<button data-act="t-openex" data-v="${id}">${svg('clock',11)} ROUND TIMER</button>`:''}
@@ -2970,7 +2993,7 @@ function exCardHTML(cw,id,idx,vd){
 function histHTML(id,vd,E){
   const h=exHist(id).filter(x=>x.date<=vd);
   if (!h.length) return `<div class="note" style="margin-top:10px;border:1px solid var(--rule)">Nothing logged yet.</div>`;
-  const pts=h.map(x=>Math.max(...x.sets.map(s=>exScore(E.k,s))));
+  const pts=h.map(x=>Math.max(...(workSets(x.sets).length?workSets(x.sets):x.sets).map(s=>exScore(E.k,s))));
   const lines=h.slice(-8).reverse().map(x=>`<div class="histrow"><span>${esc(shortDate(x.date))}</span><span>${esc(fmtSets(E.k,x.sets))}</span></div>`).join('');
   return `<div class="histbox"><div class="eyebrow" style="margin-bottom:6px">PROGRESS · BEST SET PER SESSION</div>
     ${sparkline(pts,'#E0A03A',70)}${lines}</div>`;
@@ -3143,7 +3166,7 @@ function wlLifts(){
       <div style="flex:1;text-align:left"><div class="wlt">${esc(E.n)}</div>
         <div class="wls">BEST ${esc(bestLabel(E.k,best))} · ${h.length} session${h.length>1?'s':''} · last ${esc(shortDate(h[h.length-1].date))}</div></div>
       <span class="chev ${open?'open':''}" style="padding:0">${svg('chev',14)}</span></button>
-      ${open?`<div class="wlbody">${sparkline(h.map(x=>Math.max(...x.sets.map(s=>exScore(E.k,s)))),'#E0A03A',80)}
+      ${open?`<div class="wlbody">${sparkline(h.map(x=>Math.max(...(workSets(x.sets).length?workSets(x.sets):x.sets).map(s=>exScore(E.k,s)))),'#E0A03A',80)}
         ${h.slice(-8).reverse().map(x=>`<div class="histrow"><span>${esc(shortDate(x.date))}</span><span>${esc(fmtSets(E.k,x.sets))}</span></div>`).join('')}</div>`:''}</div>`; }).join('')}</div>`;
 }
 function wlFights(){
@@ -3173,7 +3196,7 @@ function wlRoutines(){
   return sect('book','SAVED ROUTINES')+rts.map(r=>`<div class="panel"><div class="wlhead" style="cursor:default">
       <div style="flex:1;text-align:left"><div class="wlt">${esc(r.name)}</div><div class="wls">${r.items.length} exercises</div></div></div>
       <div class="wlbody">${r.items.map(id=>{ const E=exInfo(id), l=lastBefore(id,'9999-12-31');
-        return `<div class="histrow"><span>${esc(E.n)}</span><span>${l?esc(fmtSets(E.k,l.sets.slice(0,1))):'—'}</span></div>`; }).join('')}
+        return `<div class="histrow"><span>${esc(E.n)}</span><span>${l?esc(fmtSets(E.k,(workSets(l.sets).length?workSets(l.sets):l.sets).slice(0,1))):'—'}</span></div>`; }).join('')}
         <div style="display:flex;gap:8px;margin-top:12px"><button class="btn ghost" data-act="wl-use" data-v="${r.id}" style="flex:2">USE ${VD()===T?'TODAY':'ON THIS DAY'}</button>
           <button class="btn ghost" data-act="wl-rtdel" data-v="${r.id}" style="flex:1;color:var(--rust)">DELETE</button></div></div></div>`).join('');
 }
@@ -3264,11 +3287,11 @@ function wAct(a,v,v2,el){
         const w=wOut(g('w')), r=Math.round(num(g('r'))||0);
         if (w==null){ toast('Enter a weight'); return 'norender'; }
         if (r<1){ toast('Enter your reps'); return 'norender'; }
-        s={w,r};
+        s={w,r}; if (dr.wu) s.wu=1;
       } else if (E.k==='bw'){
         const w=wOut(g('w'))||0, r=Math.round(num(g('r'))||0);
         if (r<1){ toast('Enter your reps'); return 'norender'; }
-        s={w,r};
+        s={w,r}; if (dr.wu) s.wu=1;
       } else if (E.k==='carry'){
         const w=wOut(g('w')), d=dOut(g('d'),E.k);
         if (w==null||!(d>0)){ toast('Enter weight and distance'); return 'norender'; }
@@ -3291,20 +3314,32 @@ function wAct(a,v,v2,el){
       if (!cw.t0) cw.t0=Date.now();
       if (cw.fin){ cw.fin=false; cw.t1=null; }
       commit();
-      if (E.k!=='time' && E.k!=='cardio' && restFor(id)>0) restStart(restFor(id));
+      if (!s.wu && E.k!=='time' && E.k!=='cardio' && restFor(id)>0) restStart(restFor(id));      // no timer after a warm-up
       if (isPR){ toast(`New PR — ${fmtSet(E.k,s)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
-      else toast(`Set ${before.length+1}: ${fmtSet(E.k,s)}`);
+      else toast(s.wu?`Warm-up: ${fmtSet(E.k,s)}`:`Set ${workSets(before).length+1}: ${fmtSet(E.k,s)}`);
       return;
     }
     case 'w-edit': {
       const E=exInfo(v), st=cw&&(cw.sets[v]||[])[+v2]; if (!st) return;
       editSet={id:v,i:+v2,vd}; cwOpen=v;
       const dr=cdraft[vd+'|'+v]={};     // every field set explicitly, so a blank one stays blank instead of being prefilled
-      if (E.k==='wr'){ dr.w=wIn(st.w); dr.r=String(st.r); }
-      else if (E.k==='bw'){ dr.w=st.w>0?wIn(st.w):''; dr.r=String(st.r); }
+      if (E.k==='wr'){ dr.w=wIn(st.w); dr.r=String(st.r); dr.wu=st.wu?'1':''; }
+      else if (E.k==='bw'){ dr.w=st.w>0?wIn(st.w):''; dr.r=String(st.r); dr.wu=st.wu?'1':''; }
       else if (E.k==='carry'){ dr.w=wIn(st.w); dr.d=dIn(st.d,E.k); }
       else { const t=st.t||0; dr.tm=Math.floor(t/60)?String(Math.floor(t/60)):''; dr.ts=t%60?String(t%60):''; if (E.k==='cardio') dr.d=st.d>0?dIn(st.d,E.k):''; }
       return;
+    }
+    case 'w-wu': { const dk=vd+'|'+v; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].wu=cdraft[dk].wu?'':'1'; return; }
+    case 'w-ramp': {
+      const E=exInfo(v); if (!cw||E.k!=='wr') return 'norender';
+      const dr=cdraft[vd+'|'+v]||{}, pf=prefill(v,vd), target=num(dr.w!==undefined?dr.w:pf.w);
+      if (!(target>0)){ toast('Enter your working weight first'); return 'norender'; }
+      const steps=warmupRamp(target,E,v);
+      if (!steps.length){ toast('Light enough to just start your first set'); return 'norender'; }
+      cw.sets[v]=cw.sets[v]||[];
+      steps.forEach(([w,r])=>cw.sets[v].push({w:wOut(String(w)),r,wu:1}));
+      if (!cw.t0) cw.t0=Date.now();
+      cwOpen=v; commit(); toast(`${steps.length} warm-up sets added: ${steps.map(([w,r])=>w+'×'+r).join(', ')}`); return;
     }
     case 'w-editcancel': { if (editSet) delete cdraft[editSet.vd+'|'+editSet.id]; editSet=null; return; }
     case 'w-del': {
@@ -4013,7 +4048,7 @@ function mmTally(fromOff,toOff){
     const k=dkey(o);
     const add=(id,n)=>{ const E=exInfo(id); if (!n || !mmCountable(E)) return;
       for (const [m,w] of Object.entries(exMuscles(E))){ tot[m]=(tot[m]||0)+n*w; (by[m]=by[m]||{})[E.n]=(by[m][E.n]||0)+n*w; } };
-    const cw=S.cust[k]; if (cw) for (const id of cw.items) add(id,(cw.sets[id]||[]).length);
+    const cw=S.cust[k]; if (cw) for (const id of cw.items) add(id,workSets(cw.sets[id]||[]).length);
     const g=S.gym[k]; if (g) for (const key of Object.keys(g)){ const id=EXLINK_ID[key]; if (id) add(id,(g[key]||[]).length); }
   }
   return {tot,by};
