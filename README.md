@@ -35,7 +35,7 @@ fully close the app and reopen, or reopen twice.
 ## Customizing
 
 All content is plain data at the top of the script in `index.html`: `WEEK_STD` and the program variants `D8`/`D9` (training days, blocks, `steps`, `prog` rules; the Forge Builder program is the Mon/Tue/Thu/Fri Lower A / Upper A / Lower B / Upper B split), `FOODS` (the calorie database — add your staples),
-`BOOKS`, `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`, `SPORTS` (the MET value
+`BOOKS` (161 titles across nine tracks, each tagged with a phase), `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`, `SPORTS` (the MET value
 per sport used to cost calendar commitments tagged Physical — add a sport your gym does that
 isn't listed, or tune a number if it's over/under-crediting you).
 
@@ -95,3 +95,10 @@ The briefing mixes in quotes from Greg Plitt, Muhammad Ali, Mike Tyson, Michael 
 Schwarzenegger, Kobe Bryant and David Goggins (`REAL_QUOTES`). Each shows where it comes from and how solid that is:
 SOURCED (traced to a dated origin), REPORTED (credible secondary source) or ATTRIBUTED (widely credited, original not found,
 wording may differ). Choose Mixed in / Always / Off, browse them with their sources, or pin one for today from the briefing editor.
+
+### Reading list
+
+161 books in nine tracks: Markets & Capital, Economics, Geopolitics, Judgment, Character & Will, People, Body & Craft, plus two
+new ones, **Combat** (fighters' memoirs, strategy, the psychology of conflict) and **Business & Builders**. Each track is sorted by
+phase (1 = start here). The MIND score counts finished books against a fixed goal of 48 (`BOOK_GOAL`), so a bigger library never lowers it.
+Add your own as one line in `BOOKS`: `{id,tr,p,t,a,w}`.
