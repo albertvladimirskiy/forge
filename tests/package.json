@@ -1,0 +1,7 @@
+{
+  "name": "forge-tests",
+  "private": true,
+  "description": "Browser tests for FORGE. Not part of the deployed app.",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.56.0" }
+}

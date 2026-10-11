@@ -117,3 +117,20 @@ days a line fits (lift day, fight day, comeback, deload and so on).
 new ones, **Combat** (fighters' memoirs, strategy, the psychology of conflict) and **Business & Builders**. Each track is sorted by
 phase (1 = start here). The MIND score counts finished books against a fixed goal of 48 (`BOOK_GOAL`), so a bigger library never lowers it.
 Add your own as one line in `BOOKS`: `{id,tr,p,t,a,w}`.
+
+## Tests
+
+`tests/` holds browser tests for the app (they load `index.html` straight from disk in headless Chromium, no server needed).
+They are not part of the deployed site.
+
+```
+cd tests
+npm install && npx playwright install chromium   # once
+npm test                                          # all of it, about a minute
+node run.js rest                                  # only tests whose file, group or name contains "rest"
+```
+
+Each `*.test.js` file exports `{ name, tests: { 'what it checks': async (page, assert) => {...} } }`. Every test gets a fresh
+page past onboarding, with the app's own globals (`S`, `render`, `VD()`, `T`, ...) reachable inside `page.evaluate`, and an
+uncaught error inside the app fails the test. If Playwright or Chromium live somewhere unusual, set `PLAYWRIGHT_PATH` and
+`CHROMIUM_PATH`. Fixing a bug here means adding the test that would have caught it.
