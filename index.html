@@ -592,6 +592,10 @@ body.lock{overflow:hidden}
 .benchv{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:7px;font-size:var(--fs-title);color:var(--text)}
 .benchv span.cur{color:var(--amber);font-weight:700}
 .benchb{margin-top:7px;font-size:var(--fs-detail);color:var(--dim)}
+.benchn{margin-top:9px;padding-top:9px;border-top:1px solid var(--rule);font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
+.benchn b{letter-spacing:.14em;font-size:var(--fs-label);color:var(--steel)}
+.benchn.up b{color:var(--amber)}
+.benchn .chip{margin-left:6px;padding:4px 9px}
 .setadd2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .setadd2.three{grid-template-columns:1fr 1fr 1fr}
 .sf{min-width:0}
@@ -2644,6 +2648,26 @@ function prFlags(id,date,sets){
   return sets.map(s=>{ if (s.wu) return false; const sc=exScore(E.k,s); const pr=best>0 && sc>best+1e-6; if (sc>best) best=sc; return pr; });
 }
 
+/* ---------- next-weight hint for custom workouts ---------- */
+/* Custom workouts prescribe nothing, so this is only a hint read off the last session's working sets (never saved, never
+   applied by itself). Rules, in order: a top-weight set at RPE 9.5+ means repeat; every set at the top weight reaching
+   8+ reps with no drop-off (or the top set at RPE 8 or lower) means go up; otherwise repeat and chase a rep. */
+function nextWeightHint(id,vd){
+  const E=exInfo(id); if (E.k!=='wr') return null;
+  const last=lastBefore(id,vd); if (!last) return null;
+  const ws=workSets(last.sets).filter(x=>x.w>0); if (!ws.length) return null;
+  const topW=Math.max(...ws.map(x=>x.w)), top=ws.filter(x=>Math.abs(x.w-topW)<=0.3);
+  const reps=top.map(x=>x.r), minR=Math.min(...reps), noDrop=top.length<2 || top[top.length-1].r>=top[0].r;
+  const rpes=top.map(x=>x.rpe||0).filter(Boolean), hard=rpes.length?Math.max(...rpes):0;
+  const lower=['quads','hams','glutes','lowback'].includes(E.mu) && E.eq==='barbell';
+  const incKg=isImp() ? (lower?10:5)/2.20462 : (lower?5:2.5);
+  const nxt=topW+incKg, rpeTxt=hard?` at RPE ${hard}`:'';
+  if (hard>=9.5) return {mode:'repeat',w:topW,text:`Repeat ${fmtW(topW)}: the top set was RPE ${hard}. Own it before adding weight.`};
+  if (hard && hard<=8 && minR>=5) return {mode:'up',w:nxt,text:`${fmtW(topW)} × ${reps.join(', ')}${rpeTxt}. Room to add: try ${fmtW(nxt)}.`};
+  if (!hard && top.length>=2 && minR>=8 && noDrop) return {mode:'up',w:nxt,text:`${top.length} sets at ${fmtW(topW)}, all ${minR}+ reps, no drop-off. Try ${fmtW(nxt)}.`};
+  return {mode:'repeat',w:topW,text:`Repeat ${fmtW(topW)} (${reps.join(', ')} last time). Add a rep before adding weight.${!hard&&minR<8?' Log RPE on heavy sets to get a go-up signal.':''}`};
+}
+
 /* ---------- search ---------- */
 /* Every word you type has to match, in any order: against the name first, then the muscle/equipment words.
    Short fragments (3 letters or fewer) must be whole words at first, so "lat" finds lat pulldowns and not
@@ -3031,7 +3055,8 @@ function exCardHTML(cw,id,idx,vd){
   const bench=last
     ? `<div class="bench"><div class="benchl">${svg('rot',10,'var(--steel)')} LAST TIME · ${esc(shortDate(last.date))}</div>
         <div class="benchv">${(workSets(last.sets).length?workSets(last.sets):last.sets).map((s,i)=>`<span class="${i===workSets(sets).length?'cur':''}">${esc(fmtSet(E.k,s))}</span>`).join('')}</div>
-        ${bestHere?`<div class="benchb">BEST · ${esc(bestHere)}</div>`:''}</div>`
+        ${bestHere?`<div class="benchb">BEST · ${esc(bestHere)}</div>`:''}
+        ${(()=>{ const h=nextWeightHint(id,vd); return h?`<div class="benchn ${h.mode}"><b>NEXT TIME</b> · ${esc(h.text)}${h.mode==='up'?` <button class="chip" data-act="w-usenext" data-v="${id}">USE ${esc(fmtW(h.w))}</button>`:''}</div>`:''; })()}</div>`
     : `<div class="bench"><div class="benchl">${svg('target',10,'var(--amber)')} FIRST TIME</div>
         <div class="benchv"><span>Whatever you log here becomes the benchmark next time.</span></div></div>`;
   const rows=sets.map((s,i)=>`<div class="setrow">${prs[i]?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':i+1}</span>`}
@@ -3402,6 +3427,7 @@ function wAct(a,v,v2,el){
       return;
     }
     case 'w-rpe': { const [key,val]=v.split('|'), dk=vd+'|'+key; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].rpe=String(cdraft[dk].rpe)===val?'':val; return; }
+    case 'w-usenext': { const h=nextWeightHint(v,vd); if (!h) return 'norender'; const dk=vd+'|'+v; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].w=wIn(h.w); if (cdraft[dk].r===undefined){ const pf=prefill(v,vd); if (pf.r) cdraft[dk].r=pf.r; } return; }
     case 'w-wu': { const dk=vd+'|'+v; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].wu=cdraft[dk].wu?'':'1'; return; }
     case 'w-ramp': {
       const E=exInfo(v); if (!cw||E.k!=='wr') return 'norender';
