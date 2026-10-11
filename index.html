@@ -489,6 +489,30 @@ input[type=date],input[type=time]{min-height:40px}
 .mmv em.up{color:var(--moss)} .mmv em.dn{color:var(--rust)}
 .logrow{display:flex;gap:8px}
 .logrow .logbtn{flex:1;padding:11px 6px}
+
+/* ---------- 90-day challenge ---------- */
+.chhero{display:flex;align-items:center;gap:14px;padding:14px 13px}
+.chday{display:flex;flex-direction:column;align-items:center;min-width:74px;padding:6px 0;border-right:1px solid var(--rule)}
+.chday span{font-size:var(--fs-label);letter-spacing:.18em;color:var(--faint)}
+.chday b{font-family:var(--sans);font-weight:800;font-size:38px;line-height:1.05;color:var(--amber)}
+.chgoal{font-size:var(--fs-title);font-weight:600;line-height:1.35}
+.chsub{margin-top:7px;font-size:var(--fs-caption);color:var(--faint);line-height:1.5}
+.chgrid{display:grid;grid-template-columns:repeat(15,1fr);gap:3px;padding:13px}
+.chc{aspect-ratio:1;background:#15181C;border:1px solid var(--rule)}
+.chc.fut{background:transparent;border-style:dashed;opacity:.5}
+.chc.today{border-color:var(--amber);border-width:1.5px}
+.chposes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chpose{position:relative;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--sunk);border:1px dashed var(--rule2);overflow:hidden;cursor:pointer}
+.chpose img{width:100%;height:100%;object-fit:cover}
+.chpose i{position:absolute;left:0;right:0;bottom:0;padding:4px 0;font-style:normal;text-align:center;font-size:var(--fs-label);letter-spacing:.14em;color:var(--dim);background:rgba(0,0,0,.6)}
+.chthumbs{display:flex;gap:6px;margin-top:8px}
+.chthumbs img{width:58px;height:78px;object-fit:cover;border:1px solid var(--rule)}
+.chcmp{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 13px 10px}
+.chcmp>div{aspect-ratio:3/4;background:var(--sunk);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:var(--fs-caption);color:var(--faint)}
+.chcmp img{width:100%;height:100%;object-fit:cover}
+.chcmp i{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-style:normal;font-size:var(--fs-label);letter-spacing:.16em;padding:3px 7px;background:rgba(0,0,0,.65);color:var(--text)}
+.chsel select{padding-right:26px;font-size:15px}
+.brchip{display:inline-flex;align-items:center;gap:5px;color:var(--amber);font-size:var(--fs-detail)}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -1601,6 +1625,7 @@ const DEFAULTS = {
   cpref:{ rest:90, fav:{}, recent:[] },
   motiv:{ why:'', quotes:[], links:[] },   // daily briefing: your why, your own lines, your play buttons
   tpref:{ preset:'boxing', custom:{} },    // round timer
+  ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
@@ -2462,6 +2487,8 @@ function normalizeCustom(){
   ['quotes','links'].forEach(k=>{ if (!Array.isArray(S.motiv[k])) S.motiv[k]=[]; });
   S.tpref = Object.assign({preset:'boxing',custom:{}}, (S.tpref&&typeof S.tpref==='object')?S.tpref:{});
   if (!S.tpref.custom||typeof S.tpref.custom!=='object') S.tpref.custom={};
+  S.ch90 = Object.assign({start:null,goal:'',checkins:[]}, (S.ch90&&typeof S.ch90==='object')?S.ch90:{});
+  if (!Array.isArray(S.ch90.checkins)) S.ch90.checkins=[];
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
@@ -3694,6 +3721,222 @@ function MuscleMap(){
       <div class="note">Shaded band = target range. Numbers on the right compare with the 7 days before. Half-set credit goes to helper muscles on compound lifts, so treat this as an estimate.</div></div>`;
 }
 
+/* ======================================================== 90-day challenge == */
+/* A fixed 90-day block with a weekly check-in: photos (front/side/back) + weight, waist, body fat.
+   Measurements are written into the normal body log too, so Fuel/Target pick them up. Photos are too big
+   for the JSON backup, so they live in IndexedDB on this device (downscaled to ~1080px JPEG) and SAVE PHOTOS
+   hands them to the share sheet so they can go to the camera roll / Files. */
+const CH_LEN = 90, CH_POSES = [['front','Front'],['side','Side'],['back','Back']];
+let chDraft=null, chCmp=null, chArm=false;
+const photoURL = {};   // id -> object URL, cached for the session
+
+/* ---------- IndexedDB ---------- */
+let _idb=null;
+function idb(){
+  if (_idb) return _idb;
+  _idb=new Promise((res,rej)=>{
+    try{
+      const r=indexedDB.open('forge-photos',1);
+      r.onupgradeneeded=()=>r.result.createObjectStore('p');
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+    }catch(e){ rej(e); }
+  });
+  _idb.catch(()=>{ _idb=null; });
+  return _idb;
+}
+function idbDo(mode,fn){ return idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('p',mode), st=tx.objectStore('p'); const r=fn(st);
+  tx.oncomplete=()=>res(r&&r.result); tx.onerror=()=>rej(tx.error); })); }
+const photoPut=(id,blob)=>idbDo('readwrite',st=>st.put(blob,id));
+const photoGet=id=>idbDo('readonly',st=>st.get(id));
+const photoDel=id=>idbDo('readwrite',st=>st.delete(id)).catch(()=>{});
+
+/* downscale on the phone before storing: a 12MP photo becomes ~150-250KB */
+function shrinkImage(file,max=1080){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{
+      const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+      const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*k); c.height=Math.round(img.naturalHeight*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      c.toBlob(b=>b?res(b):rej(new Error('encode failed')),'image/jpeg',0.82);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('not an image')); };
+    img.src=url;
+  });
+}
+/* fill every <img data-ph="id"> after a render (renders are synchronous strings, photos load async) */
+function hydratePhotos(){
+  document.querySelectorAll('img[data-ph]').forEach(img=>{
+    const id=img.dataset.ph; if (!id) return;
+    if (photoURL[id]){ img.src=photoURL[id]; return; }
+    photoGet(id).then(b=>{ if (!b) return; photoURL[id]=URL.createObjectURL(b);
+      document.querySelectorAll(`img[data-ph="${id}"]`).forEach(x=>x.src=photoURL[id]); }).catch(()=>{});
+  });
+}
+
+/* ---------- derived ---------- */
+function daysBetween(a,b){ const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);
+  return Math.round((new Date(y2,m2-1,d2)-new Date(y1,m1-1,d1))/86400000); }
+function addDays(k,n){ const [y,m,d]=k.split('-').map(Number), dt=new Date(y,m-1,d+n);
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`; }
+function chDay(){ const c=S.ch90; if (!c||!c.start) return null; return daysBetween(c.start,T)+1; }
+function chWeekOf(date){ return Math.floor(daysBetween(S.ch90.start,date)/7); }
+function chBriefStat(){ const d=chDay(); if (d==null) return null;
+  const t=d<1?`90-day block starts in ${1-d}d`:d>CH_LEN?'90-day block complete':`Day ${d} of 90`;
+  return `<button class="brchip" data-act="ch-open">${svg('target',10,'var(--amber)')} ${t}</button>`; }
+function chCheckin(week){ return (S.ch90.checkins||[]).find(c=>c.week===week); }
+function chDueText(){
+  const d=chDay(); if (d==null||d>CH_LEN) return '';
+  const w=chWeekOf(T);
+  if (!chCheckin(w)) return w===0?'First check-in: take your before photos today.':`Check-in for week ${w} is due. Photos + numbers, two minutes.`;
+  const next=addDays(S.ch90.start,(w+1)*7);
+  return next>addDays(S.ch90.start,CH_LEN-1) ? 'Last check-in is done. Finish the block strong.' : `Next check-in ${shortDate(next)}.`;
+}
+
+/* ---------- screen ---------- */
+function ViewChallenge(){
+  const c=S.ch90, imp=isImp(), wu=wUnit(), lu=imp?'in':'cm';
+  if (!c.start){
+    return `${sect('target','90-DAY CHALLENGE')}
+      <div class="panel"><div style="padding:14px 13px">
+        <div class="brline" style="margin:0 0 10px;font-size:20px">Ninety days. One block. Before and after.</div>
+        <p class="t">Every week you take three photos and a couple of numbers. Every day counts toward the grid. At the end you put day 1 next to day 90 and see what consistency actually built.</p>
+        <label class="f" style="margin-top:12px"><span>What are the 90 days for?</span><input type="text" id="ch_goal" maxlength="80" placeholder="e.g. Lose 12 lb of fat, keep every lift" value="${esc(c.goal||'')}"></label>
+        <label class="f" style="margin-top:10px"><span>Start date</span><input type="date" id="ch_start" value="${T}"></label>
+        <button class="btn" data-act="ch-start" style="margin-top:14px">START THE 90 DAYS</button>
+      </div><div class="note">Photos stay on this phone. They're not in the JSON backup, so use SAVE PHOTOS now and then to copy them to your camera roll.</div></div>`;
+  }
+  const d=chDay(), day=Math.min(Math.max(d,1),CH_LEN), endK=addDays(c.start,CH_LEN-1);
+  let hit=0, best=0, run=0;
+  const cells=Array.from({length:CH_LEN},(_,i)=>{ const k=addDays(c.start,i), fut=k>T, sc=fut?0:dayScore(k);
+    if (!fut){ if (sc>0.08){ hit++; run++; best=Math.max(best,run); } else if (k!==T) run=0; }
+    return `<div class="chc ${k===T?'today':''} ${fut?'fut':''}" style="${!fut&&sc>0.02?`background:${heatColor(sc)}`:''}" title="${k}"></div>`; }).join('');
+  const passed=clamp(d,0,CH_LEN);
+  const cks=[...(c.checkins||[])].sort((a,b)=>a.week-b.week);
+  const first=cks[0], last=cks[cks.length-1];
+  const delta=(k,cv,u)=>first&&last&&first!==last&&first[k]!=null&&last[k]!=null?`${last[k]-first[k]>0?'+':''}${Math.round(cv(last[k]-first[k])*10)/10} ${u}`:'—';
+  const wconv=v=>imp?v*2.20462:v, lconv=v=>imp?v/2.54:v;
+  const w=chWeekOf(T), due=d<=CH_LEN && !chCheckin(w);
+  return `${sect('target','90-DAY CHALLENGE')}
+    <div class="panel chhero"><div class="chday">${d<1?`<span>STARTS IN</span><b>${1-d}</b><span>DAYS</span>`:`<span>DAY</span><b>${d>CH_LEN?90:day}</b><span>OF 90</span>`}</div>
+      <div style="flex:1;min-width:0">${c.goal?`<div class="chgoal">${esc(c.goal)}</div>`:''}
+        <div class="bar" style="margin-top:8px"><div class="barfill" style="width:${passed/CH_LEN*100}%;background:var(--amber)"></div></div>
+        <div class="chsub">${esc(shortDate(c.start))} → ${esc(shortDate(endK))} · ${hit}/${passed} days on · best run ${best}</div></div></div>
+    <div class="panel"><div class="chgrid">${cells}</div>
+      <div class="note">${d>CH_LEN?'Block complete. Compare day 1 with your last check-in below.':esc(chDueText())}</div>
+      ${d>=1&&d<=CH_LEN?`<button class="btn ${due?'':'ghost'}" data-act="ch-checkin" style="${due?'':'border:none;border-top:1px solid var(--rule)'}">${svg('plus',13,due?'var(--ink)':'currentColor')} ${chCheckin(w)?'EDIT THIS WEEK\'S CHECK-IN':'CHECK IN NOW'}</button>`:''}</div>
+    ${chDraft?ChForm():''}
+    ${cks.length?`${sect('trend','CHANGE SINCE DAY 1')}
+    <div class="stats"><div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${delta('weight',wconv,wu)}</div><div class="l">WEIGHT</div></div>
+      <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${delta('waist',lconv,lu)}</div><div class="l">WAIST</div></div>
+      <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${delta('bf',x=>x,'%')}</div><div class="l">BODY FAT</div></div></div>
+    ${ChCompare(cks)}
+    ${sect('book','CHECK-INS')}<div class="panel">${cks.slice().reverse().map(k=>`<div class="fsess"><div class="fstop"><b>Week ${k.week}</b>
+        <span>${esc(shortDate(k.date))}${k.weight!=null?` · ${Math.round(wconv(k.weight)*10)/10} ${wu}`:''}${k.waist!=null?` · ${Math.round(lconv(k.waist)*10)/10} ${lu}`:''}${k.bf!=null?` · ${k.bf}%`:''}</span>
+        <button class="x" data-act="ch-del" data-v="${k.week}" aria-label="Delete week ${k.week} check-in">${svg('x',12)}</button></div>
+        <div class="chthumbs">${CH_POSES.map(([p])=>k.photos&&k.photos[p]?`<img data-ph="${k.photos[p]}" alt="${p}">`:'').join('')}</div>
+        ${k.note?`<div class="fsl">${esc(k.note)}</div>`:''}</div>`).join('')}</div>`:''}
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn ghost" data-act="ch-save" style="flex:1">SAVE PHOTOS</button>
+      <button class="btn ghost" data-act="ch-end" style="flex:1;color:var(--rust)">${chArm?'TAP AGAIN TO END':'END / RESTART'}</button></div>`;
+}
+function ChForm(){
+  const imp=isImp(), dr=chDraft;
+  return `<div class="panel"><div style="padding:13px"><div class="eyebrow" style="margin-bottom:10px">WEEK ${dr.week} CHECK-IN</div>
+    <div class="chposes">${CH_POSES.map(([p,l])=>`<label class="chpose">${dr.photos[p]?`<img data-ph="${dr.photos[p]}" alt="${l}">`:`<span>${svg('plus',16,'var(--faint)')}</span>`}
+        <i>${l.toUpperCase()}</i><input type="file" accept="image/*" capture="environment" data-ph-pose="${p}" hidden></label>`).join('')}</div>
+    <div class="note" style="padding:8px 0 0;border:none">Same spot, same light, same time of day. Relaxed, then flexed if you want.</div>
+    <div class="grid3" style="padding:12px 0 0">
+      <label class="f"><span>Weight (${imp?'lb':'kg'})</span><input type="text" inputmode="decimal" data-chd="weight" value="${esc(dr.weight)}"></label>
+      <label class="f"><span>Waist (${imp?'in':'cm'})</span><input type="text" inputmode="decimal" data-chd="waist" value="${esc(dr.waist)}"></label>
+      <label class="f"><span>Body fat %</span><input type="text" inputmode="decimal" data-chd="bf" value="${esc(dr.bf)}"></label></div>
+    <label class="f" style="margin-top:10px"><span>Note</span><textarea data-chd="note" placeholder="Energy, sleep, what changed this week.">${esc(dr.note)}</textarea></label>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-act="ch-submit" style="flex:2">SAVE CHECK-IN</button>
+      <button class="btn ghost" data-act="ch-cancel" style="flex:1">CANCEL</button></div></div></div>`;
+}
+function ChCompare(cks){
+  if (cks.length<2) return `<div class="panel"><div class="empty">Two check-ins and a side-by-side comparison appears here.</div></div>`;
+  const a=cks.find(k=>k.week===(chCmp&&chCmp[0]))||cks[0], b=cks.find(k=>k.week===(chCmp&&chCmp[1]))||cks[cks.length-1];
+  const sel=(i,cur)=>`<select data-chcmp="${i}">${cks.map(k=>`<option value="${k.week}" ${k.week===cur.week?'selected':''}>Wk ${k.week} · ${shortDate(k.date)}</option>`).join('')}</select>`;
+  return `${sect('eye','SIDE BY SIDE')}<div class="panel"><div class="grid2 chsel">${sel(0,a)}${sel(1,b)}</div>
+    ${CH_POSES.map(([p,l])=>(a.photos&&a.photos[p])||(b.photos&&b.photos[p])?`<div class="chcmp"><div>${a.photos&&a.photos[p]?`<img data-ph="${a.photos[p]}" alt="${l} week ${a.week}">`:'<span>no photo</span>'}</div>
+      <div>${b.photos&&b.photos[p]?`<img data-ph="${b.photos[p]}" alt="${l} week ${b.week}">`:'<span>no photo</span>'}</div><i>${l.toUpperCase()}</i></div>`:'').join('')}</div>`;
+}
+function chAct(a,v){
+  const c=S.ch90, imp=isImp();
+  switch(a){
+    case 'ch-open': view='build'; buildSub='ch90'; window.scrollTo(0,0); return;
+    case 'ch-start': {
+      const st=(document.getElementById('ch_start')||{}).value||T;
+      c.start=st; c.goal=((document.getElementById('ch_goal')||{}).value||'').trim(); c.checkins=[]; chArm=false;
+      commit(); toast('Day 1. Take your before photos.'); chAct('ch-checkin'); return;
+    }
+    case 'ch-checkin': {
+      const w=chWeekOf(T), ex=chCheckin(w), L=latestField('weight'), Wa=latestField('waist');
+      const src=ex||{};
+      const wv=src.weight??(L&&L.weight), wa=src.waist??(Wa&&Wa.waist);
+      chDraft={week:w,photos:{...(src.photos||{})},
+        weight:wv!=null?String(Math.round((imp?wv*2.20462:wv)*10)/10):'', waist:wa!=null?String(Math.round((imp?wa/2.54:wa)*10)/10):'',
+        bf:src.bf!=null?String(src.bf):'', note:src.note||''};
+      return;
+    }
+    case 'ch-cancel': chDraft=null; return;
+    case 'ch-submit': {
+      const dr=chDraft; if (!dr) return;
+      const wv=num(dr.weight), wa=num(dr.waist), bf=num(dr.bf);
+      if (wv!=null && !((imp?wv/2.20462:wv)>25 && (imp?wv/2.20462:wv)<350)){ toast('That weight looks off'); return 'norender'; }
+      if (bf!=null && !(bf>=2&&bf<=60)){ toast('Body fat should be 2-60%'); return 'norender'; }
+      const rec={week:dr.week,date:T,photos:dr.photos,note:(dr.note||'').trim(),
+        weight:wv!=null?Math.round((imp?wv/2.20462:wv)*100)/100:null, waist:wa!=null?Math.round((imp?wa*2.54:wa)*10)/10:null, bf:bf!=null?bf:null};
+      const old=chCheckin(dr.week);
+      if (old) Object.values(old.photos||{}).forEach(id=>{ if (!Object.values(rec.photos).includes(id)) photoDel(id); });
+      c.checkins=(c.checkins||[]).filter(k=>k.week!==dr.week).concat(rec);
+      /* also into the normal body log so Fuel / Target / trends use it */
+      const L={...(S.log.find(x=>x.date===T)||{}),date:T};
+      if (rec.weight!=null) L.weight=rec.weight; if (rec.waist!=null) L.waist=rec.waist; if (rec.bf!=null) L.bf=rec.bf;
+      if (rec.weight!=null||rec.waist!=null||rec.bf!=null) S.log=[...S.log.filter(x=>x.date!==T),L].sort((x,y)=>x.date>y.date?1:-1);
+      chDraft=null; commit(); toast(`Week ${rec.week} check-in saved`); return;
+    }
+    case 'ch-del': {
+      const k=chCheckin(+v); if (!k) return;
+      if (chArm!=='d'+v){ chArm='d'+v; toast('Tap the X again to delete this check-in and its photos'); return 'norender'; }
+      Object.values(k.photos||{}).forEach(photoDel); c.checkins=c.checkins.filter(x=>x.week!==+v); chArm=false; commit(); return;
+    }
+    case 'ch-end': {
+      if (chArm!==true){ chArm=true; return; }
+      c.start=null; c.goal=''; chArm=false; chDraft=null; commit(); toast('Challenge ended. Photos stay until you delete the check-ins.'); return;
+    }
+    case 'ch-save': chSavePhotos(); return 'norender';
+  }
+}
+async function chSavePhotos(){
+  const ids=[]; (S.ch90.checkins||[]).forEach(k=>CH_POSES.forEach(([p])=>{ if (k.photos&&k.photos[p]) ids.push([`forge-wk${k.week}-${p}.jpg`,k.photos[p]]); }));
+  if (!ids.length){ toast('No photos yet'); return; }
+  const files=[]; for (const [name,id] of ids){ const b=await photoGet(id).catch(()=>null); if (b) files.push(new File([b],name,{type:'image/jpeg'})); }
+  try{
+    if (navigator.canShare && navigator.canShare({files})){ await navigator.share({files,title:'FORGE progress photos'}); return; }
+  }catch(e){ if (e && e.name==='AbortError') return; }
+  files.forEach((f,i)=>setTimeout(()=>{ const u=URL.createObjectURL(f), a=document.createElement('a'); a.href=u; a.download=f.name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),2000); },i*350));
+  toast(`Downloading ${files.length} photos`);
+}
+document.addEventListener('change', e=>{
+  const s=e.target; if (!s.dataset || s.dataset.chcmp==null) return;
+  const cks=[...S.ch90.checkins].sort((a,b)=>a.week-b.week);
+  chCmp=chCmp||[cks[0].week,cks[cks.length-1].week]; chCmp[+s.dataset.chcmp]=+s.value; render();
+});
+/* a photo was picked for a pose in the check-in form */
+document.addEventListener('change', async e=>{
+  const inp=e.target; if (!inp.matches || !inp.matches('input[type=file][data-ph-pose]') || !chDraft) return;
+  const f=inp.files&&inp.files[0]; if (!f) return;
+  const pose=inp.dataset.phPose;
+  try{
+    const blob=await shrinkImage(f), id='ph_'+Date.now().toString(36)+'_'+pose;
+    await photoPut(id,blob);
+    if (chDraft.photos[pose] && !(chCheckin(chDraft.week)&&Object.values(chCheckin(chDraft.week).photos||{}).includes(chDraft.photos[pose]))) photoDel(chDraft.photos[pose]);
+    chDraft.photos[pose]=id; render();
+  }catch(err){ toast('Could not read that photo'); }
+});
+
 /* ================================================================ header == */
 function Header(){
   const P=pillars(),st=streak(),ph=PHASES[phaseIdx()];
@@ -4401,8 +4644,8 @@ function SuppSection(){
 
 /* =============================================================== build === */
 function ViewBuild(){
-  const tabs=[['target','TARGET'],['fuel','FUEL'],['log','LOG']];
-  const body = buildSub==='target'?ViewTarget() : buildSub==='fuel'?ViewFuel() : ViewLog();
+  const tabs=[['target','TARGET'],['fuel','FUEL'],['log','LOG'],['ch90','90 DAY']];
+  const body = buildSub==='target'?ViewTarget() : buildSub==='fuel'?ViewFuel() : buildSub==='ch90'?ViewChallenge() : ViewLog();
   return `<div class="view wrap">
     <div class="segwrap"><div class="seg">${tabs.map(([k,l])=>`
       <button class="segbtn ${buildSub===k?'on':''}" data-act="buildsub" data-v="${k}">${l}</button>`).join('')}</div></div>
@@ -4652,6 +4895,7 @@ function render(){
     rnow.style.top=clamp((mins-wake)*px,0,rail.offsetHeight)+'px';
   }
   document.body.classList.toggle('lock', !!document.querySelector('.sheet,.tmr'));
+  hydratePhotos();
   const xq=document.getElementById('exq');
   if (xq && exFocus && view==='today'){
     xq.focus(); const l=xq.value.length; xq.setSelectionRange(l,l);
@@ -4718,6 +4962,7 @@ document.addEventListener('click', e => {
   }
   if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
   if (a==='mm-sel'){ mmSel=mmSel===v?null:v; render(); return; }
   if (a==='mm-win'){ mmWin=+v||0; render(); return; }
   if (a==='mm-open'){ view='wlog'; wlSub='body'; mmSel=null; render(); window.scrollTo(0,0); return; }
@@ -5016,6 +5261,7 @@ document.addEventListener('input', e => {
     if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value)); }
     return;
   }
+  if (t.dataset && t.dataset.chd){ if (chDraft) chDraft[t.dataset.chd]=t.value; return; }
   if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commit(); } return; }
