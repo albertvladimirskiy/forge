@@ -26,7 +26,11 @@ separate from the code files. So:
 | Clear Safari/Chrome site data | ❌ gone |
 | Different device | separate file per device |
 
-Insurance: **Codex → Export backup** (copies JSON to clipboard + downloads a file),
+Fuel and Target use the **7-day average** of your weigh-ins (not a single reading) for calorie, macro, activity and strength-standard
+math; the weight chart draws it as a dashed line. Today's food panel also tracks **water** against 40 ml per kg of bodyweight, and
+has COPY YESTERDAY'S FOOD, RECENT foods and saved MY FOODS.
+
+Insurance: **Codex → Export backup** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
 **Import** to restore. Do it monthly.
 
 One wrinkle after updates: the service worker caches hard. If new code doesn't appear,
@@ -72,6 +76,20 @@ as history for the matching library exercise (`EXLINK`). Rest timer, plate math 
 history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) are included. Custom data lives in `S.cust`,
 `S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
 
+Set logging details: tap a set to **edit** it in place (custom workouts and the program's own lifts). **WARM-UP SET** tags a set
+so it never counts toward PRs, benchmarks, volume or the rest timer, and **WARM-UP RAMP** fills in the bar and ~50/70/85% steps up
+to the weight in the box. Optional **RPE** (6-10) goes on any lifting set; a program lift whose last session hit RPE 9.5+ gets a
+plain-text "repeat it if that was a grind" nudge (the prescription itself is unchanged). The rest timer rings a bell when it ends
+(iOS can't vibrate; BELL / SILENT is in the workout panel, and each exercise can override the default rest length). Bar weight and
+the plates your gym has live under **Plan → Barbell + plates**, with a per-lift BAR button for EZ or trap bars; the plate line
+picks the fewest plates that make the weight.
+
+More on custom workouts: **SUPERSET WITH NEXT** links an exercise to the one below it (link again for a circuit); logging a set
+moves to the partner and the rest timer waits for the last exercise of the group. Each exercise has a saved **note** (a cue
+shown when it's open, and as a one-liner when collapsed). Under LAST TIME a **NEXT TIME** line suggests a weight from your last
+working sets and RPE; it never changes anything by itself. **SHARE WORKOUT SUMMARY** (and SHARE on past workouts) sends a plain
+text recap through the share sheet or the clipboard.
+
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 
 - **Daily briefing** (top of Today): one line picked by what's happening (first week, PR, comeback after missed days,
@@ -85,8 +103,11 @@ history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) ar
   measurements, side-by-side compare. Photos stay in IndexedDB on the device (not in the JSON backup): use SAVE PHOTOS.
 - **Fight camp** (Workouts → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
   weight-cut tracker that flags unsafe paces. Sessions can record sparring partners.
-- **Safety**: daily automatic snapshots (last 7, with undo) in IndexedDB, a weekly backup nudge that saves through the share
-  sheet, restore from a backup file, and a calendar (.ics) export of the week so your phone's calendar does the reminding.
+- **Safety**: daily automatic snapshots (last 14, with undo) in IndexedDB, a weekly backup nudge that saves through the share
+  sheet, restore from a backup file (an import takes an undo snapshot first), and a calendar (.ics) export of the week so your
+  phone's calendar does the reminding. Deleting a set, food, exercise, workout, routine or entry offers **UNDO** for a few seconds
+  (not 90-day photos, which are erased for good). A web app can't write to iCloud on its own, so backups stay manual; **Codex →
+  This file** also exports workouts, body log, food log and fight sessions as CSV for a spreadsheet.
 - **First run**: a five-step setup on a fresh install; existing data skips it. Lower Today sections fold and remember it.
 
 ### Quotes from real athletes (`quotes-db.js`)
@@ -106,3 +127,24 @@ days a line fits (lift day, fight day, comeback, deload and so on).
 new ones, **Combat** (fighters' memoirs, strategy, the psychology of conflict) and **Business & Builders**. Each track is sorted by
 phase (1 = start here). The MIND score counts finished books against a fixed goal of 48 (`BOOK_GOAL`), so a bigger library never lowers it.
 Add your own as one line in `BOOKS`: `{id,tr,p,t,a,w}`.
+
+## Tests
+
+`tests/` holds browser tests for the app (they load `index.html` straight from disk in headless Chromium, no server needed).
+They are not part of the deployed site.
+
+```
+cd tests
+npm install && npx playwright install chromium   # once
+npm test                                          # all of it, about a minute
+node run.js rest                                  # only tests whose file, group or name contains "rest"
+```
+
+Each `*.test.js` file exports `{ name, tests: { 'what it checks': async (page, assert) => {...} } }`. Every test gets a fresh
+page past onboarding, with the app's own globals (`S`, `render`, `VD()`, `T`, ...) reachable inside `page.evaluate`, and an
+uncaught error inside the app fails the test. If Playwright or Chromium live somewhere unusual, set `PLAYWRIGHT_PATH` and
+`CHROMIUM_PATH`. Fixing a bug here means adding the test that would have caught it.
+
+`tests/fixtures/old-state.json` is a saved app produced by the original build (before the set-logging, food, plate and water
+features); `migration.test.js` loads it with its dates moved to "now", visits every screen, and checks nothing was lost or changed.
+To refresh it after a future data-shape change, regenerate it from the build you want to protect.
