@@ -2915,7 +2915,7 @@ function restBar(){
 const exNote = id => (S.cpref.notes||{})[id] || '';
 function exNoteHTML(id){
   return `<div class="exnote"><label class="f"><span>Your note for this exercise</span>
-    <textarea data-exnote="${id}" rows="2" maxlength="200" placeholder="A cue for next time: seat height, grip, what hurts.">${esc(exNote(id))}</textarea></label></div>`;
+    <textarea data-exnote="${id}" rows="2" maxlength="200" placeholder="A cue for next time (seat, grip, pain)">${esc(exNote(id))}</textarea></label></div>`;
 }
 /* how long to rest after a set of this exercise: its own setting if it has one (0 = no timer), else the workout-wide default */
 const REST_CHOICES=[null,0,45,60,90,120,180,240];
@@ -5978,8 +5978,8 @@ let lastRenderedView=null;
 /* Every action re-renders by replacing the whole #app tree, so anything the DOM was holding that isn't in S
    is lost unless render() carries it across: the exercise sheet's scroll position, the muscle/equipment chip
    rows' horizontal scroll, and half-typed fields in the custom-food, body-log and program-lift set forms. */
-let scrollReset=false;                               // set by actions that change what the sheet lists (muscle/equipment filter)
-const KEEP_FIELD=/^(cf_|f_|sw_|sr_)/;
+let scrollReset=false, lastRenderedDay=null;                               // set by actions that change what the sheet lists (muscle/equipment filter)
+const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_)/;            // f_date is left out on purpose: after saving, the date goes back to today
 function render(){
   const y=window.scrollY;
   const scrollers=[...document.querySelectorAll('.sheetbody,.exchips')].map(el=>[el.scrollTop,el.scrollLeft,el.className]);
@@ -6010,9 +6010,10 @@ function render(){
     el.scrollLeft=scrollers[i][1];
   });
   scrollReset=false;
-  for (const id in typed){                           // only if the app didn't itself change that field's value in this render
+  const sameDay=lastRenderedDay===VD(); lastRenderedDay=VD();
+  for (const id in typed){                           // only if the app didn't itself change that field's value in this render, and not across days
     const el=document.getElementById(id);
-    if (el && el.defaultValue===typed[id][1]) el.value=typed[id][0];
+    if (sameDay && el && el.defaultValue===typed[id][1]) el.value=typed[id][0];
   }
   const strip=document.getElementById('strip');
   if (strip){
@@ -6588,7 +6589,7 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
   const midnight=()=>{
-    const busy=(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Object.keys(cdraft).length>0;
+    const busy=(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Object.values(cdraft).some(d=>Object.values(d).some(x=>x));
     if (busy) setTimeout(midnight,60000); else location.reload();     // wait out a running round timer or a set that's typed but not logged
   };
   setTimeout(midnight,Math.max(ms,60000));

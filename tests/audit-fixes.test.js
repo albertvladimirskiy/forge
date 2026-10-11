@@ -77,6 +77,25 @@ module.exports = { name: 'Fixes from the first audit pass', tests: {
     a.equal(await page.evaluate(() => S.log.length), 1);
   },
 
+  async 'the body-log date goes back to today after saving, even if you logged a past day'(page, a){
+    await page.evaluate(() => { view = 'build'; buildSub = 'log'; render(); });
+    await page.fill('#f_date', '2024-01-05'); await page.fill('#f_weight', '180');
+    await page.click('[data-act=savelog]');
+    a.equal(await page.evaluate(() => f_date.value), await page.evaluate(() => T), 'f_date kept the past date');
+    a.equal(await page.evaluate(() => S.log[0].date), '2024-01-05');
+  },
+
+  async 'half-typed text on a program lift does not follow you to another day'(page, a){
+    const ex = await page.evaluate(() => { S.meta.start = dkey(-60);
+      const def = WEEK.find(d => d.type === 'strength' && d.blocks.some(bk => BLOCKEX[bk.id])); S.swap[VD()] = def.id; S.swap[dkey(-1)] = def.id;
+      const bk = def.blocks.find(bk => BLOCKEX[bk.id]); openBlock = 'train'; openBlock2 = bk.id; render(); return BLOCKEX[bk.id][0]; });
+    await page.fill('#sw_' + ex, '100');
+    await page.evaluate(() => render());
+    a.equal(await page.evaluate(ex => document.getElementById('sw_' + ex).value, ex), '100', 'same-day re-render should keep it');
+    await page.evaluate(() => { viewOff = -1; render(); });
+    a.equal(await page.evaluate(ex => document.getElementById('sw_' + ex).value, ex), '', 'typed weight leaked onto yesterday');
+  },
+
   async 'importing a backup takes an undo snapshot first'(page, a){
     await page.evaluate(() => { S.log.push({ date: T, weight: 80 }); commit(); });
     const undos = () => page.evaluate(async () => (await snapKeys()).filter(k => k.startsWith('undo-')).length);

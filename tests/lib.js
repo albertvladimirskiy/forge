@@ -1,6 +1,6 @@
 /* Shared helpers for the FORGE browser tests. Each test gets a fresh page with the app loaded and past onboarding;
    the app's globals (S, render, VD, T, ...) are reachable inside page.evaluate. */
-const path = require('path');
+const path = require('path'), fs = require('fs');
 const { pathToFileURL } = require('url');
 
 function loadPlaywright(){
@@ -16,8 +16,10 @@ async function launch(){
 }
 const INDEX = pathToFileURL(path.join(__dirname, '..', 'index.html')).href;
 
-async function openApp(browser, opts = {}){
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: 'block', acceptDownloads: true, ...opts });
+async function openApp(browser, { state, width = 390, height = 900, ...opts } = {}){
+  const ctx = await browser.newContext({ viewport: { width, height }, serviceWorkers: 'block', acceptDownloads: true, ...opts });
+  /* `state` is a saved-app object to start from. It's written once per tab, so a reload keeps whatever the app saved afterwards. */
+  if (state) await ctx.addInitScript(json => { if (!sessionStorage.getItem('__seeded')){ localStorage.setItem('forge.v1', json); sessionStorage.setItem('__seeded', '1'); } }, JSON.stringify(state));
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', e => page.errors.push(e.message));
@@ -42,4 +44,22 @@ const sets = (page, id) => page.evaluate(id => (S.cust[VD()] && S.cust[VD()].set
 const text = (page, sel) => page.evaluate(sel => document.querySelector(sel).textContent.replace(/\s+/g, ' ').trim(), sel);
 const app = page => page.evaluate(() => document.getElementById('app').textContent.replace(/\s+/g, ' '));
 
-module.exports = { launch, openApp, BENCH, SQUAT, LB, workout, logSet, sets, text, app };
+/* A saved app from the ORIGINAL build (tests/fixtures/old-state.json), with every date moved so the data ends "today". */
+const FIXTURE_DAY = '2026-10-11';
+function oldState(){
+  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'old-state.json'), 'utf8'));
+  const dayMs = 86400000, toUTC = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  const now = new Date(), todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const delta = Math.round((todayUTC - toUTC(FIXTURE_DAY)) / dayMs);
+  const shift = s => { const d = new Date(toUTC(s) + delta * dayMs); return d.toISOString().slice(0, 10); };
+  const isDate = s => typeof s === 'string' && /^\d{4}-\d\d-\d\d$/.test(s);
+  const walk = v => {
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) =>
+      [isDate(k) ? shift(k) : k, (k === 't0' || k === 't1') && typeof x === 'number' ? x + delta * dayMs : walk(x)]));
+    return isDate(v) ? shift(v) : v;
+  };
+  return walk(raw);
+}
+
+module.exports = { launch, openApp, oldState, BENCH, SQUAT, LB, workout, logSet, sets, text, app };

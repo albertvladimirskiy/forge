@@ -144,3 +144,7 @@ Each `*.test.js` file exports `{ name, tests: { 'what it checks': async (page, a
 page past onboarding, with the app's own globals (`S`, `render`, `VD()`, `T`, ...) reachable inside `page.evaluate`, and an
 uncaught error inside the app fails the test. If Playwright or Chromium live somewhere unusual, set `PLAYWRIGHT_PATH` and
 `CHROMIUM_PATH`. Fixing a bug here means adding the test that would have caught it.
+
+`tests/fixtures/old-state.json` is a saved app produced by the original build (before the set-logging, food, plate and water
+features); `migration.test.js` loads it with its dates moved to "now", visits every screen, and checks nothing was lost or changed.
+To refresh it after a future data-shape change, regenerate it from the build you want to protect.
