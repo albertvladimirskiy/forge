@@ -3736,8 +3736,10 @@ function idb(){
   if (_idb) return _idb;
   _idb=new Promise((res,rej)=>{
     try{
-      const r=indexedDB.open('forge-photos',1);
-      r.onupgradeneeded=()=>r.result.createObjectStore('p');
+      const r=indexedDB.open('forge-photos',2);
+      r.onupgradeneeded=()=>{ const db=r.result;            // v1: photos · v2: + daily state snapshots
+        if (!db.objectStoreNames.contains('p')) db.createObjectStore('p');
+        if (!db.objectStoreNames.contains('s')) db.createObjectStore('s'); };
       r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
     }catch(e){ rej(e); }
   });
@@ -3937,6 +3939,158 @@ document.addEventListener('change', async e=>{
   }catch(err){ toast('Could not read that photo'); }
 });
 
+/* ======================================================= data safety == */
+/* Three layers, cheapest first:
+   1. daily snapshots in IndexedDB (last 7 days) - undo for a bad import or a fat-fingered delete
+   2. a weekly nudge to save a real backup file (share sheet -> Files / iCloud on iPhone)
+   3. import straight from that file, no copy-paste
+   None of it can save you from losing the phone except #2, which is why it nags. */
+const SNAP_KEEP = 7;
+let snapList=null, snapArm=null;
+function snapPut(key,json){ return idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('s','readwrite'); tx.objectStore('s').put(json,key); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); })); }
+function snapKeys(){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.transaction('s').objectStore('s').getAllKeys(); r.onsuccess=()=>res(r.result.sort().reverse()); r.onerror=()=>rej(r.error); })); }
+function snapGet(key){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.transaction('s').objectStore('s').get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); }
+function snapDelete(key){ return idb().then(db=>new Promise(res=>{ const tx=db.transaction('s','readwrite'); tx.objectStore('s').delete(key); tx.oncomplete=res; tx.onerror=res; })); }
+/* one snapshot per day, taken the first time the app opens that day (before anything changes) */
+async function snapDaily(){
+  try{
+    const keys=await snapKeys();
+    if (!keys.includes(T)) await snapPut(T,JSON.stringify(S));
+    const all=await snapKeys(), days=all.filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)), undos=all.filter(k=>k.startsWith('undo-'));
+    for (const k of days.slice(SNAP_KEEP)) await snapDelete(k);
+    for (const k of undos.slice(1)) await snapDelete(k);          // only the most recent undo point is kept
+    snapList=undos.slice(0,1).concat(days.slice(0,SNAP_KEEP));
+  }catch(e){ snapList=[]; }
+}
+function backupAge(){ const b=S.meta.lastBackup; return b?daysBetween(b,T):null; }
+function hasRealData(){ return daysLogged()>=3 || Object.keys(S.cust).length>0 || S.log.length>0 || Object.keys(S.fights).length>0; }
+function backupDue(){
+  if (!hasRealData()) return false;
+  if (S.meta.backupSnooze && T<S.meta.backupSnooze) return false;
+  const a=backupAge();
+  return a==null ? daysSinceStart()>=7 : a>=7;
+}
+function BackupBanner(){
+  if (!backupDue()) return '';
+  const a=backupAge();
+  return `<div class="banner" style="align-items:center">${svg('shield',14,'var(--amber)')}
+    <div style="flex:1"><b>${a==null?'No backup yet.':`Last backup ${a} days ago.`}</b> Everything lives on this phone only. Save a copy to Files or iCloud in one tap.</div>
+    <div style="display:flex;flex-direction:column;gap:6px"><button class="chip on" data-act="s-backup">BACK UP</button><button class="chip" data-act="s-snooze">LATER</button></div></div>`;
+}
+async function doBackup(){
+  const txt=JSON.stringify(S), name=`forge-backup-${T}.json`;
+  let how='downloaded';
+  try{
+    const file=new File([txt],name,{type:'application/json'});
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'FORGE backup'}); how='shared'; }
+    else throw new Error('no share');
+  }catch(e){
+    if (e && e.name==='AbortError'){ toast('Backup cancelled'); return; }
+    try{ const url=URL.createObjectURL(new Blob([txt],{type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500); }catch(err){}
+  }
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});
+  S.meta.lastBackup=T; delete S.meta.backupSnooze; commit(); render();
+  toast(how==='shared'?'Backup saved — keep it somewhere off this phone':'Backup downloaded (also copied to clipboard)');
+}
+function SnapshotPanel(){
+  const list=snapList||[];
+  const a=backupAge();
+  return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Photos from the 90-day challenge aren't in the file; use SAVE PHOTOS there.</div>
+    ${list.length?`<div class="eyebrow" style="padding:4px 13px 6px">AUTOMATIC SNAPSHOTS ON THIS PHONE</div>
+    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')?`<b>Undo last restore</b> <span style="color:var(--faint)">(state before it, ${esc(shortDate(k.slice(5)))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
+      <button class="chip" data-act="s-restore" data-v="${k}">${snapArm===k?'TAP TO CONFIRM':'RESTORE'}</button></div>`).join('')}
+    <div class="note">One snapshot a day, the last ${SNAP_KEEP} kept, taken when you first open the app. Restoring replaces everything with that day's state (today's state is snapshotted first, so you can undo).</div>`:''}`;
+}
+async function snapRestore(k){
+  try{
+    const json=await snapGet(k); if (!json){ toast('Snapshot not found'); return; }
+    if (!k.startsWith('undo-')) await snapPut('undo-'+T,JSON.stringify(S)).catch(()=>{});
+    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(json)); normalizeCustom();
+    WEEK=WEEKS[S.profile.program]||WEEK_STD; snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
+  }catch(e){ toast('Could not restore that snapshot'); }
+}
+
+/* ---------- calendar export (.ics) ---------- */
+/* A home-screen web app can't wake the phone, but the phone's own calendar can. This writes the next 7 days
+   of scheduled blocks as calendar events with a 15-minute alert. Import it once a week (re-importing adds copies). */
+function icsEsc(t){ return String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+/* RFC 5545 folds at 75 octets, not characters: "·" and "—" are multi-byte in UTF-8 */
+const icsEnc = new TextEncoder();
+function icsFold(line){
+  const out=[]; let cur='', bytes=0;
+  for (const ch of line){
+    const b=icsEnc.encode(ch).length;
+    if (bytes+b>(out.length?74:75)){ out.push(cur); cur=' '; bytes=1; }
+    cur+=ch; bytes+=b;
+  }
+  out.push(cur); return out.join('\r\n');
+}
+function icsTime(dateKey,mins){
+  const extra=Math.floor(mins/1440), k=extra?addDays(dateKey,extra):dateKey, m=((mins%1440)+1440)%1440;
+  return k.replace(/-/g,'')+'T'+pad(Math.floor(m/60))+pad(m%60)+'00';
+}
+function buildICS(full){
+  const now=new Date(), stamp=now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())+'T'+pad(now.getUTCHours())+pad(now.getUTCMinutes())+'00Z';
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FORGE//Training//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:FORGE'];
+  let n=0;
+  for (let o=0;o<7;o++){
+    const k=dkey(o), plan=buildDay(k), cw=S.cust[k];
+    for (const e of plan.entries){
+      if (e.fixed) continue;
+      if (!full && e.id!=='train') continue;
+      let title=e.l, desc=e.sub||'';
+      if (e.id==='train'){
+        if (cw && cw.mode==='replace'){ title=cw.name||'My workout'; desc=cw.items.map(id=>exInfo(id).n).join(', ')||'Your own session'; }
+        else { title=`${plan.def.title}${cw&&cw.items.length?' + '+(cw.name||'extra workout'):''}`; desc=plan.def.blocks.map(b=>b.l).join('\n'); }
+        title='FORGE · '+title;
+      }
+      lines.push('BEGIN:VEVENT',`UID:${k}-${e.id}@forge`,`DTSTAMP:${stamp}`,`DTSTART:${icsTime(k,e.s)}`,`DTEND:${icsTime(k,e.e)}`,
+        `SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc)}`,
+        'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(title)}`,'TRIGGER:-PT15M','END:VALARM','END:VEVENT');
+      n++;
+    }
+  }
+  lines.push('END:VCALENDAR');
+  return {text:lines.map(icsFold).join('\r\n')+'\r\n',n};
+}
+function exportICS(full){
+  const {text,n}=buildICS(full);
+  if (!n){ toast('Nothing scheduled in the next 7 days'); return; }
+  const url=URL.createObjectURL(new Blob([text],{type:'text/calendar'}));
+  const a=document.createElement('a'); a.href=url; a.download=`forge-week-${T}.ics`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  S.meta.lastIcs=T; commit();
+  toast(`${n} events ready — open the file to add them to your calendar`);
+}
+function CalendarPanel(){
+  const last=S.meta.lastIcs;
+  return `<div class="panel"><div style="padding:13px">
+    <div class="lab">Put the week in your phone's calendar</div>
+    <div class="det" style="margin-bottom:10px">Your calendar's alerts fire even when FORGE is closed, so this is the reliable reminder. Each event alerts 15 minutes before.</div>
+    <div style="display:flex;gap:8px"><button class="btn" data-act="s-ics" data-v="train" style="flex:1">TRAINING ONLY</button>
+      <button class="btn ghost" data-act="s-ics" data-v="full" style="flex:1">FULL DAY PLAN</button></div></div>
+    <div class="note">Covers the next 7 days as scheduled right now${last?` · last exported ${esc(shortDate(last))}`:''}. Do it once a week (Sunday review is a good time); importing again adds a second copy.</div></div>`;
+}
+function sAct(a,v){
+  switch(a){
+    case 's-backup': doBackup(); return 'norender';
+    case 's-snooze': S.meta.backupSnooze=addDays(T,3); commit(); toast('Reminding you in 3 days'); return;
+    case 's-restore':
+      if (snapArm!==v){ snapArm=v; return; }
+      snapRestore(v); return 'norender';
+    case 's-ics': exportICS(v==='full'); return 'norender';
+    case 's-importfile': { const i=document.getElementById('importfile'); if (i) i.click(); return 'norender'; }
+  }
+}
+/* restore from a backup file instead of pasting */
+document.addEventListener('change', e=>{
+  const inp=e.target; if (inp.id!=='importfile' || !inp.files || !inp.files[0]) return;
+  const r=new FileReader();
+  r.onload=()=>{ importOpen=true; render(); const ta=document.getElementById('importtxt'); if (ta){ ta.value=String(r.result||''); } toast('Backup loaded — check it, then RESTORE'); };
+  r.onerror=()=>toast('Could not read that file');
+  r.readAsText(inp.files[0]);
+});
+
 /* ================================================================ header == */
 function Header(){
   const P=pillars(),st=streak(),ph=PHASES[phaseIdx()];
@@ -4087,6 +4241,7 @@ function ViewToday(){
       <button class="badge" data-act="swapopen">${DTYPE[plan.def.type].label} ⇄</button>
     </div>
     ${vd===T?Briefing():''}
+    ${vd===T?BackupBanner():''}
     ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
       ${svg('rot',13,'var(--steel)')}<div>Viewing another day — everything you tick here saves to <b>${longDate(vd)}</b>. Tap to return to today.</div></button>`:''}
 
@@ -4304,8 +4459,10 @@ function ViewPlan(){
         ${chk(S.notif.on,'var(--amber)')}
         <div style="flex:1"><div class="lab">Session reminders</div>
         <div class="det">Pings 15 minutes before each scheduled block, and at start time</div></div></button>
-      <div class="note">Honest limits: these fire while FORGE is open or recently used - a home-screen web app can't wake your phone from fully closed like a native app. Best combo: turn this on, and put training in your phone calendar as the backstop.</div>
+      <div class="note">Honest limits: these fire while FORGE is open or recently used - a home-screen web app can't wake your phone from fully closed like a native app. Best combo: turn this on, and use the calendar export right below as the backstop that always fires.</div>
     </div>
+
+    ${CalendarPanel()}
 
     ${sect('plus','ONE-OFF EVENT — A SPECIFIC DATE ONLY')}
     <div class="panel"><div style="padding:13px">
@@ -4827,7 +4984,7 @@ function ViewCodex(){
     <div class="panel"><div style="padding:14px 13px 4px">
       <p class="t"><b>Your data survives code updates.</b> Progress lives in the browser's storage for this web address, completely separate from the code. Push a new version to GitHub, reload - everything is still there. What kills it: clearing the browser's site data, or moving to a different URL.</p>
       <p class="t">Nothing is uploaded anywhere. Phone and laptop keep separate files.</p>
-      <p class="t">Export a backup monthly and before changing phones.</p>
+      <p class="t">Back up weekly (FORGE reminds you) and before changing phones. BACK UP NOW opens the share sheet: pick Save to Files or iCloud Drive.</p>
     </div>
     ${importOpen?`<div style="padding:0 13px 13px">
       <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what EXPORT BACKUP gave you, then RESTORE."></textarea></label>
@@ -4837,8 +4994,11 @@ function ViewCodex(){
         <button class="btn ghost" data-act="importcancel" style="max-width:90px">CANCEL</button>
       </div>
     </div>`:`<div style="padding:0 13px 13px;display:flex;gap:8px">
-      <button class="btn ghost" data-act="export">EXPORT BACKUP</button>
-      <button class="btn ghost" data-act="import">IMPORT</button></div>`}</div>
+      <button class="btn ghost" data-act="s-backup">BACK UP NOW</button>
+      <button class="btn ghost" data-act="s-importfile">RESTORE FILE</button>
+      <button class="btn ghost" data-act="import">PASTE</button></div>`}
+    <input type="file" id="importfile" accept="application/json,.json,text/plain" hidden>
+    ${SnapshotPanel()}</div>
 
     <div class="closing">
       The character you're modelling this on is fiction, and the fiction skips the only part that matters: a decade of
@@ -4962,6 +5122,7 @@ document.addEventListener('click', e => {
   }
   if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
   if (a==='mm-sel'){ mmSel=mmSel===v?null:v; render(); return; }
   if (a==='mm-win'){ mmWin=+v||0; render(); return; }
@@ -5211,16 +5372,7 @@ document.addEventListener('click', e => {
       S.nw=[...S.nw.filter(x=>x.date!==dt),{date:dt,v:val}].sort((x,y)=>x.date>y.date?1:-1);
       commit(); render(); toast('Recorded'); return;
     }
-    case 'export': {
-      const txt=JSON.stringify(S);
-      if(navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});
-      try{
-        const url=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
-        const a2=document.createElement('a'); a2.href=url; a2.download=`forge-backup-${T}.json`; a2.click();
-        setTimeout(()=>URL.revokeObjectURL(url),1000);
-      }catch(err){}
-      toast('Backup copied to clipboard'); return;
-    }
+    case 'export': { doBackup(); return; }
     /* in-app textarea instead of prompt() — multi-line paste into prompt()
        is unreliable on iOS Safari / home-screen PWAs, the app's primary
        target per the README, and a backup blob is well past one line. */
@@ -5374,6 +5526,7 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     commit();
   }
   render();
+  snapDaily().then(()=>{ if (view==='codex') render(); });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
