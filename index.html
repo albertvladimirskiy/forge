@@ -1771,6 +1771,7 @@ const DEFAULTS = {
   cust:{},            // { date:{ name, mode:'replace'|'with', items:[exerciseId], sets:{id:[{w,r,t,d}]}, note, t0, t1, fin } }
   fights:{},          // { date:[{ id, disc, min, rounds, rpe, worked, caught }] }
   routines:[],        // [{ id, name, items:[exerciseId] }]
+  myfoods:[],         // custom foods you chose to keep: [{ n, kcal, p, c, f }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
   cpref:{ rest:90, fav:{}, recent:[], restEx:{}, restSound:true },
   motiv:{ why:'', quotes:[], links:[], qmode:'mix', qoff:[], qsolid:false },   // daily briefing: your why, your own lines, your play buttons
@@ -2634,7 +2635,8 @@ function normalizeCustom(){
   if (!S.cpref.fav || typeof S.cpref.fav!=='object') S.cpref.fav={};
   if (!Array.isArray(S.cpref.recent)) S.cpref.recent=[];
   ['cust','fights'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
-  ['routines','myex'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
+  ['routines','myex','myfoods'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
+  S.myfoods=S.myfoods.filter(f=>f&&typeof f.n==='string'&&f.n.trim()&&isFinite(f.kcal));
   for (const k in S.cust){
     const c=Object.assign(newCW('with'),S.cust[k]);
     if (!Array.isArray(c.items)) c.items=[];
@@ -2725,7 +2727,47 @@ function fieldStep(f,k){
 const trimNum = n => String(Math.round(n*100)/100);
 
 /* food search results: its own function so typing can swap just this list (keyboard stays up, no full re-render) */
+/* the distinct foods you logged most recently, newest first (per-unit values; the amount in a gram-scaled name is already baked in) */
+/* read-only: day() would create an empty record for a date just by looking at it */
+const foodOf=k=>(S.days[k]&&S.days[k].food)||[];
+function recentFoods(max=12){
+  const out=[], seen=new Set();
+  for (const k of Object.keys(S.days).sort().reverse()){
+    const list=(S.days[k]&&S.days[k].food)||[];
+    for (let i=list.length-1;i>=0;i--){
+      const f=list[i], key=String(f.n||'').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key); out.push({n:f.n,kcal:f.kcal||0,p:f.p||0,c:f.c||0,f:f.f||0});
+      if (out.length>=max) return out;
+    }
+  }
+  return out;
+}
+function myFoodMatches(q){
+  const toks=q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return S.myfoods.map((f,i)=>[f,i]).filter(([f])=>toks.every(t=>f.n.toLowerCase().includes(t)));
+}
+function foodRowHTML(f,act,idx,extra){
+  return `<div class="fres"><button class="fresmain" data-act="${act}" data-v="${idx}" data-v2="1">
+    <span style="flex:1;text-align:left">${esc(f.n)}</span>
+    <span style="color:var(--faint);font-size:var(--fs-detail)">${Math.round(f.kcal)} kcal · ${Math.round(f.p)}p</span></button>${extra||''}</div>`;
+}
 function foodResultsHTML(){
+  const q=foodQ.trim();
+  let pre='';
+  const sec=t=>`<div class="exsec">${t}</div>`;
+  const mine=q?myFoodMatches(q):S.myfoods.map((f,i)=>[f,i]);
+  if (mine.length) pre+=sec('MY FOODS')+mine.map(([f,i])=>foodRowHTML(f,'addmyfood',i,
+    `<button class="fresq" data-act="delmyfood" data-v="${i}" aria-label="Remove ${esc(f.n)} from My foods">${svg('x',12)}</button>`)).join('');
+  if (!q){
+    const rec=recentFoods();
+    if (rec.length) pre+=sec('RECENT')+rec.map((f,i)=>foodRowHTML(f,'addrecent',i,
+      `<button class="fresq" data-act="addrecent" data-v="${i}" data-v2="0.5">½</button><button class="fresq" data-act="addrecent" data-v="${i}" data-v2="2">2×</button>`)).join('');
+    if (pre) pre+=sec('ALL FOODS');
+  }
+  return pre+foodListHTML();
+}
+function foodListHTML(){
   return foodSearch(foodQ).slice(0,40).map(([f,idx])=>{
           if (f[5]) return `<div class="fres"><button class="fresmain" data-act="addfood" data-v="${idx}" data-v2="1">
             <span style="flex:1;text-align:left">${esc(f[0])}</span>
@@ -2734,7 +2776,7 @@ function foodResultsHTML(){
             <span style="flex:1;text-align:left">${esc(f[0])}</span>
             <span style="color:var(--faint);font-size:var(--fs-detail)">${f[1]} kcal · ${f[2]}p</span></button>
             <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="0.5">½</button>
-            <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="2">2×</button></div>`;}).join('')||'<div class="empty">No match - use custom below.</div>';
+            <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="2">2×</button></div>`;}).join('')||(S.myfoods.length&&myFoodMatches(foodQ).length?'':'<div class="empty">No match - use custom below.</div>');
 }
 function restBar(){
   if (!rest) return '';
@@ -4877,6 +4919,7 @@ function ViewToday(){
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
           <span style="color:var(--dim);font-size:var(--fs-detail)">${Math.round(f.kcal*f.q)} kcal</span>
           <button class="x" data-act="delfood" data-v="${i}" aria-label="Remove ${esc(f.n)}">${svg('x',13)}</button></div>`).join('')}</div>`:''}
+      ${!d.food.length&&foodOf(addDays(vd,-1)).length?`<button class="btn ghost" data-act="copyyday" style="border:none;border-top:1px solid var(--rule)">${svg('rot',13)} COPY ${vd===T?"YESTERDAY'S":'THE DAY BEFORE'} FOOD · ${foodOf(addDays(vd,-1)).length} ITEM${foodOf(addDays(vd,-1)).length>1?'S':''}</button>`:''}
       <button class="btn ghost" data-act="foodopen" style="border:none;border-top:1px solid var(--rule)">${foodOpen?svg('x',13)+' CLOSE FOOD SEARCH':svg('plus',13)+' ADD FOOD'}</button>
       ${foodOpen?`<div class="foodpick">
         <div class="searchrow">${svg('search',14,'var(--faint)')}
@@ -4896,6 +4939,7 @@ function ViewToday(){
           <label class="f"><span>Carbs g</span><input type="number" id="cf_c" inputmode="decimal"></label>
           <label class="f"><span>Fat g</span><input type="number" id="cf_f" inputmode="decimal"></label>
         </div>
+        <label class="f" style="padding:0 13px 8px;flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="cf_save" checked style="width:auto"><span style="margin:0">Keep in My foods so I can add it again in one tap</span></label>
         <div class="note" style="padding-top:0">Check the label for carbs and fat if you have it — kcal and protein alone can't determine the split (two unknowns, one equation). Leave blank only if you don't have the numbers; totals below will undercount by that amount.</div>
         <div style="padding:0 13px 13px;display:flex;gap:8px"><button class="btn ghost" data-act="addcustomfood" style="flex:1">ADD CUSTOM</button>
           <button class="btn" data-act="foodopen" style="flex:1">DONE</button></div>
@@ -5823,10 +5867,29 @@ document.addEventListener('click', e => {
       const ft=num((document.getElementById('cf_f')||{}).value)||0;
       if(!n||k==null){ toast('Name and kcal needed'); return; }
       d.food.push({n,kcal:k,p:pr,c:cb,f:ft,q:1});
+      if ((document.getElementById('cf_save')||{checked:true}).checked){
+        const keep={n,kcal:k,p:pr,c:cb,f:ft}, at=S.myfoods.findIndex(x=>x.n.toLowerCase()===n.toLowerCase());
+        if (at>=0) S.myfoods[at]=keep; else S.myfoods.push(keep);
+      }
       ['cf_n','cf_k','cf_p','cf_c','cf_f'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
       commit(); render(); toast(`${n} added`); return;
     }
     case 'delfood': d.food.splice(+v,1); commit(); break;
+    case 'addmyfood': case 'addrecent': {
+      const f=a==='addmyfood'?S.myfoods[+v]:recentFoods()[+v]; if (!f) return;
+      d.food.push({n:f.n,kcal:f.kcal,p:f.p,c:f.c,f:f.f,q:+v2||1});
+      commit(); foodFocus=true; render(); toast(`${f.n} added`); return;
+    }
+    case 'delmyfood': {
+      const f=S.myfoods[+v]; if (!f) return;
+      S.myfoods.splice(+v,1); commit(); foodFocus=true; render(); toast(`${f.n} removed from My foods`); return;
+    }
+    case 'copyyday': {
+      const src=foodOf(addDays(VD(),-1));
+      if (!src.length){ toast('Nothing logged the day before'); return; }
+      src.forEach(f=>d.food.push({...f}));
+      commit(); render(); toast(`${src.length} item${src.length>1?'s':''} copied`); return;
+    }
 
     /* ---- plan / calendar ---- */
     case 'planday': planDay=v; editIdx=null; preset=null; copyMode=false; break;
