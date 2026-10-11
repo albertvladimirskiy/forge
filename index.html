@@ -631,7 +631,7 @@ body.lock{overflow:hidden}
 .restbar.done{border-left-color:var(--moss);background:var(--banner-moss-bg)}
 .restfill{position:absolute;left:0;top:0;bottom:0;background:rgba(92,140,168,.14);transition:width .4s linear;pointer-events:none}
 .restbar.done .restfill{background:rgba(124,154,94,.18)}
-.restbar>*{position:relative}
+.restbar>:not(.restfill){position:relative}
 .restl{font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);font-weight:700}
 .restt{flex:1;font-family:var(--sans);font-weight:800;font-size:19px;letter-spacing:.04em}
 .restbar button{align-self:stretch;padding:0 11px;border-left:1px solid var(--rule2);font-size:var(--fs-caption);font-weight:700;letter-spacing:.08em;color:var(--dim)}
@@ -2716,6 +2716,18 @@ function fieldStep(f,k){
 }
 const trimNum = n => String(Math.round(n*100)/100);
 
+/* food search results: its own function so typing can swap just this list (keyboard stays up, no full re-render) */
+function foodResultsHTML(){
+  return foodSearch(foodQ).slice(0,40).map(([f,idx])=>{
+          if (f[5]) return `<div class="fres"><button class="fresmain" data-act="addfood" data-v="${idx}" data-v2="1">
+            <span style="flex:1;text-align:left">${esc(f[0])}</span>
+            <span style="color:var(--faint);font-size:var(--fs-detail);white-space:nowrap">${f[1]} kcal · ${f[2]}p <span style="opacity:.7">/ ${f[5]} g</span></span></button></div>`;
+          return `<div class="fres"><button class="fresmain" data-act="addfood" data-v="${idx}" data-v2="1">
+            <span style="flex:1;text-align:left">${esc(f[0])}</span>
+            <span style="color:var(--faint);font-size:var(--fs-detail)">${f[1]} kcal · ${f[2]}p</span></button>
+            <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="0.5">½</button>
+            <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="2">2×</button></div>`;}).join('')||'<div class="empty">No match - use custom below.</div>';
+}
 function restBar(){
   if (!rest) return '';
   const left=Math.max(0,Math.ceil((rest.end-Date.now())/1000));
@@ -2835,10 +2847,11 @@ function platesText(w){
   if (w==null || w<=0) return '';
   const imp=isImp(), bar=imp?45:20, plates=imp?[45,35,25,10,5,2.5]:[25,20,15,10,5,2.5,1.25];
   let side=(w-bar)/2; if (side<0) return `Under bar weight (${bar} ${wUnit()}).`;
-  const out=[];
-  for (const p of plates){ while (side>=p-1e-9){ out.push(p); side-=p; } }
-  if (side>0.01) out.push('+'+trimNum(side)+' extra');
-  return out.length ? `Per side on a ${bar} ${wUnit()} bar: ${out.join(' + ')}` : `Just the bar (${bar} ${wUnit()}).`;
+  const out=[]; let loaded=0;
+  for (const p of plates){ while (side>=p-1e-9){ out.push(p); side-=p; loaded+=p; } }
+  if (!out.length) return side>0.01 ? `Just the bar (${bar} ${wUnit()}) + ${trimNum(side)} per side, smaller than any plate.` : `Just the bar (${bar} ${wUnit()}).`;
+  /* spell out the sum so it can be checked at a glance: bar + 2 x one side = the weight typed */
+  return `${bar} ${wUnit()} bar + ${out.join(' + ')} per side = ${trimNum(bar+2*loaded)} ${wUnit()}${side>0.01?` (${trimNum(side)} per side short of ${trimNum(w)})`:''}`;
 }
 function exCardHTML(cw,id,idx,vd){
   const E=exInfo(id), sets=cw.sets[id]||[], open=cwOpen===id;
@@ -4835,7 +4848,7 @@ function ViewToday(){
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
           <span style="color:var(--dim);font-size:var(--fs-detail)">${Math.round(f.kcal*f.q)} kcal</span>
           <button class="x" data-act="delfood" data-v="${i}" aria-label="Remove ${esc(f.n)}">${svg('x',13)}</button></div>`).join('')}</div>`:''}
-      <button class="btn ghost" data-act="foodopen" style="border:none;border-top:1px solid var(--rule)">${svg('plus',13)} ADD FOOD</button>
+      <button class="btn ghost" data-act="foodopen" style="border:none;border-top:1px solid var(--rule)">${foodOpen?svg('x',13)+' CLOSE FOOD SEARCH':svg('plus',13)+' ADD FOOD'}</button>
       ${foodOpen?`<div class="foodpick">
         <div class="searchrow">${svg('search',14,'var(--faint)')}
           <input type="text" id="foodq" placeholder="Search ${FOODS.length.toLocaleString()} foods..." value="${esc(foodQ)}" autocomplete="off"></div>
@@ -4843,15 +4856,7 @@ function ViewToday(){
           <input type="number" id="foodg" inputmode="decimal" placeholder="${foodGU==='oz'?'4':'100'}" value="${esc(foodG)}">
           <button class="chip ${foodGU==='g'?'on':''}" data-act="gunit" data-v="g">g</button>
           <button class="chip ${foodGU==='oz'?'on':''}" data-act="gunit" data-v="oz">oz</button></div>
-        <div class="foodresults">${foodSearch(foodQ).slice(0,40).map(([f,idx])=>{
-          if (f[5]) return `<div class="fres"><button class="fresmain" data-act="addfood" data-v="${idx}" data-v2="1">
-            <span style="flex:1;text-align:left">${esc(f[0])}</span>
-            <span style="color:var(--faint);font-size:var(--fs-detail);white-space:nowrap">${f[1]} kcal · ${f[2]}p <span style="opacity:.7">/ ${f[5]} g</span></span></button></div>`;
-          return `<div class="fres"><button class="fresmain" data-act="addfood" data-v="${idx}" data-v2="1">
-            <span style="flex:1;text-align:left">${esc(f[0])}</span>
-            <span style="color:var(--faint);font-size:var(--fs-detail)">${f[1]} kcal · ${f[2]}p</span></button>
-            <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="0.5">½</button>
-            <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="2">2×</button></div>`;}).join('')||'<div class="empty">No match - use custom below.</div>'}
+        <div class="foodresults" id="foodres">${foodResultsHTML()}
         </div>
         <div class="grid3" style="border-top:1px solid var(--rule)">
           <label class="f"><span>Custom food</span><input type="text" id="cf_n" placeholder="Name"></label>
@@ -4863,7 +4868,8 @@ function ViewToday(){
           <label class="f"><span>Fat g</span><input type="number" id="cf_f" inputmode="decimal"></label>
         </div>
         <div class="note" style="padding-top:0">Check the label for carbs and fat if you have it — kcal and protein alone can't determine the split (two unknowns, one equation). Leave blank only if you don't have the numbers; totals below will undercount by that amount.</div>
-        <div style="padding:0 13px 13px"><button class="btn ghost" data-act="addcustomfood">ADD CUSTOM</button></div>
+        <div style="padding:0 13px 13px;display:flex;gap:8px"><button class="btn ghost" data-act="addcustomfood" style="flex:1">ADD CUSTOM</button>
+          <button class="btn" data-act="foodopen" style="flex:1">DONE</button></div>
       </div>`:''}
     </div>`:''}
 
@@ -5592,13 +5598,15 @@ function render(){
   if (xq && exFocus && view==='today'){
     xq.focus(); const l=xq.value.length; xq.setSelectionRange(l,l);
   }
+  exFocus=false;                                     // one-shot: later renders must not pull the keyboard back up
   const fq=document.getElementById('foodq');
-  if (fq && foodFocus){
+  if (fq && foodFocus && !xq){                         // the exercise sheet sits on top: never let the food box steal its keyboard
     fq.focus();
     const l=fq.value.length;
     const [s,e]=fqSel?[Math.min(fqSel[0],l),Math.min(fqSel[1],l)]:[l,l];
     fq.setSelectionRange(s,e);
   }
+  foodFocus=false;                                   // one-shot, same reason
 }
 let foodFocus=false;
 
@@ -5958,7 +5966,7 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commit(); } return; }
-  if (t.id==='foodq'){ foodQ=t.value; foodFocus=true; render(); return; }   // search must filter live
+  if (t.id==='foodq'){ foodQ=t.value; const r=document.getElementById('foodres'); if (r) r.innerHTML=foodResultsHTML(); return; }   // filter live, swap only the list
   if (t.id==='foodg'){ foodG=t.value; return; }                              // amount box: remember, no re-render
   const el=t.closest('[data-in]'); if(!el) return;
   const path=el.dataset.in, val=el.value;
