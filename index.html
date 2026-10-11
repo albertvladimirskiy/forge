@@ -1782,7 +1782,14 @@ const DEFAULTS = {
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
 
-function commit(){ Store.save(S); }
+let saveWarnAt=0;
+function commit(){
+  Store.save(S).then(ok=>{
+    if (ok!==false || Date.now()-saveWarnAt<60000) return;
+    saveWarnAt=Date.now();
+    toast("Couldn't save to this phone (storage full or blocked). Back up now.");
+  });
+}
 function toast(m){
   toastMsg = m;
   const t = document.querySelector('.toast');
@@ -2088,9 +2095,9 @@ function prescribe(ex){
 
 /* ============================================================= records === */
 function e1rmVal(ex,w,r){ return EXS[ex].added ? w : e1rm(w,r); }
-function checkPR(ex,w,r){
+function checkPR(ex,w,r,date){
   const val=e1rmVal(ex,w,r), prev=S.prs[ex];
-  if (!prev || val>prev.e1rm+0.01){ S.prs[ex]={w,r,e1rm:val,date:T}; return true; }
+  if (!prev || val>prev.e1rm+0.01){ S.prs[ex]={w,r,e1rm:val,date:date||T}; return true; }
   return false;
 }
 function bestStreakEver(){
@@ -3122,9 +3129,9 @@ function wAct(a,v,v2,el){
     case 'w-restadd': if (rest){ rest.end+=(+v2)*1000; rest.total=Math.max(15,rest.total+(+v2)); if (rest.done&&rest.end>Date.now()){ rest.done=false; } restTick(); } return;   // re-render so the bar's label/colour match its state
     case 'w-restskip': rest=null; clearInterval(restIv); return;
     case 'w-pick': exPickOpen=!exPickOpen; exCreate=false; exFocus=exPickOpen; touch(); return;
-    case 'w-mu': exMu=v||''; exFocus=false; return;
-    case 'w-eq': exEq=v||''; exFocus=false; return;
-    case 'w-create': exCreate=!exCreate; exFocus=false; return;
+    case 'w-mu': exMu=v||''; exFocus=false; scrollReset=true; return;
+    case 'w-eq': exEq=v||''; exFocus=false; scrollReset=true; return;
+    case 'w-create': exCreate=!exCreate; exFocus=false; scrollReset=true; return;
     case 'w-createsave': {
       const n=(document.getElementById('nx_n')||{}).value; const name=(n||'').trim();
       if (!name){ toast('Give it a name'); return 'norender'; }
@@ -4279,8 +4286,8 @@ async function doBackup(){
   }catch(e){
     if (e && e.name==='AbortError'){ toast('Backup cancelled'); return; }
     try{ const url=URL.createObjectURL(new Blob([txt],{type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500); }catch(err){}
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});     // the toast below says so; the share-sheet route never touches the clipboard
   }
-  if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});
   S.meta.lastBackup=T; delete S.meta.backupSnooze; commit(); render();
   toast(how==='shared'?'Backup saved — keep it somewhere off this phone':'Backup downloaded (also copied to clipboard)');
 }
@@ -5561,12 +5568,20 @@ function Nav(){
 
 /* ================================================================ render == */
 let lastRenderedView=null;
+/* Every action re-renders by replacing the whole #app tree, so anything the DOM was holding that isn't in S
+   is lost unless render() carries it across: the exercise sheet's scroll position, the muscle/equipment chip
+   rows' horizontal scroll, and half-typed fields in the custom-food and body-log forms. */
+let scrollReset=false;                               // set by actions that change what the sheet lists (muscle/equipment filter)
+const KEEP_FIELD=/^(cf_|f_)/;
 function render(){
   const y=window.scrollY;
-  // The food-search field re-renders on every keystroke (it must, to filter live),
-  // which tears down and rebuilds the <input> itself — capture where the cursor
-  // actually was before that happens, or every keystroke would otherwise snap it
-  // back to the end of the text, breaking mid-string edits.
+  const scrollers=[...document.querySelectorAll('.sheetbody,.exchips')].map(el=>[el.scrollTop,el.scrollLeft,el.className]);
+  const typed={};
+  document.querySelectorAll('input[id],textarea[id]').forEach(el=>{
+    if (KEEP_FIELD.test(el.id) && el.value!==el.defaultValue) typed[el.id]=[el.value,el.defaultValue];
+  });
+  // Any re-render (tapping a result, the g/oz chips) rebuilds the food-search <input>,
+  // so capture where the cursor was, or it would snap back to the end of the text.
   const oldFq=document.getElementById('foodq');
   const fqSel=(oldFq&&document.activeElement===oldFq)?[oldFq.selectionStart,oldFq.selectionEnd]:null;
   let body=view==='today'?ViewToday():view==='plan'?ViewPlan():(view==='build'||view==='body')?ViewBuild()
@@ -5581,6 +5596,17 @@ function render(){
   lastRenderedView=view;
   document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+TimerOverlay()+Onboarding()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
+  const fresh=[...document.querySelectorAll('.sheetbody,.exchips')];
+  if (fresh.length===scrollers.length) fresh.forEach((el,i)=>{
+    if (el.className!==scrollers[i][2]) return;
+    if (!(scrollReset && el.classList.contains('sheetbody'))) el.scrollTop=scrollers[i][0];
+    el.scrollLeft=scrollers[i][1];
+  });
+  scrollReset=false;
+  for (const id in typed){                           // only if the app didn't itself change that field's value in this render
+    const el=document.getElementById(id);
+    if (el && el.defaultValue===typed[id][1]) el.value=typed[id][0];
+  }
   const strip=document.getElementById('strip');
   if (strip){
     const sel=strip.querySelector('.dcell.sel');
@@ -5775,6 +5801,7 @@ document.addEventListener('click', e => {
       const ft=num((document.getElementById('cf_f')||{}).value)||0;
       if(!n||k==null){ toast('Name and kcal needed'); return; }
       d.food.push({n,kcal:k,p:pr,c:cb,f:ft,q:1});
+      ['cf_n','cf_k','cf_p','cf_c','cf_f'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
       commit(); render(); toast(`${n} added`); return;
     }
     case 'delfood': d.food.splice(+v,1); commit(); break;
@@ -5871,7 +5898,7 @@ document.addEventListener('click', e => {
       if (!S.gym[VD()]) S.gym[VD()]={};
       if (!S.gym[VD()][ex]) S.gym[VD()][ex]=[];
       S.gym[VD()][ex].push({w:Math.round(w*100)/100, r:Math.round(r)});
-      const isPR = checkPR(ex, Math.round(w*100)/100, Math.round(r));
+      const isPR = checkPR(ex, Math.round(w*100)/100, Math.round(r), VD());
       commit(); render();
       const n=S.gym[VD()][ex].length;
       if (isPR){ toast(`New PR — ${dispExact(w)} × ${Math.round(r)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
@@ -5936,6 +5963,7 @@ document.addEventListener('click', e => {
         && parsed.days && typeof parsed.days==='object' && !Array.isArray(parsed.days)
         && Array.isArray(parsed.log);
       if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
+      snapPut('undo-'+Date.now(),JSON.stringify(S)).then(snapDaily).catch(()=>{});   // today's state stays recoverable under "Undo a restore"
       S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
       S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;   // restoring a backup is never a first run
       normalizeCustom();
@@ -5949,7 +5977,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const t=e.target;
   if (t.id==='exq'){                                  // exercise search: swap only the result list so the keyboard stays up
-    exQ=t.value; const r=document.getElementById('exres'); if (r) r.innerHTML=exResultsHTML(); return;
+    exQ=t.value; const r=document.getElementById('exres'); if (r){ r.innerHTML=exResultsHTML(); r.scrollTop=0; } return;
   }
   if (t.id==='bq'){                                   // quote search: swap only the list
     briefQ=t.value; briefLim=15; const r=document.getElementById('bqres'); if (r) r.innerHTML=bqResultsHTML(); return;
@@ -6083,7 +6111,11 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
-  setTimeout(()=>location.reload(),Math.max(ms,60000));
+  const midnight=()=>{
+    const busy=(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Object.keys(cdraft).length>0;
+    if (busy) setTimeout(midnight,60000); else location.reload();     // wait out a running round timer or a set that's typed but not logged
+  };
+  setTimeout(midnight,Math.max(ms,60000));
   document.addEventListener('visibilitychange', ()=>{
     if (document.visibilityState==='visible' && dkey()!==T) location.reload();
   });
