@@ -1950,6 +1950,22 @@ function latestField(key){
   const withField=S.log.filter(e=>e[key]!=null).sort((a,b)=>a.date>b.date?1:-1);
   return withField.length ? withField[withField.length-1] : null;
 }
+/* Scale weight swings a few pounds a day on water and food alone, so anything DERIVED from bodyweight (calorie and macro
+   targets, activity burn, lean-mass and strength-standard targets) uses the average of the weigh-ins from the last 7 days.
+   One weigh-in in that window, or none, falls back to the latest reading, so weekly weighers see no change. The weight-cut
+   tracker and "days since weigh-in" deliberately stay on the raw readings. */
+function trendWeight(){
+  const L=latestField('weight'); if(!L) return null;
+  const win=S.log.filter(e=>e.weight!=null && e.date>=dkey(-6) && e.date<=T);
+  if (win.length<2) return {kg:L.weight,n:1,raw:L.weight,date:L.date,smoothed:false};
+  return {kg:win.reduce((a,e)=>a+e.weight,0)/win.length,n:win.length,raw:L.weight,date:L.date,smoothed:true};
+}
+/* rolling 7-day average at each weigh-in, for the chart */
+function weightTrendSeries(){
+  const ws=S.log.filter(e=>e.weight!=null);
+  return ws.map(e=>{ const from=addDays(e.date,-6), win=ws.filter(x=>x.date>=from && x.date<=e.date);
+    return win.reduce((a,x)=>a+x.weight,0)/win.length; });
+}
 /* days since the most recent LOGGED WEIGHT specifically (not just any log entry —
    a bodyweight-free entry like a squat PR shouldn't reset this) */
 function daysSinceWeight(){
@@ -1960,7 +1976,7 @@ function daysSinceWeight(){
 
 function pillars(){
   const t=id=>((S.tiers[id]??0)/4)*100;
-  const Lw=latestField('weight'), bw=Lw&&Lw.weight;
+  const TWp=trendWeight(), bw=TWp&&TWp.kg;
   /* bestLift() so a session logged on Today counts even if the Log tab's
      own squat/bench/etc fields haven't been re-typed since — matches how
      STRENGTH STANDARDS and THE LIFTS THAT BUILD IT already read strength. */
@@ -1987,18 +2003,18 @@ function activityMinutes(k){
    item based on its chosen sport (SPORTMET), rather than one flat number
    for everything — a BJJ round and a brisk walk no longer cost the same.  */
 function extraKcal(k){
-  const L=latestField('weight'); if(!L||!k) return 0;
+  const L=trendWeight(); if(!L||!k) return 0;
   const items=physicalItems(k); if(!items.length) return 0;
   const kcal=items.reduce((a,c)=>{
     let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440;
     const met=SPORTMET[c.sp]!=null?SPORTMET[c.sp]:SPORTMET[''];
-    return a+met*3.5*L.weight/200*(e-s);
+    return a+met*3.5*L.kg/200*(e-s);
   },0);
   return Math.round(kcal);
 }
 function nutrition(k){
-  const L=latestField('weight'); if(!L) return null;
-  const p=S.profile,kg=L.weight,cm=+p.height,age=+p.age||22;
+  const L=trendWeight(); if(!L) return null;
+  const p=S.profile,kg=L.kg,cm=+p.height,age=+p.age||22;
   const bmr=10*kg+6.25*cm-5*age+(p.sex==='m'?5:-161);
   const tdee=bmr*(+p.activity||1.725);
   const extra=extraKcal(k);
@@ -2230,8 +2246,8 @@ function monthAvg(off){
 /* Turns height / weight / body fat into a concrete, measurable target and the
    honest distance to it. All internal units metric.                          */
 function physique(){
-  const Lw=latestField('weight'); if(!Lw) return null;
-  const kg=Lw.weight, m=(+S.profile.height)/100;
+  const Lw=trendWeight(); if(!Lw) return null;
+  const kg=Lw.kg, m=(+S.profile.height)/100;
   if(!m||m<1.2) return null;
   /* bf% read independently of weight — a caliper reading logged on its own
      shouldn't be hidden just because the latest weigh-in didn't repeat it */
@@ -2357,18 +2373,21 @@ const VD = () => dkey(viewOff);
 
 /* ============================================================== helpers == */
 function heatColor(s){ if(s<=0.02) return '#15181C'; return `rgba(224,160,58,${(0.18+s*0.82).toFixed(2)})`; }
-function sparkline(vals,color,h=110){
+function sparkline(vals,color,h=110,trend){
   const pts=vals.filter(v=>v!=null);
   if(pts.length<2) return `<div class="empty">Two entries and a line appears here.</div>`;
-  const min=Math.min(...pts),max=Math.max(...pts),rng=(max-min)||1;
+  const all=trend&&trend.length===pts.length?pts.concat(trend):pts;
+  const min=Math.min(...all),max=Math.max(...all),rng=(max-min)||1;
+  const td=all===pts?'':trend.map((v,i)=>`${i===0?'M':'L'}${(i/(pts.length-1)*100).toFixed(2)},${(100-((v-min)/rng)*82-9).toFixed(2)}`).join(' ');
   const d=pts.map((v,i)=>`${i===0?'M':'L'}${(i/(pts.length-1)*100).toFixed(2)},${(100-((v-min)/rng)*82-9).toFixed(2)}`).join(' ');
   return `<svg class="spark" viewBox="0 0 100 100" preserveAspectRatio="none" style="height:${h}px">
     <defs><linearGradient id="g${color.replace(/[^a-z]/gi,'')}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${color}" stop-opacity=".22"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
     <path d="${d} L100,100 L0,100 Z" fill="url(#g${color.replace(/[^a-z]/gi,'')})"/>
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"${td?' opacity=".55"':''}/>
+    ${td?`<path d="${td}" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>`:''}</svg>
   <div style="display:flex;justify-content:space-between;padding:0 13px 12px;font-size:var(--fs-caption);color:var(--faint)">
-    <span>low ${Math.round(min*10)/10}</span><span>${pts.length} entries</span><span>high ${Math.round(max*10)/10}</span></div>`;
+    <span>low ${Math.round(min*10)/10}</span><span>${pts.length} entries${td?' · dashed = 7-day average':''}</span><span>high ${Math.round(max*10)/10}</span></div>`;
 }
 const sect=(ico,t)=>`<div class="sect">${svg(ico,13,'var(--amber)')}<h2>${t}</h2><div class="line"></div></div>`;
 const chk=(on,c)=>`<div class="box" style="${on?`background:${c||'var(--amber)'};border-color:${c||'var(--amber)'}`:''}">${on?svg('check',12,'var(--ink)',3):''}</div>`;
@@ -5361,13 +5380,14 @@ function ViewLog(){
     ${S.log.length?`${sect('trend','TREND')}
     <div class="panel">
       <div class="chips">${Object.keys(chartMap).map(k=>`<button class="chip ${chartKey===k?'on':''}" data-act="chart" data-v="${k}">${k==='bf'?'Body fat':k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
-      ${sparkline(seriesFor(ck),cc)}
+      ${sparkline(seriesFor(ck),cc,110,ck==='weight'?weightTrendSeries().map(v=>Math.round(conv(v)*10)/10):undefined)}
+      ${ck==='weight'&&trendWeight()&&trendWeight().smoothed?`<div class="note">7-day average <b style="color:var(--text)">${conv(trendWeight().kg)} ${wu}</b> from ${trendWeight().n} weigh-ins · latest ${conv(trendWeight().raw)} ${wu}. Calorie and strength targets use the average.</div>`:''}
     </div>`:''}
 
     ${L&&L.weight?`${sect('target','STRENGTH STANDARDS')}
     <div class="hint">Auto-filled from your logged gym sets (estimated 1RM) or manual entries - whichever is higher.</div>
     <div class="panel">${LIFTS.map(s=>{
-      const cur=bestLift(s.k),goal=L.weight*s.m,pct=cur?clamp(cur/goal*100,0,100):0;
+      const cur=bestLift(s.k),goal=trendWeight().kg*s.m,pct=cur?clamp(cur/goal*100,0,100):0;
       return `<div class="stand"><div class="standtop"><span style="font-weight:600">${s.l}</span>
         <span>${cur?Math.round(conv(cur)):'—'} <span style="color:var(--faint)">/ ${Math.round(conv(goal))} ${wu}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${pct}%;background:${pct>=100?'var(--moss)':'var(--steel)'}"></div></div></div>`;}).join('')}
@@ -5483,7 +5503,7 @@ function ViewTarget(){
 
     ${sect('dumb','THE LIFTS THAT BUILD IT')}
     <div class="panel">${LIFTS.map(s=>{
-      const cur=bestLift(s.k), goal=L&&L.weight?L.weight*s.m:null, pct=(cur&&goal)?clamp(cur/goal*100,0,100):0;
+      const cur=bestLift(s.k), goal=L&&L.weight?trendWeight().kg*s.m:null, pct=(cur&&goal)?clamp(cur/goal*100,0,100):0;
       return `<div class="stand"><div class="standtop"><span style="font-weight:600">${s.l}</span>
         <span>${cur?dispExact(cur):'—'} <span style="color:var(--faint)">/ ${goal?dispLoad(goal,s.k):'—'}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${pct}%;background:${pct>=100?'var(--moss)':'var(--steel)'}"></div></div></div>`;}).join('')}
@@ -5553,6 +5573,7 @@ function ViewFuel(){
       <div class="bar"><div class="barfill" style="width:${clamp(ftoday.kcal/N.kcal*100,0,100)}%;background:var(--amber)"></div></div>
     </div>
     <div style="padding:0 13px 13px"><p class="t" style="margin:0">Maintenance is near <b>${N.tdee} kcal</b>. ${adjNote}</p>
+      ${(()=>{ const w=trendWeight(), c=x=>Math.round((imp?x*2.20462:x)*10)/10; return w&&w.smoothed?`<p class="t" style="margin:8px 0 0;color:var(--faint)">Based on your 7-day average weight, ${c(w.kg)} ${imp?'lb':'kg'} (${w.n} weigh-ins), so one salty day doesn't move your targets.</p>`:''; })()}
       ${N.extra>0?`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('trend',11,'var(--steel)')} <b>+${N.extra} kcal today</b> for ${N.extraMin} minutes of tagged physical activity beyond training, costed per sport (BJJ and grappling run hotter than a walk) — adjust it any time in Plan.</p>`
         :`<p class="t" style="margin:8px 0 0;color:var(--faint)">Tag any extra activity — practice, a match, a long hike — as <b>Physical</b> in Plan and pick the sport, and this number moves up on its own for that day.</p>`}
     </div></div>
