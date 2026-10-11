@@ -1,11 +1,11 @@
 # FORGE — deploy + data guide
 
-Seven files, no build step. `index.html` is the app; `foods-db.js` is the big food library and `exercises-db.js` the exercise library it loads.
+Eight files, no build step. `index.html` is the app; `foods-db.js` is the big food library, `exercises-db.js` the exercise library and `quotes-db.js` the athlete quote library it loads.
 
 ## Deploy (GitHub Pages, ~4 min)
 
 1. New public repo, e.g. `forge`.
-2. Upload all seven files to the root.
+2. Upload all eight files to the root.
 3. Settings → Pages → Deploy from a branch → `main` / `(root)` → Save.
 4. Open `https://<username>.github.io/forge/` on your phone.
 
@@ -89,12 +89,16 @@ history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) ar
   sheet, restore from a backup file, and a calendar (.ics) export of the week so your phone's calendar does the reminding.
 - **First run**: a five-step setup on a fresh install; existing data skips it. Lower Today sections fold and remember it.
 
-### Quotes from real athletes
+### Quotes from real athletes (`quotes-db.js`)
 
-The briefing mixes in quotes from Greg Plitt, Muhammad Ali, Mike Tyson, Michael Jordan, Bruce Lee, Jocko Willink, Arnold
-Schwarzenegger, Kobe Bryant and David Goggins (`REAL_QUOTES`). Each shows where it comes from and how solid that is:
-SOURCED (traced to a dated origin), REPORTED (credible secondary source) or ATTRIBUTED (widely credited, original not found,
-wording may differ). Choose Mixed in / Always / Off, browse them with their sources, or pin one for today from the briefing editor.
+203 lines from 107 fighters, martial artists, lifters, runners and riders, team and solo athletes, coaches and mountaineers,
+grouped by person in `QLIB`. Each row is `[text, tier, source note, tags]`. The tier says how solid it is: SOURCED (traced to a
+dated origin: an ad, a speech, a book title, a film script), REPORTED (credible secondary source) or ATTRIBUTED (widely credited,
+original not found, so the wording may differ). Roughly 60% are ATTRIBUTED, because most of the internet's quote lists never cite
+anything; tick ONLY VERIFIED to hide those. The briefing editor lets you pick which kinds of athlete you want, browse and search all
+of them with their sources, and pin one for today. Selection is a stable shuffle that keeps one athlete from appearing twice in a row
+and walks it a day at a time, so nothing repeats until the whole pool for that kind of day has been shown. Tags decide which
+days a line fits (lift day, fight day, comeback, deload and so on).
 
 ### Reading list
 
