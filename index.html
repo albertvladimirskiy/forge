@@ -417,6 +417,32 @@ input[type=date],input[type=time]{min-height:40px}
 .mitem b{color:var(--text)}
 
 
+
+/* ---------- daily briefing ---------- */
+.brief{display:block;width:100%;text-align:left;margin:0 0 14px;padding:14px 15px 13px;background:linear-gradient(160deg,#1A1610,#121417 70%);
+  border:1px solid var(--banner-amber-border);border-left:3px solid var(--amber)}
+.brief.col{display:flex;align-items:center;gap:10px;padding:11px 13px}
+.brhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brtag{font-size:var(--fs-label);letter-spacing:.2em;color:var(--amber);font-weight:700;white-space:nowrap}
+.brx{padding:4px;margin:-4px}
+.brmini{flex:1;min-width:0;font-size:var(--fs-detail);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brline{font-family:var(--sans);font-weight:800;font-size:18px;line-height:1.3;letter-spacing:.005em;margin:11px 0 0;color:var(--text)}
+.brsrc{font-size:var(--fs-caption);color:var(--faint);margin-top:6px;letter-spacing:.06em}
+.brwhy{display:block;width:100%;text-align:left;margin-top:12px;padding:10px 11px;border:1px solid var(--rule2);background:rgba(0,0,0,.25);
+  font-size:var(--fs-body);color:var(--text);line-height:1.5}
+.brwhy i{display:block;font-style:normal;font-size:var(--fs-label);letter-spacing:.18em;color:var(--faint);margin-bottom:4px}
+.brwhy.empty{color:var(--dim);border-style:dashed}
+.brstats{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:11px;font-size:var(--fs-detail);color:var(--dim)}
+.brstats span{display:inline-flex;align-items:center;gap:5px}
+.brlinks{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.brlink{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--amber);color:var(--text);font-size:var(--fs-caption);letter-spacing:.08em;font-weight:700}
+.brlink.ghost{border-color:var(--rule2);color:var(--faint)}
+.bredrow{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule);font-size:var(--fs-detail);color:var(--dim);line-height:1.45}
+.bredrow span{flex:1;min-width:0;word-break:break-word}
+.bredrow small{display:block;color:var(--faint)}
+.bredrow .x{color:var(--faint);padding:6px;margin:-6px}
+.bredadd{display:flex;gap:6px;margin-top:8px}
+.bredadd input{padding:8px 9px;min-width:0}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -577,6 +603,7 @@ const ICO = {
   cal:'M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   star:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
   arrowUp:'M12 19V5M5 12l7-7 7 7',
+  play:'M6 4l14 8-14 8z',
   arrowDown:'M12 5v14M19 12l-7 7-7-7',
 };
 function svg(name,size,color,sw){
@@ -1526,6 +1553,7 @@ const DEFAULTS = {
   routines:[],        // [{ id, name, items:[exerciseId] }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
   cpref:{ rest:90, fav:{}, recent:[] },
+  motiv:{ why:'', quotes:[], links:[] },   // daily briefing: your why, your own lines, your play buttons
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
@@ -2382,6 +2410,9 @@ function normalizeCustom(){
     S.cust[k]=c;
   }
   for (const k in S.fights) if (!Array.isArray(S.fights[k])) delete S.fights[k];
+  S.motiv = Object.assign({why:'',quotes:[],links:[]}, (S.motiv&&typeof S.motiv==='object')?S.motiv:{});
+  if (typeof S.motiv.why!=='string') S.motiv.why='';
+  ['quotes','links'].forEach(k=>{ if (!Array.isArray(S.motiv[k])) S.motiv[k]=[]; });
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
@@ -3002,6 +3033,282 @@ function wAct(a,v,v2,el){
   }
 }
 
+/* ======================================================== daily briefing == */
+/* The emotional layer: one line a day picked by what's actually going on (streak at risk, a missed day,
+   a PR, fight day...), your own written "why", and links to whatever gets you going. All lines are
+   original FORGE copy; your own quotes mix into the rotation. The pick is stable for the day (hash of
+   date + situation) and ANOTHER steps through the pool. */
+const BRIEF_LINES = {
+  general:[
+    'Nobody is coming. That is not bad news. It means the whole thing is yours.',
+    'Motivation is a visitor. Discipline lives here. Do not wait at the door.',
+    'You do not rise to the occasion. You fall to the level of what you practiced on ordinary days. Today is an ordinary day.',
+    'The version of you that you keep describing to yourself is built in sessions exactly like this one.',
+    'Comfort is a slow leak. Plug it today.',
+    'Do the thing you said you would do, at the time you said you would do it. That is the whole secret.',
+    'You will not remember the days you felt like it. You will remember the days you went anyway.',
+    'Easy choices, hard life. Hard choices, easy life. Pick early.',
+    'Your body keeps an honest ledger. Make a deposit.',
+    'Talent is a starting position, not a finish line. Out-work your starting position.',
+    'Be the person in the room who does not need to be asked twice.',
+    'Every rep is a vote for who you are becoming. Vote often.',
+    'You have survived every bad day so far. Your record is perfect. Keep it.',
+    'If it were easy, everyone would look like the person you are trying to become.',
+    'Quiet work, loud results. Nobody needs to see it but you.',
+    'The clock is going to move either way. Make it move with you in it.',
+    'Small, boring, daily. That is how big things get built.',
+    'Stop negotiating with the part of you that wants to quit. It does not get a vote today.',
+    'Pressure is a privilege. It means something is at stake.',
+    'You are not tired. You are under-challenged and over-stimulated. Go find out the difference.',
+    'Respect the process when nobody claps. That is the only time it counts.',
+    'Win the morning and the day usually follows.',
+    'The work does not care how you feel about it. Show up and let it change how you feel.',
+    'You were not built to be comfortable. You were built to adapt. Give your body a reason.',
+    'One more honest day in the bank. That is the job.',
+    'Standards are what you do when nobody is checking.',
+    'Do not count the days. Make the days count, then count them anyway.',
+    'There is a person somewhere training while you scroll. Go meet them in the arena.',
+    'Average is a crowded room. Walk out of it.',
+    'Your excuses are probably true. Do it anyway.',
+    'Iron, mats, books, money. Feed all four and none of them starve.',
+    'Hard work compounds. So does skipping it.',
+    'You do not need a new plan. You need to finish today on the plan you have.',
+    'Earn your sleep tonight.',
+    'Be so consistent it gets boring to everyone but you.',
+    'Strong is a decision repeated.',
+    'The best time to be dangerous was years ago. The second best time is this session.',
+    'Discomfort is the price of admission. Pay it and get your seat.',
+    'Courage is not loud. It is clocking in again.',
+    'Make your future self owe you a thank-you.',
+  ],
+  lift:[
+    'Heavy things do not care about your mood. Pick them up anyway.',
+    'The bar is honest. It weighs exactly what it says and it tells you exactly who you are today.',
+    'Brace like someone is about to hit you. Then move it like you mean it.',
+    'Two reps in the tank, perfect form, every set. That is how you get strong for decades.',
+    'Chalk up. Breathe. Own the first rep and the rest follow.',
+    'Progressive overload is just patience with plates on it.',
+    'Today you are stronger than the day you started. Prove it with one clean set.',
+    'Leave your ego at the door and your effort on the floor.',
+    'Lift like the next ten years depend on it. They do.',
+    'Every set is a conversation with gravity. Win the argument.',
+    'Slow down the eccentric. Own the weight, do not let it own you.',
+    'You do not get the physique by wanting it. You get it by squatting when you would rather not.',
+    'Strength is a skill. Practice it like one.',
+    'The warm-up is not optional. Neither is the last set.',
+    'Grip it like you are angry at it.',
+    'Log the set. Beat the log. Repeat until legendary.',
+    'Your muscles do not know what day it is. They only know whether you showed up.',
+    'A heavy day is a gift. Unwrap it carefully.',
+  ],
+  fight:[
+    'Hands up. Chin down. Breathe through the nose. Everything else is details.',
+    'Nobody remembers who was tired. They remember who kept their guard up.',
+    'Tap early, learn fast, come back tomorrow. That is how black belts are made.',
+    'Get comfortable being uncomfortable. That is the whole art.',
+    'Fear is information. Use it, then move.',
+    'The mat does not lie. Go find out what is true today.',
+    'Technique beats strength until strength learns technique. Be both.',
+    'Every round you survive is a round you get to learn from.',
+    'Footwork first. Power is just footwork with intent.',
+    'Calm is a weapon. Panic empties the tank in thirty seconds.',
+    'You will get hit. Decide now that it will not decide anything.',
+    'Drill it until it is boring. Then drill it until it is yours.',
+    'Leave your ego in the parking lot and your effort on the mat.',
+    'The fight is won in the rounds nobody watches.',
+    'Be the training partner everyone wants: hard, safe, always there.',
+    'Cardio is confidence. Earn it.',
+    'Breathe in position. Every stable spot is a chance to recover.',
+    'Find the uncomfortable position and live there for a while.',
+  ],
+  craft:[
+    'The skills nobody brags about are the ones that save the day.',
+    'Today is for the unglamorous competencies. Those are the rare ones.',
+    'Learn something your future self will be grateful for in an emergency.',
+    'Range beats specialization when life gets weird. Build range.',
+    'Recovery is training. Treat it with the same discipline.',
+    'Sharpen the axe today so tomorrow cuts clean.',
+    'A day off the barbell is not a day off the mission.',
+    'Competence is quiet confidence. Collect some today.',
+    'Rest hard. Then come back harder.',
+    'Hands busy, mind clear. Build something.',
+  ],
+  streakRisk:[
+    'Your streak is on the line tonight. Ten minutes keeps it alive. Go.',
+    'Do not let today be the day the chain broke. One block. Right now.',
+    'You worked too hard for that streak to lose it to a couch. Get one thing done.',
+    'The day is not over. Neither are you. Tick one box before you sleep.',
+    'Small is fine. Zero is not. Do the smallest thing that counts.',
+    'Future you is watching tonight. Do not make them clean up this mess.',
+    'Ten push-ups, one page, one honest note. Keep the chain.',
+    'It is late, not too late.',
+  ],
+  comeback:[
+    'You missed a day. Do not miss two. That is the only rule that matters now.',
+    'The plan did not fail. You stepped off it. Step back on.',
+    'Guilt is useless. Momentum is not. Start the momentum.',
+    'Nobody is keeping score of yesterday except you. Close the tab on it.',
+    'Every comeback starts with one boring, ordinary session. This is it.',
+    'You are not starting over. You are starting from experience.',
+    'Get one win on the board before lunch. Then another.',
+    'Fall down seven times, get up eight. You are on eight.',
+    'Do not wait for Monday. Monday is a myth for people who never start.',
+    'The hardest rep is the first one back. Do it now and the rest get easier.',
+    'Missed days are tuition. Make sure you learned something.',
+    'Back in the arena. That is all that matters today.',
+  ],
+  pr:[
+    'You just set a new standard. Now it is the floor, not the ceiling.',
+    'New personal record. Enjoy it for exactly one day, then go earn the next one.',
+    'That PR did not happen today. It happened over every boring session before it.',
+    'Proof that the work works. Keep stacking.',
+    'Stronger than you have ever been. Remember that next time you doubt it.',
+    'New best on the board. Recover well and go again.',
+  ],
+  deload:[
+    'Deload week is where the adaptation lands. Train light, sleep heavy.',
+    'Pulling back is not going soft. It is how you go hard for years.',
+    'Easy weights, sharp technique. Let the body catch up with the work.',
+    'Champions plan their recovery. Plan yours this week.',
+    'Light week, heavy discipline. Still show up. Just do less.',
+  ],
+  firstWeek:[
+    'Day one energy is easy. Build day thirty habits.',
+    'Start smaller than you think. Finish every single day.',
+    'You do not need to be good yet. You need to be here.',
+    'The first week is about showing up, not showing off.',
+    'Learn the movements. The weight comes later. It always does.',
+    'Every expert you admire had a first week that looked like this one.',
+    'Make it a habit before you make it hard.',
+    'Just tick the boxes this week. Momentum is the whole goal.',
+  ],
+  milestone:[
+    'Another milestone. The person who started this would not recognize you.',
+    'Look how far a stack of ordinary days can get you.',
+    'Streak earned, not given. Keep it going.',
+    'This is what consistency looks like from the inside. It looks like today.',
+    'You built this one day at a time. Build the next one.',
+  ],
+  camp:[
+    'Fight camp. Every session now has a date attached to it.',
+    'Sharpen, do not overload. The work is mostly done. Polish it.',
+    'Make weight the smart way: slowly and boringly, starting today.',
+    'Visualize the first exchange. Then go train it.',
+    'Sleep is part of camp. Treat it like sparring.',
+    'Nothing new in fight week. Trust what you drilled.',
+  ],
+  challenge:[
+    'Ninety days. One day at a time. This is one of them.',
+    'Take the photo. You will want the before picture, trust me.',
+    'Halfway is where most people quit. You are not most people.',
+    'The mirror is slow. The tape and the log are not. Trust the numbers.',
+    'Finish the ninety. Then decide what you are capable of.',
+  ],
+};
+const BRIEF_TAG_LABEL = {general:'TODAY',lift:'LIFT DAY',fight:'FIGHT DAY',craft:'BUILD DAY',streakRisk:'STREAK ON THE LINE',
+  comeback:'COMEBACK',pr:'NEW RECORD',deload:'DELOAD WEEK',firstWeek:'FIRST WEEK',milestone:'MILESTONE',camp:'FIGHT CAMP',challenge:'90-DAY CHALLENGE'};
+let briefEdit=false;
+
+function strHash(s){ let h=2166136261; for (let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+/* did anything set a record in the last two days? program lifts write S.prs; custom sets are checked with prFlags */
+function recentPR(){
+  const since=dkey(-1);
+  if (Object.values(S.prs||{}).some(p=>p&&p.date>=since)) return true;
+  for (const k of [dkey(-1),T]){ const cw=S.cust[k]; if (!cw) continue;
+    for (const id of cw.items){ const s=cw.sets[id]||[]; if (s.length && prFlags(id,k,s).some(Boolean)) return true; } }
+  return false;
+}
+function briefTag(){
+  const plan=buildDay(T), type=plan.def.type, st=streak(), nowH=new Date().getHours();
+  if (typeof campDaysOut==='function'){ const d=campDaysOut(); if (d!=null && d>=0 && d<=56) return 'camp'; }
+  if (recentPR()) return 'pr';
+  if ([7,14,21,30,50,60,75,100,150,200,365].includes(st) && dayScore(T)>0.08) return 'milestone';
+  if (st>0 && nowH>=18 && dayScore(T)<=0.08) return 'streakRisk';
+  if (daysSinceStart()>=2 && dayScore(dkey(-1))<=0.08 && dayScore(dkey(-2))<=0.08 && daysLogged()>0) return 'comeback';
+  if (deloadActive()) return 'deload';
+  if (daysLogged()<7 && daysSinceStart()<10) return 'firstWeek';
+  if (typeof chDay==='function'){ const c=chDay(); if (c!=null && c>=1 && c<=90 && strHash(T)%3===0) return 'challenge'; }
+  if ((S.fights[T]||[]).length || type==='strike' || type==='ground' || type==='engine') return 'fight';
+  if (type==='strength' || (S.cust[T]&&S.cust[T].items.length)) return 'lift';
+  if (type==='craft' || type==='recover') return 'craft';
+  return 'general';
+}
+function briefLine(tag){
+  const mine=(S.motiv.quotes||[]).filter(q=>q&&q.trim());
+  const pool=(BRIEF_LINES[tag]||BRIEF_LINES.general).map(t=>({t,mine:false}))
+    .concat(mine.map(t=>({t,mine:true})));
+  const shift=(S.days[T]&&S.days[T].bShift)||0;
+  /* general days lean on your own quotes more: they're the ones that hit hardest */
+  if (mine.length && tag==='general' && (strHash(T+'m')+shift)%3===0) return {t:mine[(strHash(T)+shift)%mine.length],mine:true};
+  return pool[(strHash(T+tag)+shift)%pool.length];
+}
+function Briefing(){
+  const d=day(T), tag=briefTag(), line=briefLine(tag), st=streak();
+  const nowH=new Date().getHours();
+  const head=nowH<12?'MORNING BRIEF':nowH<18?'AFTERNOON CHECK':'EVENING CHECK';
+  const dl=daysLogged(), next=MILESTONES.find(m=>dl<m.d);
+  const why=(S.motiv.why||'').trim();
+  const links=(S.motiv.links||[]).filter(l=>l&&l.url);
+  const extra=[];
+  if (typeof campBriefStat==='function'){ const c=campBriefStat(); if (c) extra.push(c); }
+  if (typeof chBriefStat==='function'){ const c=chBriefStat(); if (c) extra.push(c); }
+  if (d.bCol){
+    return `<button class="brief col" data-act="b-col" aria-expanded="false">
+      <span class="brtag">${esc(BRIEF_TAG_LABEL[tag])}</span><span class="brmini">${esc(line.t)}</span>${svg('chevD',13,'var(--faint)')}</button>`;
+  }
+  if (briefEdit) return BriefEditor();
+  return `<div class="brief">
+    <div class="brhead"><span class="brtag">${head} · ${esc(BRIEF_TAG_LABEL[tag])}</span>
+      <button class="brx" data-act="b-col" aria-label="Collapse the briefing for today">${svg('chevD',14,'var(--faint)').replace('<svg','<svg style="transform:rotate(180deg)"')}</button></div>
+    <div class="brline">${esc(line.t)}</div>
+    ${line.mine?'<div class="brsrc">— from your list</div>':''}
+    ${why?`<button class="brwhy" data-act="b-edit"><i>YOUR WHY</i>${esc(why)}</button>`
+         :`<button class="brwhy empty" data-act="b-edit"><i>YOUR WHY</i>Write the one sentence you'd want to read on your worst morning. ${svg('edit',11,'var(--amber)')}</button>`}
+    <div class="brstats">
+      <span>${svg('flame',11,st>0?'var(--amber)':'var(--faint)')} ${st} day streak</span>
+      ${next?`<span>${next.d-dl} to ${esc(next.l)}</span>`:''}
+      ${extra.map(x=>`<span>${x}</span>`).join('')}
+    </div>
+    <div class="brlinks">
+      ${links.map((l,i)=>`<button class="brlink" data-act="b-open" data-v="${i}">${svg('play',10,'var(--amber)')} ${esc(l.label||'Play')}</button>`).join('')}
+      <button class="brlink ghost" data-act="b-next">ANOTHER LINE</button>
+      <button class="brlink ghost" data-act="b-edit">${svg('edit',10)} EDIT</button>
+    </div></div>`;
+}
+function BriefEditor(){
+  const m=S.motiv;
+  return `<div class="brief"><div class="brhead"><span class="brtag">YOUR BRIEFING</span>
+      <button class="chip on" data-act="b-done">DONE</button></div>
+    <label class="f" style="margin-top:8px"><span>Your why — shown every day</span>
+      <textarea data-bm="why" maxlength="280" placeholder="e.g. So nobody I love ever has to wonder if I can protect them.">${esc(m.why||'')}</textarea></label>
+    <div class="eyebrow" style="margin:14px 0 6px">YOUR OWN LINES (${(m.quotes||[]).length})</div>
+    ${(m.quotes||[]).map((q,i)=>`<div class="bredrow"><span>${esc(q)}</span><button class="x" data-act="b-rmq" data-v="${i}" aria-label="Remove line">${svg('x',12)}</button></div>`).join('')}
+    <div class="bredadd"><input type="text" id="b_q" maxlength="240" placeholder="A quote or reminder that works on you"><button class="chip on" data-act="b-addq">ADD</button></div>
+    <div class="eyebrow" style="margin:14px 0 6px">PLAY BUTTONS — YOUR SPEECHES, PLAYLISTS, VIDEOS</div>
+    ${(m.links||[]).map((l,i)=>`<div class="bredrow"><span><b>${esc(l.label)}</b> <small>${esc(l.url)}</small></span><button class="x" data-act="b-rml" data-v="${i}" aria-label="Remove link">${svg('x',12)}</button></div>`).join('')}
+    <div class="bredadd"><input type="text" id="b_ll" maxlength="30" placeholder="Label" style="flex:1"><input type="url" id="b_lu" placeholder="https://..." style="flex:2"><button class="chip on" data-act="b-addl">ADD</button></div>
+    <div class="note" style="padding:10px 0 0;border:none">Links open in their own app (YouTube, Spotify...). Your lines mix into the daily rotation.</div></div>`;
+}
+function bAct(a,v){
+  const d=day(T);
+  switch(a){
+    case 'b-col': d.bCol=!d.bCol; commit(); return;
+    case 'b-next': d.bShift=(d.bShift||0)+1; commit(); return;
+    case 'b-edit': briefEdit=true; d.bCol=false; return;
+    case 'b-done': briefEdit=false; commit(); return;
+    case 'b-addq': { const el=document.getElementById('b_q'), q=(el&&el.value||'').trim();
+      if (!q){ toast('Type a line first'); return 'norender'; }
+      S.motiv.quotes.push(q); commit(); toast('Added to your rotation'); return; }
+    case 'b-rmq': S.motiv.quotes.splice(+v,1); commit(); return;
+    case 'b-addl': {
+      const l=(document.getElementById('b_ll')||{}).value||'', u=((document.getElementById('b_lu')||{}).value||'').trim();
+      if (!/^https?:\/\/\S+\.\S+/i.test(u)){ toast('Paste a full link starting with https://'); return 'norender'; }
+      S.motiv.links.push({label:l.trim()||'Play',url:u}); commit(); toast('Play button added'); return; }
+    case 'b-rml': S.motiv.links.splice(+v,1); commit(); return;
+    case 'b-open': { const l=S.motiv.links[+v]; if (l&&/^https?:\/\//i.test(l.url)) window.open(l.url,'_blank','noopener'); return 'norender'; }
+  }
+}
+
 /* ================================================================ header == */
 function Header(){
   const P=pillars(),st=streak(),ph=PHASES[phaseIdx()];
@@ -3151,6 +3458,7 @@ function ViewToday(){
       </div>
       <button class="badge" data-act="swapopen">${DTYPE[plan.def.type].label} ⇄</button>
     </div>
+    ${vd===T?Briefing():''}
     ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
       ${svg('rot',13,'var(--steel)')}<div>Viewing another day — everything you tick here saves to <b>${longDate(vd)}</b>. Tap to return to today.</div></button>`:''}
 
@@ -4023,6 +4331,7 @@ document.addEventListener('click', e => {
     if (wAct(a,v,v2,el)!=='norender') render();
     return;
   }
+  if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
 
   switch(a){
     case 'addoneoff': {
@@ -4318,6 +4627,7 @@ document.addEventListener('input', e => {
     if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value)); }
     return;
   }
+  if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commit(); } return; }
   if (t.id==='foodq'){ foodQ=t.value; foodFocus=true; render(); return; }   // search must filter live
