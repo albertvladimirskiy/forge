@@ -255,6 +255,7 @@ input[type=date],input[type=time]{min-height:40px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom));
   background:var(--panel2);border:1px solid var(--rule2);padding:10px 16px;font-size:var(--fs-body);z-index:50;
   animation:fade .2s ease both;pointer-events:none}
+.toastundo{pointer-events:auto;margin-left:14px;padding:4px 2px;color:var(--amber);font-weight:700;letter-spacing:.1em;font-size:var(--fs-caption)}
 
 /* ---------- drill-through steps ---------- */
 .brow{display:flex;align-items:stretch;border-bottom:1px solid #191D22}
@@ -1784,7 +1785,7 @@ const DEFAULTS = {
   ui:{ fold:{} },                          // which Today sections you've folded/unfolded
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
-let toastMsg = null, toastTimer = null;
+let toastMsg = null, toastTimer = null, toastUndo = false, undoSnap = null;
 
 let saveWarnAt=0;
 function commit(){
@@ -1794,13 +1795,14 @@ function commit(){
     toast("Couldn't save to this phone (storage full or blocked). Back up now.");
   });
 }
-function toast(m){
-  toastMsg = m;
+const toastInner = () => esc(toastMsg||'') + (toastUndo&&undoSnap ? '<button class="toastundo" data-act="undo">UNDO</button>' : '');
+function toast(m,undo){
+  toastMsg = m; toastUndo = !!undo;
   const t = document.querySelector('.toast');
-  if (t){ t.textContent = m; t.classList.add('show'); }
+  if (t){ t.innerHTML = toastInner(); t.classList.add('show'); }
   else render();
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>{ toastMsg=null; const t2=document.querySelector('.toast'); if(t2) t2.classList.remove('show'); }, 1800);
+  toastTimer = setTimeout(()=>{ toastMsg=null; toastUndo=false; undoSnap=null; const t2=document.querySelector('.toast'); if(t2) t2.classList.remove('show'); }, undo?7000:1800);
 }
 
 /* =============================================================== utils == */
@@ -4425,11 +4427,11 @@ document.addEventListener('change', async e=>{
 
 /* ======================================================= data safety == */
 /* Three layers, cheapest first:
-   1. daily snapshots in IndexedDB (last 7 days) - undo for a bad import or a fat-fingered delete
+   1. daily snapshots in IndexedDB (last 14 days) - undo for a bad import or a fat-fingered delete
    2. a weekly nudge to save a real backup file (share sheet -> Files / iCloud on iPhone)
    3. import straight from that file, no copy-paste
    None of it can save you from losing the phone except #2, which is why it nags. */
-const SNAP_KEEP = 7;
+const SNAP_KEEP = 14;
 let snapList=null, snapArm=null;
 function snapPut(key,json){ return idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('s','readwrite'); tx.objectStore('s').put(json,key); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); })); }
 function snapKeys(){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.transaction('s').objectStore('s').getAllKeys(); r.onsuccess=()=>res(r.result.sort().reverse()); r.onerror=()=>rej(r.error); })); }
@@ -4556,8 +4558,57 @@ function CalendarPanel(){
       <button class="btn ghost" data-act="s-ics" data-v="full" style="flex:1">FULL DAY PLAN</button></div></div>
     <div class="note">Covers the next 7 days as scheduled right now${last?` · last exported ${esc(shortDate(last))}`:''}. Do it once a week (Sunday review is a good time); importing again adds a second copy.</div></div>`;
 }
+/* ---------- CSV export: for spreadsheets, coaches, or leaving the app. Weights/distances are in your units. ---------- */
+function csvCell(x){
+  if (x==null) return '';
+  let t=String(x);
+  if (typeof x==='string' && /^[=+\-@\t\r]/.test(t)) t="'"+t;           // a name starting with = + - @ must not run as a spreadsheet formula
+  return /[",\n\r]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t;
+}
+const csvRows = rows => '\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n')+'\r\n';
+function buildCSV(kind){
+  const wu=wUnit(), du=isImp()?'mi':'km', conv=x=>x==null?'':wIn(x), lconv=x=>x==null?'':Math.round((isImp()?x/2.54:x)*10)/10;
+  if (kind==='workouts'){
+    const rows=[['date','source','workout','exercise','set','warmup',`weight_${wu}`,'reps','rpe','seconds',`distance_${du}`]];
+    const addSets=(date,source,workout,name,k,sets)=>sets.forEach((st,i)=>rows.push([date,source,workout,name,i+1,st.wu?'yes':'',
+      st.w!=null?wIn(st.w):'',st.r??'',st.rpe??'',st.t??'',st.d!=null?(k==='carry'?st.d:Math.round(st.d/(isImp()?1609.344:1000)*100)/100):'']));
+    for (const k of Object.keys(S.cust).sort()){ const cw=S.cust[k];
+      for (const id of cw.items){ const E=exInfo(id); addSets(k,'custom',cw.name||'',E.n,E.k,cw.sets[id]||[]); } }
+    for (const k of Object.keys(S.gym||{}).sort())
+      for (const ex of Object.keys(S.gym[k])) addSets(k,'program','',(EXS[ex]&&EXS[ex].n)||ex,'wr',S.gym[k][ex]||[]);
+    return rows;
+  }
+  if (kind==='fights'){
+    const rows=[['date','discipline','minutes','rounds','effort_rpe','partner','worked','got_caught']];
+    for (const k of Object.keys(S.fights).sort()) for (const f of S.fights[k]) rows.push([k,FIGHT_L[f.disc]||f.disc,f.min,f.rounds||'',f.rpe||'',f.partner||'',f.worked||'',f.caught||'']);
+    return rows;
+  }
+  if (kind==='body'){
+    const rows=[['date',`weight_${wu}`,'body_fat_pct',`waist_${isImp()?'in':'cm'}`,`shoulders_${isImp()?'in':'cm'}`,'resting_hr','sleep_h',`squat_${wu}`,`bench_${wu}`,`deadlift_${wu}`,`press_${wu}`,`row_${wu}`,`pullup_added_${wu}`]];
+    for (const e of S.log) rows.push([e.date,conv(e.weight),e.bf??'',lconv(e.waist),lconv(e.shoulder),e.rhr??'',e.sleep??'',conv(e.squat),conv(e.bench),conv(e.dead),conv(e.ohp),conv(e.row),conv(e.pullup)]);
+    return rows;
+  }
+  const rows=[['date','food','quantity','kcal','protein_g','carbs_g','fat_g']];
+  for (const k of Object.keys(S.days).sort()) for (const f of foodOf(k)){
+    const q=f.q??1, r1=x=>Math.round((x||0)*q*10)/10;
+    rows.push([k,f.n,q,Math.round((f.kcal||0)*q),r1(f.p),r1(f.c),r1(f.f)]);
+  }
+  return rows;
+}
+async function exportCSV(kind){
+  const rows=buildCSV(kind);
+  if (rows.length<2){ toast('Nothing to export yet'); return; }
+  const name=`forge-${kind}-${T}.csv`, txt=csvRows(rows);
+  try{
+    const file=new File([txt],name,{type:'text/csv'});
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:`FORGE ${kind}`}); toast(`${rows.length-1} rows shared`); return; }
+  }catch(e){ if (e && e.name==='AbortError') return; }
+  const url=URL.createObjectURL(new Blob([txt],{type:'text/csv'})); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast(`${rows.length-1} rows downloaded`);
+}
 function sAct(a,v){
   switch(a){
+    case 's-csv': exportCSV(v); return 'norender';
     case 's-backup': doBackup(); return 'norender';
     case 's-snooze': S.meta.backupSnooze=addDays(T,3); commit(); toast('Reminding you in 3 days'); return;
     case 's-restore':
@@ -5738,6 +5789,10 @@ function ViewCodex(){
       <button class="btn ghost" data-act="s-backup">BACK UP NOW</button>
       <button class="btn ghost" data-act="s-importfile">RESTORE FILE</button>
       <button class="btn ghost" data-act="import">PASTE</button></div>`}
+    <div style="padding:0 13px 13px"><div class="eyebrow" style="margin-bottom:8px">EXPORT TO A SPREADSHEET (CSV)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn ghost" data-act="s-csv" data-v="workouts">WORKOUTS</button><button class="btn ghost" data-act="s-csv" data-v="body">BODY LOG</button>
+        <button class="btn ghost" data-act="s-csv" data-v="food">FOOD LOG</button><button class="btn ghost" data-act="s-csv" data-v="fights">FIGHT SESSIONS</button></div></div>
     <input type="file" id="importfile" accept="application/json,.json,text/plain" hidden>
     ${SnapshotPanel()}</div>
 
@@ -5790,7 +5845,7 @@ function render(){
      itself just changed; every other re-render of the same tab skips it. */
   if (view!==lastRenderedView) body=body.replace('class="view wrap"','class="view wrap enter"');
   lastRenderedView=view;
-  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+TimerOverlay()+Onboarding()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
+  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+TimerOverlay()+Onboarding()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${toastInner()}</div>`;
   window.scrollTo(0,y);
   const fresh=[...document.querySelectorAll('.sheetbody,.exchips')];
   if (fresh.length===scrollers.length) fresh.forEach((el,i)=>{
@@ -5872,7 +5927,31 @@ document.addEventListener('pointerup', endDrag);
 document.addEventListener('pointercancel', endDrag);
 
 /* ================================================================ events == */
+/* Destructive taps that can be taken back for a few seconds. The whole state is snapshotted just before; the toast
+   offers UNDO only if the tap really changed something (the first tap of a tap-twice-to-confirm does not).
+   Not included: deleting 90-day check-ins or past blocks, because their photos are erased from the phone for good. */
+const UNDOABLE = {'w-del':'Set deleted','delset':'Set deleted','delfood':'Food removed','dellog':'Entry removed','w-discard':'Workout dropped',
+  'w-rmex':'Exercise removed','f-del':'Session deleted','wl-delday':'Workout deleted','wl-rtdel':'Routine deleted','deloneoff':'Event removed',
+  'deledit':'Commitment removed','delmyfood':'Removed from My foods'};
+function doUndo(){
+  if (!undoSnap) return;
+  try{
+    S=JSON.parse(undoSnap); undoSnap=null; toastUndo=false;
+    normalizeCustom(); WEEK=WEEKS[S.profile.program]||WEEK_STD;
+    editSet=null; gymEdit=null; armDiscard=false; armRm=null; armFight=null;
+    commit(); render(); toast('Restored');
+  }catch(e){ toast('Could not undo that'); }
+}
 document.addEventListener('click', e => {
+  const el=e.target.closest('[data-act]'); if (!el) return;
+  const a=el.dataset.act;
+  if (a==='undo'){ doUndo(); return; }
+  if (undoSnap){ undoSnap=null; toastUndo=false; }     // any other tap makes the old snapshot stale: undoing it would also revert what came after
+  const before = UNDOABLE[a] ? JSON.stringify(S) : null;
+  handleClick(e);
+  if (before!=null && JSON.stringify(S)!==before){ undoSnap=before; toast(UNDOABLE[a],true); }
+});
+function handleClick(e){
   const el = e.target.closest('[data-act]'); if (!el) return;
   const a = el.dataset.act, v = el.dataset.v, v2 = el.dataset.v2;
   const d = day(VD());
@@ -6209,11 +6288,12 @@ document.addEventListener('click', e => {
     }
   }
   render();
-});
+}
 
 /* live inputs - commit WITHOUT re-render so typing never loses focus */
 document.addEventListener('input', e => {
   const t=e.target;
+  if (undoSnap){ undoSnap=null; toastUndo=false; }       // typing after a delete also makes its undo stale
   if (t.id==='exq'){                                  // exercise search: swap only the result list so the keyboard stays up
     exQ=t.value; const r=document.getElementById('exres'); if (r){ r.innerHTML=exResultsHTML(); r.scrollTop=0; } return;
   }

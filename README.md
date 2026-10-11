@@ -26,7 +26,7 @@ separate from the code files. So:
 | Clear Safari/Chrome site data | ❌ gone |
 | Different device | separate file per device |
 
-Insurance: **Codex → Export backup** (copies JSON to clipboard + downloads a file),
+Insurance: **Codex → Export backup** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
 **Import** to restore. Do it monthly.
 
 One wrinkle after updates: the service worker caches hard. If new code doesn't appear,
@@ -72,6 +72,14 @@ as history for the matching library exercise (`EXLINK`). Rest timer, plate math 
 history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) are included. Custom data lives in `S.cust`,
 `S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
 
+Set logging details: tap a set to **edit** it in place (custom workouts and the program's own lifts). **WARM-UP SET** tags a set
+so it never counts toward PRs, benchmarks, volume or the rest timer, and **WARM-UP RAMP** fills in the bar and ~50/70/85% steps up
+to the weight in the box. Optional **RPE** (6-10) goes on any lifting set; a program lift whose last session hit RPE 9.5+ gets a
+plain-text "repeat it if that was a grind" nudge (the prescription itself is unchanged). The rest timer rings a bell when it ends
+(iOS can't vibrate; BELL / SILENT is in the workout panel, and each exercise can override the default rest length). Bar weight and
+the plates your gym has live under **Plan → Barbell + plates**, with a per-lift BAR button for EZ or trap bars; the plate line
+picks the fewest plates that make the weight.
+
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 
 - **Daily briefing** (top of Today): one line picked by what's happening (first week, PR, comeback after missed days,
@@ -85,8 +93,11 @@ history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) ar
   measurements, side-by-side compare. Photos stay in IndexedDB on the device (not in the JSON backup): use SAVE PHOTOS.
 - **Fight camp** (Workouts → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
   weight-cut tracker that flags unsafe paces. Sessions can record sparring partners.
-- **Safety**: daily automatic snapshots (last 7, with undo) in IndexedDB, a weekly backup nudge that saves through the share
-  sheet, restore from a backup file, and a calendar (.ics) export of the week so your phone's calendar does the reminding.
+- **Safety**: daily automatic snapshots (last 14, with undo) in IndexedDB, a weekly backup nudge that saves through the share
+  sheet, restore from a backup file (an import takes an undo snapshot first), and a calendar (.ics) export of the week so your
+  phone's calendar does the reminding. Deleting a set, food, exercise, workout, routine or entry offers **UNDO** for a few seconds
+  (not 90-day photos, which are erased for good). A web app can't write to iCloud on its own, so backups stay manual; **Codex →
+  This file** also exports workouts, body log, food log and fight sessions as CSV for a spreadsheet.
 - **First run**: a five-step setup on a fresh install; existing data skips it. Lower Today sections fold and remember it.
 
 ### Quotes from real athletes (`quotes-db.js`)
