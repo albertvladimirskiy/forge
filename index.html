@@ -524,6 +524,18 @@ input[type=date],input[type=time]{min-height:40px}
 .cutsvg{display:block;width:100%;height:110px;background:#0C0F13;border:1px solid var(--rule)}
 .cutleg{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:var(--fs-caption);color:var(--faint)}
 .cutleg i{display:inline-block;width:9px;height:3px;margin-right:5px;vertical-align:2px}
+
+/* ---------- first run + folding ---------- */
+.ob{position:fixed;inset:0;z-index:49;display:flex;flex-direction:column;background:var(--ink);padding-top:env(safe-area-inset-top)}
+.obdots{display:flex;gap:6px}
+.obdots span{width:22px;height:3px;background:var(--rule2)}
+.obdots span.on{background:var(--amber)}
+.obh{font-family:var(--sans);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.04em;margin:4px 0 14px}
+.obl{font-size:var(--fs-label);letter-spacing:.14em;color:var(--faint);margin:16px 0 8px;text-transform:uppercase}
+.startopt.sel{border-color:var(--amber);background:var(--banner-amber-bg)}
+.sect.fold{width:100%;text-align:left;cursor:pointer}
+.sect.fold .chev{color:var(--faint)}
+.foldsum{font-weight:500;letter-spacing:.06em;color:var(--faint);font-size:var(--fs-caption);white-space:nowrap}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -1638,6 +1650,7 @@ const DEFAULTS = {
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
   camp:{}, campHist:[],                    // fight camp: { name, date, weighIn, target(kg), disc, start, startW }
+  ui:{ fold:{} },                          // which Today sections you've folded/unfolded
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
@@ -2503,6 +2516,8 @@ function normalizeCustom(){
   if (!Array.isArray(S.ch90.checkins)) S.ch90.checkins=[];
   if (!S.camp||typeof S.camp!=='object'||Array.isArray(S.camp)) S.camp={};
   if (!Array.isArray(S.campHist)) S.campHist=[];
+  S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
+  if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
@@ -4259,6 +4274,113 @@ function PartnersPanel(){
       ${p.caught?`<div class="fsl"><i>LAST TIME GOT CAUGHT</i>${esc(p.caught)}</div>`:''}</div>`).join('')}</div>`;
 }
 
+/* ===================================================== first run + folds == */
+/* Five short steps on a fresh install so nothing runs on silent defaults (age 22, 178 cm...). Existing users
+   with any history are marked onboarded at boot and never see it. SKIP is always one tap away. */
+let obStep=0, obD=null;
+function obInit(){
+  const p=S.profile;
+  obD={unit:p.unit,sex:p.sex,age:String(p.age||''),height:'',weight:'',wake:p.wake,sleep:p.sleep,trainPref:p.trainPref,program:p.program,why:S.motiv.why||''};
+}
+function Onboarding(){
+  if (S.meta.onboarded) return '';
+  if (!obD) obInit();
+  const d=obD, imp=d.unit==='imperial', steps=5;
+  const dots=`<div class="obdots">${Array.from({length:steps},(_,i)=>`<span class="${i<=obStep?'on':''}"></span>`).join('')}</div>`;
+  const chipRow=(field,opts)=>`<div class="chips" style="padding:0">${opts.map(([v,l])=>`<button class="chip ${d[field]===v?'on':''}" data-act="ob-set" data-v="${field}" data-v2="${v}">${l}</button>`).join('')}</div>`;
+  let body='', next='NEXT';
+  if (obStep===0){
+    body=`<div class="brand" style="font-size:34px;margin-top:8px">FORGE</div>
+      <div class="brline" style="font-size:22px;margin-top:22px">Strength, combat, a sharp mind and money that compounds. One app, one honest log.</div>
+      <p class="t" style="margin-top:16px">Two minutes of setup so every number it gives you (calories, loads, schedule) is about you, not a default.</p>`;
+    next='SET IT UP';
+  } else if (obStep===1){
+    body=`<div class="obh">Your body</div>
+      <div class="obl">Units</div>${chipRow('unit',[['imperial','lb / in'],['metric','kg / cm']])}
+      <div class="obl">Sex (for the calorie math)</div>${chipRow('sex',[['m','Male'],['f','Female']])}
+      <div class="grid3" style="padding:16px 0 0">
+        <label class="f"><span>Age</span><input type="text" inputmode="numeric" data-ob="age" value="${esc(d.age)}" placeholder="22"></label>
+        <label class="f"><span>Height (${imp?'in':'cm'})</span><input type="text" inputmode="decimal" data-ob="height" value="${esc(d.height)}" placeholder="${imp?'70':'178'}"></label>
+        <label class="f"><span>Weight (${imp?'lb':'kg'})</span><input type="text" inputmode="decimal" data-ob="weight" value="${esc(d.weight)}" placeholder="${imp?'175':'80'}"></label></div>
+      <div class="note" style="padding:10px 0 0;border:none">Weight unlocks Fuel (calories, macros) and Target (your physique numbers). You can change all of this later under the gear icon.</div>`;
+  } else if (obStep===2){
+    body=`<div class="obh">Your day</div>
+      <div class="grid2" style="padding:6px 0 0">
+        <label class="f"><span>Wake</span><input type="time" data-ob="wake" value="${esc(d.wake)}"></label>
+        <label class="f"><span>Sleep</span><input type="time" data-ob="sleep" value="${esc(d.sleep)}"></label></div>
+      <div class="obl">Train when possible</div>${chipRow('trainPref',[['morning','Morning'],['midday','Midday'],['evening','Evening']])}
+      <div class="note" style="padding:12px 0 0;border:none">FORGE schedules training, meals and reading into the gaps around your fixed commitments. Add classes, work and team practice later in My Week.</div>`;
+  } else if (obStep===3){
+    body=`<div class="obh">Your program</div>
+      ${Object.entries(PROGRAMS).map(([k,pr])=>`<button class="startopt ${d.program===k?'sel':''}" data-act="ob-set" data-v="program" data-v2="${k}"><b>${pr.n}</b><span>${esc(pr.d)}</span></button>`).join('')}
+      <div class="note" style="padding:4px 0 0;border:none">Any day can still be swapped, edited into your own workout, or have fighting added on top.</div>`;
+  } else {
+    body=`<div class="obh">Your why</div>
+      <p class="t">One sentence you'd want to read on your worst morning. It sits at the top of Today, every day.</p>
+      <textarea data-ob="why" maxlength="280" style="min-height:96px" placeholder="e.g. So nobody I love ever has to wonder if I can protect them.">${esc(d.why)}</textarea>
+      <div class="note" style="padding:10px 0 0;border:none">Optional. You can write it later by tapping YOUR WHY on Today.</div>`;
+    next='START DAY 1';
+  }
+  return `<div class="ob" role="dialog" aria-label="Set up FORGE">
+    <div class="sheethead">${dots}<button class="chip" data-act="ob-skip">SKIP</button></div>
+    <div class="sheetbody" style="padding:18px var(--pad)">${body}</div>
+    <div class="sheetfoot" style="display:flex;gap:8px">${obStep>0?`<button class="btn ghost" data-act="ob-back" style="flex:1">BACK</button>`:''}
+      <button class="btn" data-act="ob-next" style="flex:2">${next}</button></div></div>`;
+}
+function obAct(a,v,v2){
+  const d=obD||(obInit(),obD);
+  switch(a){
+    case 'ob-set': {
+      if (v==='unit' && d.unit!==v2){   // convert anything typed so far
+        const h=num(d.height), w=num(d.weight);
+        if (h!=null) d.height=String(Math.round((v2==='metric'?h*2.54:h/2.54)*10)/10);
+        if (w!=null) d.weight=String(Math.round((v2==='metric'?w/2.20462:w*2.20462)*10)/10);
+      }
+      d[v]=v2; return;
+    }
+    case 'ob-back': obStep=Math.max(0,obStep-1); return;
+    case 'ob-skip': S.meta.onboarded=true; commit(); toast('Skipped. Everything is under the gear icon.'); return;
+    case 'ob-next': {
+      if (obStep===1){
+        const imp=d.unit==='imperial', age=num(d.age), h=num(d.height), w=num(d.weight);
+        if (age!=null && !(age>=12&&age<=90)){ toast('Age looks off'); return 'norender'; }
+        const cm=h==null?null:(imp?h*2.54:h), kg=w==null?null:(imp?w/2.20462:w);
+        if (cm!=null && !(cm>120&&cm<230)){ toast(`Height looks off — ${imp?'inches':'cm'}?`); return 'norender'; }
+        if (kg!=null && !(kg>30&&kg<300)){ toast('Weight looks off'); return 'norender'; }
+      }
+      if (obStep<4){ obStep++; return; }
+      obFinish(); return;
+    }
+  }
+}
+function obFinish(){
+  const d=obD, p=S.profile, imp=d.unit==='imperial';
+  p.unit=d.unit; p.sex=d.sex; p.wake=d.wake||p.wake; p.sleep=d.sleep||p.sleep; p.trainPref=d.trainPref; p.program=d.program;
+  const age=num(d.age), h=num(d.height), w=num(d.weight);
+  if (age!=null) p.age=Math.round(age);
+  if (h!=null) p.height=Math.round((imp?h*2.54:h)*10)/10;
+  if (w!=null){ const kg=Math.round((imp?w/2.20462:w)*100)/100;
+    S.log=[...S.log.filter(x=>x.date!==T),{...(S.log.find(x=>x.date===T)||{}),date:T,weight:kg}].sort((a,b)=>a.date>b.date?1:-1); }
+  if ((d.why||'').trim()) S.motiv.why=d.why.trim();
+  WEEK=WEEKS[p.program]||WEEK_STD;
+  S.meta.onboarded=true; view='today'; viewOff=0; commit();
+  toast('Day 1. Go.');
+}
+
+/* ---------- collapsible Today sections ---------- */
+/* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
+   is remembered. After-action opens by itself in the evening (or once you've written in it). */
+const FOLD_DEF = {
+  rail:()=>false, food:()=>true, habits:()=>true, last14:()=>false,
+  review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
+};
+function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
+function foldHead(k,ico,title,summary){
+  const open=foldOpen(k);
+  return `<button class="sect fold" data-act="fold" data-v="${k}" aria-expanded="${open}">${svg(ico,13,'var(--amber)')}<h2>${title}</h2>
+    ${summary?`<span class="foldsum">${summary}</span>`:''}<div class="line"></div><span class="chev ${open?'open':''}" style="padding:0">${svg('chev',12)}</span></button>`;
+}
+
 /* ================================================================ header == */
 function Header(){
   const P=pillars(),st=streak(),ph=PHASES[phaseIdx()];
@@ -4423,7 +4545,7 @@ function ViewToday(){
       ${WEEK.map((w,i)=>`<button class="chip ${w.id===plan.def.id?'on':''}" data-act="swap" data-v="${w.id}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
     </div><div class="note">Swaps only affect ${vd===T?'today':'this date'}. The weekly rotation stays put.</div></div>`:''}
 
-    ${vd===T?DayRail(plan):''}
+    ${vd===T?foldHead('rail','clock','SCHEDULE VIEW','drag to retime')+(foldOpen('rail')?DayRail(plan):''):''}
 
     ${vd===T?(()=>{ const dsw=daysSinceWeight(), neverLogged=dsw==null, stale=dsw!=null&&dsw>=7;
       if (!neverLogged&&!stale) return '';
@@ -4457,8 +4579,8 @@ function ViewToday(){
     ${dowIdx(T)===6?`<button class="panel banner steel" data-act="view" data-v="codex" style="width:100%;text-align:left">
       ${svg('trend',14,'var(--steel)')}<div><b>Sunday.</b> Your weekly review is ready on Codex - two minutes, then plan the week.</div></button>`:''}
 
-    ${sect('food','FOOD — '+Math.round(ft.kcal)+' KCAL '+(vd===T?'TODAY':'THIS DAY'))}
-    <div class="panel">
+    ${foldHead('food','food','FOOD',`${Math.round(ft.kcal).toLocaleString()}${N?` / ${N.kcal.toLocaleString()}`:''} kcal · ${Math.round(ft.p)}g P`)}
+    ${foldOpen('food')?`<div class="panel">
       ${N?`<div class="fuelbar">
         ${[['kcal',ft.kcal,N.kcal,'var(--amber)'],['P',ft.p,N.protein,'var(--rust)'],['C',ft.c,N.carbs,'var(--steel)'],['F',ft.f,N.fat,'var(--moss)']].map(([l,v,t2,c])=>`
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
@@ -4501,25 +4623,25 @@ function ViewToday(){
         <div class="note" style="padding-top:0">Check the label for carbs and fat if you have it — kcal and protein alone can't determine the split (two unknowns, one equation). Leave blank only if you don't have the numbers; totals below will undercount by that amount.</div>
         <div style="padding:0 13px 13px"><button class="btn ghost" data-act="addcustomfood">ADD CUSTOM</button></div>
       </div>`:''}
-    </div>
+    </div>`:''}
 
-    ${sect('act','DAILY HABITS')}
-    <div class="panel"><div class="habits">${HABITS.map(h=>`
+    ${foldHead('habits','act','DAILY HABITS',`${HABITS.filter(h=>d.habits[h.id]).length}/${HABITS.length}`)}
+    ${foldOpen('habits')?`<div class="panel"><div class="habits">${HABITS.map(h=>`
       <button class="hab ${d.habits[h.id]?'on':''}" data-act="habit" data-v="${h.id}">
         <div class="habdot" style="${d.habits[h.id]?'background:var(--moss);border-color:var(--moss)':''}">${d.habits[h.id]?svg('check',12,'var(--ink)',3):''}</div>
-        <div class="hl">${h.l}</div></button>`).join('')}</div></div>
+        <div class="hl">${h.l}</div></button>`).join('')}</div></div>`:''}
 
-    ${sect('book','AFTER-ACTION')}
-    <div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
+    ${foldHead('review','book','AFTER-ACTION',`${['win','miss','next'].filter(k=>d.rv[k]).length}/3 written`)}
+    ${foldOpen('review')?`<div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
       <label class="f"><span>One thing that worked</span><textarea data-in="rv.win" placeholder="Be specific.">${esc(d.rv.win||'')}</textarea></label>
       <label class="f"><span>One thing that didn't</span><textarea data-in="rv.miss" placeholder="The fact and the cause. No self-flagellation.">${esc(d.rv.miss||'')}</textarea></label>
       <label class="f"><span>Tomorrow's one thing</span><textarea data-in="rv.next" placeholder="If only one thing gets done tomorrow, this is it.">${esc(d.rv.next||'')}</textarea></label>
-    </div><div class="note">Five minutes here compounds harder than an extra thirty in the gym.</div></div>
+    </div><div class="note">Five minutes here compounds harder than an extra thirty in the gym.</div></div>`:''}
 
-    ${sect('trend','LAST 14 DAYS')}
-    <div class="panel"><div class="heat">${Array.from({length:14},(_,i)=>{
+    ${foldHead('last14','trend','LAST 14 DAYS',`${dl} days logged`)}
+    ${foldOpen('last14')?`<div class="panel"><div class="heat">${Array.from({length:14},(_,i)=>{
       const k=dkey(-(13-i)); return `<div class="cell" style="background:${heatColor(dayScore(k))}"></div>`;}).join('')}</div>
-      <div class="note">${dl} days logged${next?` · ${next.d-dl} to ${next.l}`:''}</div></div>
+      <div class="note">${dl} days logged${next?` · ${next.d-dl} to ${next.l}`:''}</div></div>`:''}
   </div>`;
 }
 let openBlock2=null;
@@ -5209,7 +5331,7 @@ function render(){
      itself just changed; every other re-render of the same tab skips it. */
   if (view!==lastRenderedView) body=body.replace('class="view wrap"','class="view wrap enter"');
   lastRenderedView=view;
-  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+TimerOverlay()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
+  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+TimerOverlay()+Onboarding()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
   const strip=document.getElementById('strip');
   if (strip){
@@ -5222,7 +5344,7 @@ function render(){
     const now=new Date(); const mins=now.getHours()*60+now.getMinutes();
     rnow.style.top=clamp((mins-wake)*px,0,rail.offsetHeight)+'px';
   }
-  document.body.classList.toggle('lock', !!document.querySelector('.sheet,.tmr'));
+  document.body.classList.toggle('lock', !!document.querySelector('.sheet,.tmr,.ob'));
   hydratePhotos();
   const xq=document.getElementById('exq');
   if (xq && exFocus && view==='today'){
@@ -5290,6 +5412,8 @@ document.addEventListener('click', e => {
   }
   if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^ob-/.test(a)){ if (obAct(a,v,v2,el)!=='norender') render(); return; }
+  if (a==='fold'){ S.ui.fold[v]=!foldOpen(v); commit(); render(); return; }
   if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
@@ -5582,6 +5706,7 @@ document.addEventListener('input', e => {
     if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value)); }
     return;
   }
+  if (t.dataset && t.dataset.ob){ if (obD) obD[t.dataset.ob]=t.value; return; }
   if (t.dataset && t.dataset.camp){ S.camp[t.dataset.camp]=t.value; commit(); return; }
   if (t.dataset && t.dataset.chd){ if (chDraft) chDraft[t.dataset.chd]=t.value; return; }
   if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
@@ -5689,6 +5814,10 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
        (swapped days, other programs), and re-running would keep moving it. */
     if (!S.meta.rowSplit){ S.meta.rowSplit=true; rowMigrated=true; }
     if (rowMigrated) commit();
+  }
+  if (S.meta.onboarded==null){
+    S.meta.onboarded = !!saved && (S.log.length>0 || Object.keys(S.gym).length>0 || Object.keys(S.cust).length>0 || daysLogged()>0);
+    commit();
   }
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
