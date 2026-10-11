@@ -536,6 +536,14 @@ input[type=date],input[type=time]{min-height:40px}
 .sect.fold{width:100%;text-align:left;cursor:pointer}
 .sect.fold .chev{color:var(--faint)}
 .foldsum{font-weight:500;letter-spacing:.06em;color:var(--faint);font-size:var(--fs-caption);white-space:nowrap}
+
+.qtier{display:inline-block;margin-left:6px;padding:1px 5px;border:1px solid;font-size:var(--fs-label);letter-spacing:.14em;font-weight:700;vertical-align:1px}
+.qbrowse{margin-top:8px;border:1px solid var(--rule);background:var(--sunk);max-height:340px;overflow-y:auto}
+.qb{padding:11px;border-bottom:1px solid var(--rule)}
+.qb:last-of-type{border-bottom:none}
+.qbq{font-size:var(--fs-body);color:var(--text);line-height:1.5}
+.qbw{margin-top:6px;font-size:var(--fs-detail);color:var(--dim)}
+.qbs{margin-top:3px;font-size:var(--fs-caption);color:var(--faint);line-height:1.45}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -1646,7 +1654,7 @@ const DEFAULTS = {
   routines:[],        // [{ id, name, items:[exerciseId] }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
   cpref:{ rest:90, fav:{}, recent:[] },
-  motiv:{ why:'', quotes:[], links:[] },   // daily briefing: your why, your own lines, your play buttons
+  motiv:{ why:'', quotes:[], links:[], qmode:'mix' },   // daily briefing: your why, your own lines, your play buttons
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
   camp:{}, campHist:[],                    // fight camp: { name, date, weighIn, target(kg), disc, start, startW }
@@ -2507,7 +2515,8 @@ function normalizeCustom(){
     S.cust[k]=c;
   }
   for (const k in S.fights) if (!Array.isArray(S.fights[k])) delete S.fights[k];
-  S.motiv = Object.assign({why:'',quotes:[],links:[]}, (S.motiv&&typeof S.motiv==='object')?S.motiv:{});
+  S.motiv = Object.assign({why:'',quotes:[],links:[],qmode:'mix'}, (S.motiv&&typeof S.motiv==='object')?S.motiv:{});
+  if (!['mix','only','off'].includes(S.motiv.qmode)) S.motiv.qmode='mix';
   if (typeof S.motiv.why!=='string') S.motiv.why='';
   ['quotes','links'].forEach(k=>{ if (!Array.isArray(S.motiv[k])) S.motiv[k]=[]; });
   S.tpref = Object.assign({preset:'boxing',custom:{}}, (S.tpref&&typeof S.tpref==='object')?S.tpref:{});
@@ -3333,7 +3342,30 @@ const BRIEF_LINES = {
 };
 const BRIEF_TAG_LABEL = {general:'TODAY',lift:'LIFT DAY',fight:'FIGHT DAY',craft:'BUILD DAY',streakRisk:'STREAK ON THE LINE',
   comeback:'COMEBACK',pr:'NEW RECORD',deload:'DELOAD WEEK',firstWeek:'FIRST WEEK',milestone:'MILESTONE',camp:'FIGHT CAMP',challenge:'90-DAY CHALLENGE'};
-let briefEdit=false;
+
+/* Real quotes from real athletes. Quote lists online are full of misattributions, so each entry carries where it
+   comes from and how solid that is:
+     sourced    - traced to a dated, identifiable origin (an ad, a news story, a video, a book title)
+     reported   - credible secondary source, original not confirmed
+     attributed - widely credited to them, but I found no original source: treat the wording as approximate
+   Add your own favourites in the app; if you find a better source for one of these, fix its `src` here. */
+const QUOTE_TIER = {sourced:['SOURCED','var(--moss)'],reported:['REPORTED','var(--steel)'],attributed:['ATTRIBUTED','var(--faint)']};
+const REAL_QUOTES = [
+  {q:'There are two types of pain: pain that hurts you and pain that changes you.',who:'Greg Plitt',src:'His YouTube video and Facebook post, Oct 4, 2011 (traced by Barry Popik)',t:'sourced',tags:['general','lift','comeback','firstWeek']},
+  {q:'Normality is what weak people call living. I call it death.',who:'Greg Plitt',src:'Quoted in an Iron Man Magazine tribute ("Greg used to say"); original video not confirmed',t:'reported',tags:['general','streakRisk','comeback']},
+  {q:'I love the mentality that when push comes to shove, simply work harder and the results will come.',who:'Greg Plitt',src:'Circulates in fan collections; no original source found',t:'attributed',tags:['general','lift','streakRisk']},
+  {q:'Today begins, tomorrow continues, and it never ends until you reach your goal.',who:'Greg Plitt',src:'Circulates in fan collections; no original source found',t:'attributed',tags:['general','challenge','firstWeek']},
+  {q:'I hated every minute of it. But I said to myself, "Suffer now, and live the rest of your life as a champion."',who:'Muhammad Ali',src:'On training for the 1978 Leon Spinks rematch, as reported in September 1978',t:'sourced',tags:['general','comeback','fight','lift','camp']},
+  {q:'Everybody has plans until they get hit for the first time.',who:'Mike Tyson',src:'Associated Press, August 1987, ahead of the Tyrell Biggs fight (traced by Quote Investigator)',t:'sourced',tags:['fight','camp','general']},
+  {q:'I\'ve missed more than 9,000 shots in my career. I\'ve lost almost 300 games. [...] I\'ve failed over and over and over again in my life. And that is why I succeed.',who:'Michael Jordan',src:'Nike "Failure" commercial, 1997',t:'sourced',tags:['comeback','general','pr','milestone']},
+  {q:'I fear not the man who has practiced 10,000 kicks once, but I fear the man who has practiced one kick 10,000 times.',who:'Bruce Lee',src:'Confirmed authentic by the Bruce Lee Foundation (per Snopes); the original source has not been published',t:'reported',tags:['fight','craft','general','camp']},
+  {q:'Discipline equals freedom.',who:'Jocko Willink',src:'Title of his 2017 book, Discipline Equals Freedom: Field Manual',t:'sourced',tags:['general','streakRisk','comeback','firstWeek']},
+  {q:'The last three or four reps is what makes the muscle grow.',who:'Arnold Schwarzenegger',src:'Widely credited to Pumping Iron (1977); the exact scene is not confirmed',t:'attributed',tags:['lift','pr']},
+  {q:'Rest at the end, not in the middle.',who:'Kobe Bryant',src:'Reported as a line he lived by after retiring; original venue not confirmed',t:'reported',tags:['general','camp','streakRisk','challenge']},
+  {q:'You have to build calluses on your brain just like how you build calluses on your hands.',who:'David Goggins',src:'Credited to Can\'t Hurt Me (2018); page not verified',t:'attributed',tags:['general','fight','lift','deload']},
+];
+
+let briefEdit=false, briefBrowse=false;
 
 function strHash(s){ let h=2166136261; for (let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
 /* did anything set a record in the last two days? program lifts write S.prs; custom sets are checked with prFlags */
@@ -3360,6 +3392,14 @@ function briefTag(){
   return 'general';
 }
 function briefLine(tag){
+  const d0=S.days[T]||{}, qmode=S.motiv.qmode||'mix';
+  if (d0.bPin!=null && REAL_QUOTES[d0.bPin]){ const r=REAL_QUOTES[d0.bPin]; return {t:r.q,quote:r}; }
+  if (qmode!=='off'){
+    const qs=REAL_QUOTES.filter(r=>r.tags.includes(tag)), shift0=d0.bShift||0;
+    const pool=qs.length?qs:REAL_QUOTES.filter(r=>r.tags.includes('general'));
+    const pct=tag==='general'?35:45;
+    if (qmode==='only' || (strHash(T+'q')+shift0*37)%100<pct) { const r=pool[(strHash(T+tag+'q')+shift0)%pool.length]; return {t:r.q,quote:r}; }
+  }
   const mine=(S.motiv.quotes||[]).filter(q=>q&&q.trim());
   const pool=(BRIEF_LINES[tag]||BRIEF_LINES.general).map(t=>({t,mine:false}))
     .concat(mine.map(t=>({t,mine:true})));
@@ -3388,6 +3428,7 @@ function Briefing(){
       <button class="brx" data-act="b-col" aria-label="Collapse the briefing for today">${svg('chevD',14,'var(--faint)').replace('<svg','<svg style="transform:rotate(180deg)"')}</button></div>
     <div class="brline">${esc(line.t)}</div>
     ${line.mine?'<div class="brsrc">— from your list</div>':''}
+    ${line.quote?`<div class="brsrc"><b style="color:var(--text)">— ${esc(line.quote.who)}</b> <span class="qtier" style="color:${QUOTE_TIER[line.quote.t][1]};border-color:${QUOTE_TIER[line.quote.t][1]}">${QUOTE_TIER[line.quote.t][0]}</span><br>${esc(line.quote.src)}</div>`:''}
     ${why?`<button class="brwhy" data-act="b-edit"><i>YOUR WHY</i>${esc(why)}</button>`
          :`<button class="brwhy empty" data-act="b-edit"><i>YOUR WHY</i>Write the one sentence you'd want to read on your worst morning. ${svg('edit',11,'var(--amber)')}</button>`}
     <div class="brstats">
@@ -3407,6 +3448,13 @@ function BriefEditor(){
       <button class="chip on" data-act="b-done">DONE</button></div>
     <label class="f" style="margin-top:8px"><span>Your why — shown every day</span>
       <textarea data-bm="why" maxlength="280" placeholder="e.g. So nobody I love ever has to wonder if I can protect them.">${esc(m.why||'')}</textarea></label>
+    <div class="eyebrow" style="margin:14px 0 6px">QUOTES FROM REAL ATHLETES</div>
+    <div class="chips" style="padding:0">${[['mix','Mixed in'],['only','Always'],['off','Off']].map(([v,l])=>`<button class="chip ${(m.qmode||'mix')===v?'on':''}" data-act="b-qmode" data-v="${v}">${l}</button>`).join('')}</div>
+    <button class="linkbtn" data-act="b-browse" style="margin-top:8px">${briefBrowse?'HIDE':'BROWSE'} ${REAL_QUOTES.length} QUOTES AND THEIR SOURCES</button>
+    ${briefBrowse?`<div class="qbrowse">${REAL_QUOTES.map((r,i)=>`<div class="qb"><div class="qbq">${esc(r.q)}</div>
+      <div class="qbw"><b>${esc(r.who)}</b> <span class="qtier" style="color:${QUOTE_TIER[r.t][1]};border-color:${QUOTE_TIER[r.t][1]}">${QUOTE_TIER[r.t][0]}</span></div>
+      <div class="qbs">${esc(r.src)}</div><button class="chip ${(S.days[T]&&S.days[T].bPin===i)?'on':''}" data-act="b-pin" data-v="${i}" style="margin-top:6px">${(S.days[T]&&S.days[T].bPin===i)?'PINNED FOR TODAY':'SHOW TODAY'}</button></div>`).join('')}
+      <div class="note" style="padding:8px 0 0;border:none">SOURCED = traced to a dated origin. REPORTED = credible secondary source. ATTRIBUTED = widely credited, original not found, so the exact wording may differ. Found a better source? Tell me and I'll fix it.</div></div>`:''}
     <div class="eyebrow" style="margin:14px 0 6px">YOUR OWN LINES (${(m.quotes||[]).length})</div>
     ${(m.quotes||[]).map((q,i)=>`<div class="bredrow"><span>${esc(q)}</span><button class="x" data-act="b-rmq" data-v="${i}" aria-label="Remove line">${svg('x',12)}</button></div>`).join('')}
     <div class="bredadd"><input type="text" id="b_q" maxlength="240" placeholder="A quote or reminder that works on you"><button class="chip on" data-act="b-addq">ADD</button></div>
@@ -3419,7 +3467,10 @@ function bAct(a,v){
   const d=day(T);
   switch(a){
     case 'b-col': d.bCol=!d.bCol; commit(); return;
-    case 'b-next': d.bShift=(d.bShift||0)+1; commit(); return;
+    case 'b-next': d.bShift=(d.bShift||0)+1; delete d.bPin; commit(); return;
+    case 'b-qmode': S.motiv.qmode=v; delete d.bPin; commit(); return;
+    case 'b-browse': briefBrowse=!briefBrowse; return;
+    case 'b-pin': d.bPin=d.bPin===+v?null:+v; commit(); return;
     case 'b-edit': briefEdit=true; d.bCol=false; return;
     case 'b-done': briefEdit=false; commit(); return;
     case 'b-addq': { const el=document.getElementById('b_q'), q=(el&&el.value||'').trim();

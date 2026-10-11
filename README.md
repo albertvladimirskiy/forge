@@ -88,3 +88,10 @@ history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) ar
 - **Safety**: daily automatic snapshots (last 7, with undo) in IndexedDB, a weekly backup nudge that saves through the share
   sheet, restore from a backup file, and a calendar (.ics) export of the week so your phone's calendar does the reminding.
 - **First run**: a five-step setup on a fresh install; existing data skips it. Lower Today sections fold and remember it.
+
+### Quotes from real athletes
+
+The briefing mixes in quotes from Greg Plitt, Muhammad Ali, Mike Tyson, Michael Jordan, Bruce Lee, Jocko Willink, Arnold
+Schwarzenegger, Kobe Bryant and David Goggins (`REAL_QUOTES`). Each shows where it comes from and how solid that is:
+SOURCED (traced to a dated origin), REPORTED (credible secondary source) or ATTRIBUTED (widely credited, original not found,
+wording may differ). Choose Mixed in / Always / Off, browse them with their sources, or pin one for today from the briefing editor.
