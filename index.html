@@ -3975,7 +3975,13 @@ document.addEventListener('change', async e=>{
     const blob=await shrinkImage(f), id='ph_'+Date.now().toString(36)+'_'+pose;
     await photoPut(id,blob);
     if (chDraft.photos[pose] && !(chCheckin(chDraft.week)&&Object.values(chCheckin(chDraft.week).photos||{}).includes(chDraft.photos[pose]))) photoDel(chDraft.photos[pose]);
-    chDraft.photos[pose]=id; render();
+    chDraft.photos[pose]=id;
+    /* update just this slot: a full re-render here would replace the other pose inputs, and a photo
+       picked for one of them while this one was still saving would be lost */
+    const slot=document.querySelector(`input[data-ph-pose="${pose}"]`), lab=slot&&slot.closest('.chpose');
+    if (lab){ const old=lab.querySelector('img,span'); const img=document.createElement('img'); img.dataset.ph=id; img.alt=pose;
+      if (old) old.replaceWith(img); else lab.prepend(img); hydratePhotos(); }
+    else render();
   }catch(err){ toast('Could not read that photo'); }
 });
 

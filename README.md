@@ -71,3 +71,20 @@ anywhere (30 push-ups last week means 30 is the benchmark and the prefill), flag
 as history for the matching library exercise (`EXLINK`). Rest timer, plate math for barbell lifts, favorites, routines and a
 history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) are included. Custom data lives in `S.cust`,
 `S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
+
+### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
+
+- **Daily briefing** (top of Today): one line picked by what's happening (first week, PR, comeback after missed days,
+  streak at risk in the evening, fight camp, lift / fight / build day), your written *why*, your own lines mixed into the
+  rotation, and play buttons for your own speeches or playlists. Lines live in `BRIEF_LINES`; add your own in the app.
+- **Round timer**: boxing / pro / Muay Thai / MMA / BJJ / wrestling / bag / Tabata presets or custom, synthesized bell and
+  clapper, wake lock, drift-free timing. Ends by logging a fight session (or a set, when opened from an exercise card).
+- **Muscle map** (Workouts → BODY, or MUSCLE MAP on Today): weekly sets per muscle from custom workouts and program lifts,
+  with half-set credit to helper muscles on compound lifts. Targets in `MM_REG`, helper rules in `MM_SEC`.
+- **90-day challenge** (Build → 90 DAY): day counter + grid, weekly check-ins with front/side/back photos and
+  measurements, side-by-side compare. Photos stay in IndexedDB on the device (not in the JSON backup): use SAVE PHOTOS.
+- **Fight camp** (Workouts → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
+  weight-cut tracker that flags unsafe paces. Sessions can record sparring partners.
+- **Safety**: daily automatic snapshots (last 7, with undo) in IndexedDB, a weekly backup nudge that saves through the share
+  sheet, restore from a backup file, and a calendar (.ics) export of the week so your phone's calendar does the reminding.
+- **First run**: a five-step setup on a fresh install; existing data skips it. Lower Today sections fold and remember it.
