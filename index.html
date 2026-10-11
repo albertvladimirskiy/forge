@@ -417,6 +417,133 @@ input[type=date],input[type=time]{min-height:40px}
 .mitem b{color:var(--text)}
 
 
+
+/* ---------- daily briefing ---------- */
+.brief{display:block;width:100%;text-align:left;margin:0 0 14px;padding:14px 15px 13px;background:linear-gradient(160deg,#1A1610,#121417 70%);
+  border:1px solid var(--banner-amber-border);border-left:3px solid var(--amber)}
+.brief.col{display:flex;align-items:center;gap:10px;padding:11px 13px}
+.brhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brtag{font-size:var(--fs-label);letter-spacing:.2em;color:var(--amber);font-weight:700;white-space:nowrap}
+.brx{padding:4px;margin:-4px}
+.brmini{flex:1;min-width:0;font-size:var(--fs-detail);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brline{font-family:var(--sans);font-weight:800;font-size:18px;line-height:1.3;letter-spacing:.005em;margin:11px 0 0;color:var(--text)}
+.brsrc{font-size:var(--fs-caption);color:var(--faint);margin-top:6px;letter-spacing:.06em}
+.brwhy{display:block;width:100%;text-align:left;margin-top:12px;padding:10px 11px;border:1px solid var(--rule2);background:rgba(0,0,0,.25);
+  font-size:var(--fs-body);color:var(--text);line-height:1.5}
+.brwhy i{display:block;font-style:normal;font-size:var(--fs-label);letter-spacing:.18em;color:var(--faint);margin-bottom:4px}
+.brwhy.empty{color:var(--dim);border-style:dashed}
+.brstats{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:11px;font-size:var(--fs-detail);color:var(--dim)}
+.brstats span{display:inline-flex;align-items:center;gap:5px}
+.brlinks{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.brlink{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--amber);color:var(--text);font-size:var(--fs-caption);letter-spacing:.08em;font-weight:700}
+.brlink.ghost{border-color:var(--rule2);color:var(--faint)}
+.bredrow{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule);font-size:var(--fs-detail);color:var(--dim);line-height:1.45}
+.bredrow span{flex:1;min-width:0;word-break:break-word}
+.bredrow small{display:block;color:var(--faint)}
+.bredrow .x{color:var(--faint);padding:6px;margin:-6px}
+.bredadd{display:flex;gap:6px;margin-top:8px}
+.bredadd input{padding:8px 9px;min-width:0}
+
+/* ---------- round timer ---------- */
+.tmr{position:fixed;inset:0;z-index:48;display:flex;flex-direction:column;background:var(--ink);padding-top:env(safe-area-inset-top)}
+.tmr.work{background:#1A0E0B}
+.tmr.work.warn{background:#2A1A08}
+.tmr.rest{background:#0B1318}
+.tmr.prep{background:#14120B}
+.ttop{display:flex;justify-content:space-between;align-items:center;padding:14px var(--pad);font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);font-weight:700}
+.tbig{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 var(--pad);text-align:center}
+.tphase{font-size:var(--fs-headline);letter-spacing:.35em;font-weight:700;color:var(--dim)}
+.tmr.work .tphase{color:var(--rust)} .tmr.work.warn .tphase{color:var(--amber)} .tmr.rest .tphase{color:var(--steel)} .tmr.prep .tphase{color:var(--amber)}
+.ttime{font-family:var(--sans);font-weight:800;font-size:min(30vw,150px);line-height:1;letter-spacing:-.02em;margin:14px 0 10px;font-variant-numeric:tabular-nums}
+.tround{font-size:var(--fs-title);letter-spacing:.18em;color:var(--dim)}
+.tbarw{width:100%;max-width:420px;height:6px;background:var(--rule);margin-top:26px}
+.tbar{height:100%;background:var(--rust);transition:width .1s linear}
+.tmr.rest .tbar{background:var(--steel)} .tmr.prep .tbar,.tmr.work.warn .tbar{background:var(--amber)}
+.tdots{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:18px;max-width:320px}
+.tdots span{width:10px;height:10px;border:1.5px solid var(--rule2)}
+.tdots span.on{background:var(--moss);border-color:var(--moss)} .tdots span.cur{background:var(--rust);border-color:var(--rust)}
+.tmr.paused .ttime{opacity:.45}
+.tctl{display:flex;gap:10px;padding:14px var(--pad) calc(18px + env(safe-area-inset-bottom))}
+.tctl.col{flex-direction:column}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.tst .sfi{align-items:stretch}
+.tval{flex:1;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  background:var(--sunk);font-family:var(--sans);font-weight:800;font-size:20px;padding:10px 0}
+.tmrbtn{color:var(--dim);border-color:var(--note-pain-border)}
+
+/* ---------- muscle map ---------- */
+.mmsvg{display:block;width:100%;max-width:440px;margin:0 auto;height:auto}
+.mmleg{display:flex;justify-content:center;gap:14px;padding:4px 13px 12px;font-size:var(--fs-caption);color:var(--faint)}
+.mmleg i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;border:1px solid var(--rule2)}
+.mmdet{padding:11px 13px 12px;border-top:1px solid var(--rule)}
+.mmdh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.mmdh b{font-size:var(--fs-title)} .mmdh span{font-size:var(--fs-detail);color:var(--faint)}
+.mmrow{display:flex;align-items:center;gap:10px;width:100%;padding:9px 13px;border-bottom:1px solid #191D22;text-align:left}
+.mmrow.on{background:var(--panel2)}
+.mmn{width:96px;flex:none;font-size:var(--fs-detail);color:var(--dim)}
+.mmbar{position:relative;flex:1;height:8px;background:var(--sunk);border:1px solid var(--rule)}
+.mmtgt{position:absolute;top:0;bottom:0;background:rgba(224,160,58,.12);border-left:1px solid rgba(224,160,58,.35);border-right:1px solid rgba(224,160,58,.35)}
+.mmfill{position:absolute;left:0;top:0;bottom:0}
+.mmv{width:58px;flex:none;text-align:right;font-size:var(--fs-title);font-weight:700}
+.mmv em{display:block;font-style:normal;font-size:var(--fs-caption);font-weight:500}
+.mmv em.up{color:var(--moss)} .mmv em.dn{color:var(--rust)}
+.logrow{display:flex;gap:8px}
+.logrow .logbtn{flex:1;padding:11px 6px}
+
+/* ---------- 90-day challenge ---------- */
+.chhero{display:flex;align-items:center;gap:14px;padding:14px 13px}
+.chday{display:flex;flex-direction:column;align-items:center;min-width:74px;padding:6px 0;border-right:1px solid var(--rule)}
+.chday span{font-size:var(--fs-label);letter-spacing:.18em;color:var(--faint)}
+.chday b{font-family:var(--sans);font-weight:800;font-size:38px;line-height:1.05;color:var(--amber)}
+.chgoal{font-size:var(--fs-title);font-weight:600;line-height:1.35}
+.chsub{margin-top:7px;font-size:var(--fs-caption);color:var(--faint);line-height:1.5}
+.chgrid{display:grid;grid-template-columns:repeat(15,1fr);gap:3px;padding:13px}
+.chc{aspect-ratio:1;background:#15181C;border:1px solid var(--rule)}
+.chc.fut{background:transparent;border-style:dashed;opacity:.5}
+.chc.today{border-color:var(--amber);border-width:1.5px}
+.chposes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chpose{position:relative;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--sunk);border:1px dashed var(--rule2);overflow:hidden;cursor:pointer}
+.chpose img{width:100%;height:100%;object-fit:cover}
+.chpose i{position:absolute;left:0;right:0;bottom:0;padding:4px 0;font-style:normal;text-align:center;font-size:var(--fs-label);letter-spacing:.14em;color:var(--dim);background:rgba(0,0,0,.6)}
+.chthumbs{display:flex;gap:6px;margin-top:8px}
+.chthumbs img{width:58px;height:78px;object-fit:cover;border:1px solid var(--rule)}
+.chcmp{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 13px 10px}
+.chcmp>div{aspect-ratio:3/4;background:var(--sunk);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:var(--fs-caption);color:var(--faint)}
+.chcmp img{width:100%;height:100%;object-fit:cover}
+.chcmp i{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-style:normal;font-size:var(--fs-label);letter-spacing:.16em;padding:3px 7px;background:rgba(0,0,0,.65);color:var(--text)}
+.chsel select{padding-right:26px;font-size:15px}
+.brchip{display:inline-flex;align-items:center;gap:5px;color:var(--amber);font-size:var(--fs-detail)}
+
+/* ---------- fight camp ---------- */
+.camphero{display:flex;align-items:center;gap:14px;padding:14px 13px}
+.campph{margin-top:8px;font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
+.campph b{color:var(--rust);letter-spacing:.12em;margin-right:4px}
+.cutbox{margin:0 13px 13px;padding:11px;border:1px solid var(--rule);background:var(--sunk)}
+.cuthead{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-caption);letter-spacing:.06em;color:var(--faint);margin-bottom:8px}
+.cuthead span:first-child{font-weight:700;letter-spacing:.14em}
+.cutsvg{display:block;width:100%;height:110px;background:#0C0F13;border:1px solid var(--rule)}
+.cutleg{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:var(--fs-caption);color:var(--faint)}
+.cutleg i{display:inline-block;width:9px;height:3px;margin-right:5px;vertical-align:2px}
+
+/* ---------- first run + folding ---------- */
+.ob{position:fixed;inset:0;z-index:49;display:flex;flex-direction:column;background:var(--ink);padding-top:env(safe-area-inset-top)}
+.obdots{display:flex;gap:6px}
+.obdots span{width:22px;height:3px;background:var(--rule2)}
+.obdots span.on{background:var(--amber)}
+.obh{font-family:var(--sans);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.04em;margin:4px 0 14px}
+.obl{font-size:var(--fs-label);letter-spacing:.14em;color:var(--faint);margin:16px 0 8px;text-transform:uppercase}
+.startopt.sel{border-color:var(--amber);background:var(--banner-amber-bg)}
+.sect.fold{width:100%;text-align:left;cursor:pointer}
+.sect.fold .chev{color:var(--faint)}
+.foldsum{font-weight:500;letter-spacing:.06em;color:var(--faint);font-size:var(--fs-caption);white-space:nowrap}
+
+.qtier{display:inline-block;margin-left:6px;padding:1px 5px;border:1px solid;font-size:var(--fs-label);letter-spacing:.14em;font-weight:700;vertical-align:1px}
+.qbrowse{margin-top:8px;border:1px solid var(--rule);background:var(--sunk);max-height:340px;overflow-y:auto}
+.qb{padding:11px;border-bottom:1px solid var(--rule)}
+.qb:last-of-type{border-bottom:none}
+.qbq{font-size:var(--fs-body);color:var(--text);line-height:1.5}
+.qbw{margin-top:6px;font-size:var(--fs-detail);color:var(--dim)}
+.qbs{margin-top:3px;font-size:var(--fs-caption);color:var(--faint);line-height:1.45}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -577,6 +704,7 @@ const ICO = {
   cal:'M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   star:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
   arrowUp:'M12 19V5M5 12l7-7 7 7',
+  play:'M6 4l14 8-14 8z',
   arrowDown:'M12 5v14M19 12l-7 7-7-7',
 };
 function svg(name,size,color,sw){
@@ -1526,6 +1654,11 @@ const DEFAULTS = {
   routines:[],        // [{ id, name, items:[exerciseId] }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
   cpref:{ rest:90, fav:{}, recent:[] },
+  motiv:{ why:'', quotes:[], links:[], qmode:'mix' },   // daily briefing: your why, your own lines, your play buttons
+  tpref:{ preset:'boxing', custom:{} },    // round timer
+  ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
+  camp:{}, campHist:[],                    // fight camp: { name, date, weighIn, target(kg), disc, start, startW }
+  ui:{ fold:{} },                          // which Today sections you've folded/unfolded
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
@@ -2382,6 +2515,19 @@ function normalizeCustom(){
     S.cust[k]=c;
   }
   for (const k in S.fights) if (!Array.isArray(S.fights[k])) delete S.fights[k];
+  S.motiv = Object.assign({why:'',quotes:[],links:[],qmode:'mix'}, (S.motiv&&typeof S.motiv==='object')?S.motiv:{});
+  if (!['mix','only','off'].includes(S.motiv.qmode)) S.motiv.qmode='mix';
+  if (typeof S.motiv.why!=='string') S.motiv.why='';
+  ['quotes','links'].forEach(k=>{ if (!Array.isArray(S.motiv[k])) S.motiv[k]=[]; });
+  S.tpref = Object.assign({preset:'boxing',custom:{}}, (S.tpref&&typeof S.tpref==='object')?S.tpref:{});
+  if (!S.tpref.custom||typeof S.tpref.custom!=='object') S.tpref.custom={};
+  S.ch90 = Object.assign({start:null,goal:'',checkins:[]}, (S.ch90&&typeof S.ch90==='object')?S.ch90:{});
+  if (!Array.isArray(S.ch90.checkins)) S.ch90.checkins=[];
+  if (!Array.isArray(S.ch90.past)) S.ch90.past=[];
+  if (!S.camp||typeof S.camp!=='object'||Array.isArray(S.camp)) S.camp={};
+  if (!Array.isArray(S.campHist)) S.campHist=[];
+  S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
+  if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
@@ -2602,6 +2748,7 @@ function exCardHTML(cw,id,idx,vd){
       <div class="xtools">
         <button data-act="w-fav" data-v="${id}">${svg('star',11,fav?'var(--amber)':'var(--faint)').replace('fill="none"',fav?'fill="var(--amber)"':'fill="none"')} ${fav?'FAVORITED':'FAVORITE'}</button>
         <button data-act="w-hist" data-v="${id}">${svg('trend',11)} HISTORY</button>
+        ${(E.k==='time'||E.k==='cardio')&&(E.mu==='combat'||/round|shadow|bag|spar|roll|mitt|pad|tabata|rope/i.test(E.n))?`<button data-act="t-openex" data-v="${id}">${svg('clock',11)} ROUND TIMER</button>`:''}
         ${idx>0?`<button data-act="w-mv" data-v="${id}" data-v2="-1" aria-label="Move up">${svg('arrowUp',11)}</button>`:''}
         ${idx<cw.items.length-1?`<button data-act="w-mv" data-v="${id}" data-v2="1" aria-label="Move down">${svg('arrowDown',11)}</button>`:''}
         <button data-act="w-rmex" data-v="${id}" style="color:var(--rust)">${svg('trash',11,'var(--rust)')} ${armRm===id?'TAP TO CONFIRM':'REMOVE'}</button>
@@ -2627,7 +2774,8 @@ function WorkoutSection(vd,plan){
   h+=`<div class="xbar">
     ${cw?'':tile('w-new',lift?'replace':'with',lift?'edit':'plus',lift?'EDIT WORKOUT':'ADD WORKOUT',
         lift?`Do your own instead of ${esc(plan.def.title)}`:'Pick your exercises. It remembers your numbers.')}
-    ${tile('f-new','',  'swords',fights.length?'ADD ANOTHER FIGHT SESSION':'ADD FIGHTING','Log mat, ring or bag time')}</div>`;
+    ${tile('f-new','',  'swords',fights.length?'ADD ANOTHER FIGHT SESSION':'ADD FIGHTING','Log mat, ring or bag time')}</div>
+    <button class="logbtn tmrbtn" data-act="t-open">${svg('clock',13,'var(--rust)')} ROUND TIMER · BOXING, MUAY THAI, MMA, BJJ, TABATA</button>`;
   if (cw){
     const st=cwStats(cw);
     h+=`${sect('dumb','YOUR WORKOUT')}
@@ -2651,7 +2799,8 @@ function WorkoutSection(vd,plan){
     </div>`;
   }
   h+=FightSection(vd);
-  h+=`<button class="logbtn" data-act="view" data-v="wlog">${svg('trend',12,'var(--faint)')} ALL WORKOUTS, LIFT PRs + ROUTINES ${svg('chev',12,'var(--faint)')}</button>`;
+  h+=`<div class="logrow"><button class="logbtn" data-act="view" data-v="wlog">${svg('trend',12,'var(--faint)')} WORKOUTS, PRs, ROUTINES</button>
+    <button class="logbtn" data-act="mm-open">${svg('dumb',12,'var(--faint)')} MUSCLE MAP</button></div>`;
   return h;
 }
 function startChooserHTML(vd,plan){
@@ -2697,6 +2846,7 @@ function FightSection(vd){
         <span>${esc(fmtMin(+f.min||0))}${f.rounds?` · ${f.rounds} rounds`:''}${f.rpe?` · RPE ${f.rpe}`:''}</span>
         <button class="x" data-act="f-edit" data-v="${i}" aria-label="Edit session">${svg('edit',12)}</button>
         <button class="x" data-act="f-del" data-v="${i}" aria-label="Delete session">${svg('x',12)}</button></div>
+      ${f.partner?`<div class="fsd">With ${esc(f.partner)}</div>`:''}
       ${diff!=null&&diff!==0?`<div class="fsd">${diff>0?'+':''}${diff} min vs last ${esc(FIGHT_L[f.disc]||'')} (${esc(shortDate(lf.k))})</div>`:''}
       ${f.worked?`<div class="fsl"><i>WORKED</i>${esc(f.worked)}</div>`:''}
       ${f.caught?`<div class="fsl"><i>GOT CAUGHT</i>${esc(f.caught)}</div>`:''}</div>`; }).join('');
@@ -2712,8 +2862,14 @@ function FightSection(vd){
         <label class="f"><span>Rounds</span><input type="text" inputmode="numeric" data-fd="rounds" value="${esc(d.rounds)}" placeholder="optional"></label>
         <label class="f"><span>Effort</span><input type="text" value="${d.rpe?d.rpe+' · '+RPE_WORD(d.rpe):'tap below'}" readonly aria-label="Effort"></label></div>
       <div class="rpe">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="${d.rpe===n?'on':''}" data-act="f-rpe" data-v="${n}">${n}</button>`).join('')}</div>
+      <label class="f" style="margin-top:12px"><span>Partner(s) · optional</span><input type="text" data-fd="partner" id="fd_partner" value="${esc(d.partner||'')}" placeholder="Who you drilled or sparred with" maxlength="80"></label>
+      ${(()=>{ const recent=partnerList().slice(0,6).filter(p=>!String(d.partner||'').toLowerCase().split(',').map(x=>x.trim()).includes(p.name.toLowerCase()));
+        const lw=(d.partner||'').split(',').map(x=>x.trim()).filter(Boolean).map(n=>[n,lastWithPartner(n,vd)]).filter(x=>x[1]);
+        return (recent.length?`<div class="exchips" style="padding:6px 0 0;flex-wrap:wrap">${recent.map(p=>`<button class="chip" data-act="f-partner" data-v="${esc(p.name)}">+ ${esc(p.name)}</button>`).join('')}</div>`:'')
+          + lw.map(([n,x])=>`<div class="fsd" style="margin-top:6px">Last with ${esc(n)}: ${esc(shortDate(x.k))}${x.f.caught?` · got caught: ${esc(x.f.caught)}`:''}</div>`).join(''); })()}
       <label class="f" style="margin-top:12px"><span>One thing that worked</span><textarea data-fd="worked" placeholder="Be specific.">${esc(d.worked)}</textarea></label>
       <label class="f" style="margin-top:10px"><span>One thing that got you caught</span><textarea data-fd="caught" placeholder="The fact and the cause.">${esc(d.caught)}</textarea></label>
+      ${fightEdit==null?`<button class="btn ghost" data-act="t-open" style="margin-top:12px">${svg('clock',13)} RUN IT ON THE ROUND TIMER</button>`:''}
       <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-act="f-save" style="flex:2">${fightEdit!=null?'SAVE CHANGES':'SAVE SESSION'}</button>
         <button class="btn ghost" data-act="f-cancel" style="flex:1">CANCEL</button></div></div>`;
   }
@@ -2723,9 +2879,10 @@ function FightSection(vd){
 
 /* ---------- history / PRs / routines screen ---------- */
 function ViewWorkoutLog(){
-  const tabs=[['workouts','WORKOUTS'],['lifts','LIFTS'],['fights','FIGHTING'],['routines','ROUTINES']];
+  const tabs=[['workouts','WORKOUTS'],['body','BODY'],['lifts','LIFTS'],['fights','FIGHTS'],['routines','ROUTINES']];
   let body='';
   if (wlSub==='workouts') body=wlWorkouts();
+  else if (wlSub==='body') body=MuscleMap();
   else if (wlSub==='lifts') body=wlLifts();
   else if (wlSub==='fights') body=wlFights();
   else body=wlRoutines();
@@ -2776,13 +2933,14 @@ function wlLifts(){
 }
 function wlFights(){
   const all=[]; for (const k of Object.keys(S.fights)) for (const f of S.fights[k]) all.push({k,f});
-  if (!all.length) return `<div class="panel" style="margin-top:14px"><div class="empty">Log a fighting session from Today and your mat time builds up here.</div></div>`;
+  const camp=`${sect('swords','FIGHT CAMP')}${CampPanel()}`;
+  if (!all.length) return camp+`<div class="panel"><div class="empty">Log a fighting session from Today and your mat time builds up here.</div></div>`;
   all.sort((a,b)=>a.k<b.k?1:-1);
   const wkStart=dkey(-dowIdx(T)), wk=all.filter(x=>x.k>=wkStart && x.k<=T);
   const min=a=>a.reduce((s,x)=>s+(+x.f.min||0),0);
   const by={}; for (const x of all) by[x.f.disc]=(by[x.f.disc]||0)+(+x.f.min||0);
   const d28=dkey(-27), m28=all.filter(x=>x.k>=d28 && x.k<=T);
-  return `${sect('swords','MAT + RING TIME')}<div class="stats">
+  return `${camp}${sect('swords','MAT + RING TIME')}<div class="stats">
     <div class="stat"><div class="v">${wk.length}</div><div class="l">THIS WEEK</div></div>
     <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${esc(fmtMin(min(wk)))}</div><div class="l">TIME THIS WEEK</div></div>
     <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${esc(fmtMin(min(m28)))}</div><div class="l">LAST 28 DAYS</div></div></div>
@@ -2790,7 +2948,9 @@ function wlFights(){
       <div class="bar"><div class="barfill" style="width:${clamp(m/Math.max(...Object.values(by))*100,3,100)}%;background:var(--rust)"></div></div></div>`).join('')}</div>
     ${sect('book','SESSIONS')}<div class="panel">${all.slice(0,60).map(({k,f})=>`<div class="fsess"><div class="fstop"><b>${esc(FIGHT_L[f.disc]||'Session')}</b>
       <span>${esc(shortDate(k))} · ${esc(fmtMin(+f.min||0))}${f.rounds?` · ${f.rounds} rds`:''}${f.rpe?` · RPE ${f.rpe}`:''}</span></div>
-      ${f.worked?`<div class="fsl"><i>WORKED</i>${esc(f.worked)}</div>`:''}${f.caught?`<div class="fsl"><i>GOT CAUGHT</i>${esc(f.caught)}</div>`:''}</div>`).join('')}</div>`;
+      ${f.partner?`<div class="fsd">With ${esc(f.partner)}</div>`:''}
+      ${f.worked?`<div class="fsl"><i>WORKED</i>${esc(f.worked)}</div>`:''}${f.caught?`<div class="fsl"><i>GOT CAUGHT</i>${esc(f.caught)}</div>`:''}</div>`).join('')}</div>
+    ${PartnersPanel()}`;
 }
 function wlRoutines(){
   const rts=S.routines||[];
@@ -2825,7 +2985,7 @@ function wAct(a,v,v2,el){
     }
     case 'w-mode': if (cw){ cw.mode=v==='replace'?'replace':'with'; commit(); } return;
     case 'w-rest': S.cpref.rest=+v||0; commit(); return;
-    case 'w-restadd': if (rest){ rest.end+=(+v2)*1000; rest.total=Math.max(15,rest.total+(+v2)); if (rest.done&&rest.end>Date.now()){ rest.done=false; } restTick(); } return 'norender';
+    case 'w-restadd': if (rest){ rest.end+=(+v2)*1000; rest.total=Math.max(15,rest.total+(+v2)); if (rest.done&&rest.end>Date.now()){ rest.done=false; } restTick(); } return;   // re-render so the bar's label/colour match its state
     case 'w-restskip': rest=null; clearInterval(restIv); return;
     case 'w-pick': exPickOpen=!exPickOpen; exCreate=false; exFocus=exPickOpen; touch(); return;
     case 'w-mu': exMu=v||''; exFocus=false; return;
@@ -2944,14 +3104,19 @@ function wAct(a,v,v2,el){
       if (!fdraft) return;
       fdraft.disc=v;
       const lf=lastFight(v,vd), def=(FIGHT_DISC.find(x=>x[0]===v)||[])[2]||60;
-      if (fightEdit==null || !fdraft.min){
+      /* suggest minutes/rounds only while the fields are empty or still hold our own previous suggestion;
+         anything typed by hand, or measured by the round timer, is left alone */
+      const au=fdraft.auto, untouched=!fdraft.min || (au && fdraft.min===au.min && (fdraft.rounds||'')===au.rounds);
+      if (untouched){
         fdraft.min=String(lf&&lf.f.min?lf.f.min:def);
         fdraft.rounds=lf&&lf.f.rounds?String(lf.f.rounds):'';
+        fdraft.auto={min:fdraft.min,rounds:fdraft.rounds};
         if (!fdraft.rpe && lf && lf.f.rpe) fdraft.rpe=lf.f.rpe;
       }
       return;
     }
     case 'f-rpe': if (fdraft) fdraft.rpe=fdraft.rpe===+v?0:+v; return;
+    case 'f-partner': if (fdraft){ const cur=String(fdraft.partner||'').split(',').map(x=>x.trim()).filter(Boolean); if (!cur.includes(v)) cur.push(v); fdraft.partner=cur.join(', '); } return;
     case 'f-save': {
       if (!fdraft) return;
       if (!fdraft.disc){ toast('Pick what you trained'); return 'norender'; }
@@ -2959,7 +3124,8 @@ function wAct(a,v,v2,el){
       if (min<1){ toast('Enter the minutes'); return 'norender'; }
       const rec={id:fightEdit!=null&&S.fights[vd][fightEdit]?S.fights[vd][fightEdit].id:Date.now().toString(36),
         disc:fdraft.disc,min,rounds:Math.round(num(fdraft.rounds)||0)||0,rpe:fdraft.rpe||0,
-        worked:(fdraft.worked||'').trim(),caught:(fdraft.caught||'').trim()};
+        worked:(fdraft.worked||'').trim(),caught:(fdraft.caught||'').trim(),
+        partner:String(fdraft.partner||'').split(',').map(x=>x.trim()).filter(Boolean).join(', ')};
       if (!S.fights[vd]) S.fights[vd]=[];
       if (fightEdit!=null && S.fights[vd][fightEdit]) S.fights[vd][fightEdit]=rec; else S.fights[vd].push(rec);
       fightOpen=false; fightEdit=null; fdraft=null; commit(); toast(`${FIGHT_L[rec.disc]} logged — ${fmtMin(min)}`); return;
@@ -2967,7 +3133,7 @@ function wAct(a,v,v2,el){
     case 'f-edit': {
       const f=(S.fights[vd]||[])[+v]; if (!f) return;
       fightOpen=true; fightEdit=+v;
-      fdraft={disc:f.disc,min:String(f.min||''),rounds:f.rounds?String(f.rounds):'',rpe:f.rpe||0,worked:f.worked||'',caught:f.caught||''};
+      fdraft={disc:f.disc,min:String(f.min||''),rounds:f.rounds?String(f.rounds):'',rpe:f.rpe||0,worked:f.worked||'',caught:f.caught||'',partner:f.partner||''};
       return;
     }
     case 'f-del': {
@@ -3000,6 +3166,1311 @@ function wAct(a,v,v2,el){
     }
     case 'wl-rtdel': S.routines=S.routines.filter(r=>r.id!==v); commit(); toast('Routine deleted'); return;
   }
+}
+
+/* ======================================================== daily briefing == */
+/* The emotional layer: one line a day picked by what's actually going on (streak at risk, a missed day,
+   a PR, fight day...), your own written "why", and links to whatever gets you going. All lines are
+   original FORGE copy; your own quotes mix into the rotation. The pick is stable for the day (hash of
+   date + situation) and ANOTHER steps through the pool. */
+const BRIEF_LINES = {
+  general:[
+    'Nobody is coming. That is not bad news. It means the whole thing is yours.',
+    'Motivation is a visitor. Discipline lives here. Do not wait at the door.',
+    'You do not rise to the occasion. You fall to the level of what you practiced on ordinary days. Today is an ordinary day.',
+    'The version of you that you keep describing to yourself is built in sessions exactly like this one.',
+    'Comfort is a slow leak. Plug it today.',
+    'Do the thing you said you would do, at the time you said you would do it. That is the whole secret.',
+    'You will not remember the days you felt like it. You will remember the days you went anyway.',
+    'Easy choices, hard life. Hard choices, easy life. Pick early.',
+    'Your body keeps an honest ledger. Make a deposit.',
+    'Talent is a starting position, not a finish line. Out-work your starting position.',
+    'Be the person in the room who does not need to be asked twice.',
+    'Every rep is a vote for who you are becoming. Vote often.',
+    'You have survived every bad day so far. Your record is perfect. Keep it.',
+    'If it were easy, everyone would look like the person you are trying to become.',
+    'Quiet work, loud results. Nobody needs to see it but you.',
+    'The clock is going to move either way. Make it move with you in it.',
+    'Small, boring, daily. That is how big things get built.',
+    'Stop negotiating with the part of you that wants to quit. It does not get a vote today.',
+    'Pressure is a privilege. It means something is at stake.',
+    'You are not tired. You are under-challenged and over-stimulated. Go find out the difference.',
+    'Respect the process when nobody claps. That is the only time it counts.',
+    'Win the morning and the day usually follows.',
+    'The work does not care how you feel about it. Show up and let it change how you feel.',
+    'You were not built to be comfortable. You were built to adapt. Give your body a reason.',
+    'One more honest day in the bank. That is the job.',
+    'Standards are what you do when nobody is checking.',
+    'Do not count the days. Make the days count, then count them anyway.',
+    'There is a person somewhere training while you scroll. Go meet them in the arena.',
+    'Average is a crowded room. Walk out of it.',
+    'Your excuses are probably true. Do it anyway.',
+    'Iron, mats, books, money. Feed all four and none of them starve.',
+    'Hard work compounds. So does skipping it.',
+    'You do not need a new plan. You need to finish today on the plan you have.',
+    'Earn your sleep tonight.',
+    'Be so consistent it gets boring to everyone but you.',
+    'Strong is a decision repeated.',
+    'The best time to be dangerous was years ago. The second best time is this session.',
+    'Discomfort is the price of admission. Pay it and get your seat.',
+    'Courage is not loud. It is clocking in again.',
+    'Make your future self owe you a thank-you.',
+  ],
+  lift:[
+    'Heavy things do not care about your mood. Pick them up anyway.',
+    'The bar is honest. It weighs exactly what it says and it tells you exactly who you are today.',
+    'Brace like someone is about to hit you. Then move it like you mean it.',
+    'Two reps in the tank, perfect form, every set. That is how you get strong for decades.',
+    'Chalk up. Breathe. Own the first rep and the rest follow.',
+    'Progressive overload is just patience with plates on it.',
+    'Today you are stronger than the day you started. Prove it with one clean set.',
+    'Leave your ego at the door and your effort on the floor.',
+    'Lift like the next ten years depend on it. They do.',
+    'Every set is a conversation with gravity. Win the argument.',
+    'Slow down the eccentric. Own the weight, do not let it own you.',
+    'You do not get the physique by wanting it. You get it by squatting when you would rather not.',
+    'Strength is a skill. Practice it like one.',
+    'The warm-up is not optional. Neither is the last set.',
+    'Grip it like you are angry at it.',
+    'Log the set. Beat the log. Repeat until legendary.',
+    'Your muscles do not know what day it is. They only know whether you showed up.',
+    'A heavy day is a gift. Unwrap it carefully.',
+  ],
+  fight:[
+    'Hands up. Chin down. Breathe through the nose. Everything else is details.',
+    'Nobody remembers who was tired. They remember who kept their guard up.',
+    'Tap early, learn fast, come back tomorrow. That is how black belts are made.',
+    'Get comfortable being uncomfortable. That is the whole art.',
+    'Fear is information. Use it, then move.',
+    'The mat does not lie. Go find out what is true today.',
+    'Technique beats strength until strength learns technique. Be both.',
+    'Every round you survive is a round you get to learn from.',
+    'Footwork first. Power is just footwork with intent.',
+    'Calm is a weapon. Panic empties the tank in thirty seconds.',
+    'You will get hit. Decide now that it will not decide anything.',
+    'Drill it until it is boring. Then drill it until it is yours.',
+    'Leave your ego in the parking lot and your effort on the mat.',
+    'The fight is won in the rounds nobody watches.',
+    'Be the training partner everyone wants: hard, safe, always there.',
+    'Cardio is confidence. Earn it.',
+    'Breathe in position. Every stable spot is a chance to recover.',
+    'Find the uncomfortable position and live there for a while.',
+  ],
+  craft:[
+    'The skills nobody brags about are the ones that save the day.',
+    'Today is for the unglamorous competencies. Those are the rare ones.',
+    'Learn something your future self will be grateful for in an emergency.',
+    'Range beats specialization when life gets weird. Build range.',
+    'Recovery is training. Treat it with the same discipline.',
+    'Sharpen the axe today so tomorrow cuts clean.',
+    'A day off the barbell is not a day off the mission.',
+    'Competence is quiet confidence. Collect some today.',
+    'Rest hard. Then come back harder.',
+    'Hands busy, mind clear. Build something.',
+  ],
+  streakRisk:[
+    'Your streak is on the line tonight. Ten minutes keeps it alive. Go.',
+    'Do not let today be the day the chain broke. One block. Right now.',
+    'You worked too hard for that streak to lose it to a couch. Get one thing done.',
+    'The day is not over. Neither are you. Tick one box before you sleep.',
+    'Small is fine. Zero is not. Do the smallest thing that counts.',
+    'Future you is watching tonight. Do not make them clean up this mess.',
+    'Ten push-ups, one page, one honest note. Keep the chain.',
+    'It is late, not too late.',
+  ],
+  comeback:[
+    'You missed a day. Do not miss two. That is the only rule that matters now.',
+    'The plan did not fail. You stepped off it. Step back on.',
+    'Guilt is useless. Momentum is not. Start the momentum.',
+    'Nobody is keeping score of yesterday except you. Close the tab on it.',
+    'Every comeback starts with one boring, ordinary session. This is it.',
+    'You are not starting over. You are starting from experience.',
+    'Get one win on the board before lunch. Then another.',
+    'Fall down seven times, get up eight. You are on eight.',
+    'Do not wait for Monday. Monday is a myth for people who never start.',
+    'The hardest rep is the first one back. Do it now and the rest get easier.',
+    'Missed days are tuition. Make sure you learned something.',
+    'Back in the arena. That is all that matters today.',
+  ],
+  pr:[
+    'You just set a new standard. Now it is the floor, not the ceiling.',
+    'New personal record. Enjoy it for exactly one day, then go earn the next one.',
+    'That PR did not happen today. It happened over every boring session before it.',
+    'Proof that the work works. Keep stacking.',
+    'Stronger than you have ever been. Remember that next time you doubt it.',
+    'New best on the board. Recover well and go again.',
+  ],
+  deload:[
+    'Deload week is where the adaptation lands. Train light, sleep heavy.',
+    'Pulling back is not going soft. It is how you go hard for years.',
+    'Easy weights, sharp technique. Let the body catch up with the work.',
+    'Champions plan their recovery. Plan yours this week.',
+    'Light week, heavy discipline. Still show up. Just do less.',
+  ],
+  firstWeek:[
+    'Day one energy is easy. Build day thirty habits.',
+    'Start smaller than you think. Finish every single day.',
+    'You do not need to be good yet. You need to be here.',
+    'The first week is about showing up, not showing off.',
+    'Learn the movements. The weight comes later. It always does.',
+    'Every expert you admire had a first week that looked like this one.',
+    'Make it a habit before you make it hard.',
+    'Just tick the boxes this week. Momentum is the whole goal.',
+  ],
+  milestone:[
+    'Another milestone. The person who started this would not recognize you.',
+    'Look how far a stack of ordinary days can get you.',
+    'Streak earned, not given. Keep it going.',
+    'This is what consistency looks like from the inside. It looks like today.',
+    'You built this one day at a time. Build the next one.',
+  ],
+  camp:[
+    'Fight camp. Every session now has a date attached to it.',
+    'Sharpen, do not overload. The work is mostly done. Polish it.',
+    'Make weight the smart way: slowly and boringly, starting today.',
+    'Visualize the first exchange. Then go train it.',
+    'Sleep is part of camp. Treat it like sparring.',
+    'Nothing new in fight week. Trust what you drilled.',
+  ],
+  challenge:[
+    'Ninety days. One day at a time. This is one of them.',
+    'Take the photo. You will want the before picture, trust me.',
+    'Halfway is where most people quit. You are not most people.',
+    'The mirror is slow. The tape and the log are not. Trust the numbers.',
+    'Finish the ninety. Then decide what you are capable of.',
+  ],
+};
+const BRIEF_TAG_LABEL = {general:'TODAY',lift:'LIFT DAY',fight:'FIGHT DAY',craft:'BUILD DAY',streakRisk:'STREAK ON THE LINE',
+  comeback:'COMEBACK',pr:'NEW RECORD',deload:'DELOAD WEEK',firstWeek:'FIRST WEEK',milestone:'MILESTONE',camp:'FIGHT CAMP',challenge:'90-DAY CHALLENGE'};
+
+/* Real quotes from real athletes. Quote lists online are full of misattributions, so each entry carries where it
+   comes from and how solid that is:
+     sourced    - traced to a dated, identifiable origin (an ad, a news story, a video, a book title)
+     reported   - credible secondary source, original not confirmed
+     attributed - widely credited to them, but I found no original source: treat the wording as approximate
+   Add your own favourites in the app; if you find a better source for one of these, fix its `src` here. */
+const QUOTE_TIER = {sourced:['SOURCED','var(--moss)'],reported:['REPORTED','var(--steel)'],attributed:['ATTRIBUTED','var(--faint)']};
+const REAL_QUOTES = [
+  {q:'There are two types of pain: pain that hurts you and pain that changes you.',who:'Greg Plitt',src:'His YouTube video and Facebook post, Oct 4, 2011 (traced by Barry Popik)',t:'sourced',tags:['general','lift','comeback','firstWeek']},
+  {q:'Normality is what weak people call living. I call it death.',who:'Greg Plitt',src:'Quoted in an Iron Man Magazine tribute ("Greg used to say"); original video not confirmed',t:'reported',tags:['general','streakRisk','comeback']},
+  {q:'I love the mentality that when push comes to shove, simply work harder and the results will come.',who:'Greg Plitt',src:'Circulates in fan collections; no original source found',t:'attributed',tags:['general','lift','streakRisk']},
+  {q:'Today begins, tomorrow continues, and it never ends until you reach your goal.',who:'Greg Plitt',src:'Circulates in fan collections; no original source found',t:'attributed',tags:['general','challenge','firstWeek']},
+  {q:'I hated every minute of it. But I said to myself, "Suffer now, and live the rest of your life as a champion."',who:'Muhammad Ali',src:'On training for the 1978 Leon Spinks rematch, as reported in September 1978',t:'sourced',tags:['general','comeback','fight','lift','camp']},
+  {q:'Everybody has plans until they get hit for the first time.',who:'Mike Tyson',src:'Associated Press, August 1987, ahead of the Tyrell Biggs fight (traced by Quote Investigator)',t:'sourced',tags:['fight','camp','general']},
+  {q:'I\'ve missed more than 9,000 shots in my career. I\'ve lost almost 300 games. [...] I\'ve failed over and over and over again in my life. And that is why I succeed.',who:'Michael Jordan',src:'Nike "Failure" commercial, 1997',t:'sourced',tags:['comeback','general','pr','milestone']},
+  {q:'I fear not the man who has practiced 10,000 kicks once, but I fear the man who has practiced one kick 10,000 times.',who:'Bruce Lee',src:'Confirmed authentic by the Bruce Lee Foundation (per Snopes); the original source has not been published',t:'reported',tags:['fight','craft','general','camp']},
+  {q:'Discipline equals freedom.',who:'Jocko Willink',src:'Title of his 2017 book, Discipline Equals Freedom: Field Manual',t:'sourced',tags:['general','streakRisk','comeback','firstWeek']},
+  {q:'The last three or four reps is what makes the muscle grow.',who:'Arnold Schwarzenegger',src:'Widely credited to Pumping Iron (1977); the exact scene is not confirmed',t:'attributed',tags:['lift','pr']},
+  {q:'Rest at the end, not in the middle.',who:'Kobe Bryant',src:'Reported as a line he lived by after retiring; original venue not confirmed',t:'reported',tags:['general','camp','streakRisk','challenge']},
+  {q:'You have to build calluses on your brain just like how you build calluses on your hands.',who:'David Goggins',src:'Credited to Can\'t Hurt Me (2018); page not verified',t:'attributed',tags:['general','fight','lift','deload']},
+];
+
+let briefEdit=false, briefBrowse=false;
+
+function strHash(s){ let h=2166136261; for (let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+/* did anything set a record in the last two days? program lifts write S.prs; custom sets are checked with prFlags */
+function recentPR(){
+  const since=dkey(-1);
+  if (Object.values(S.prs||{}).some(p=>p&&p.date>=since)) return true;
+  for (const k of [dkey(-1),T]){ const cw=S.cust[k]; if (!cw) continue;
+    for (const id of cw.items){ const s=cw.sets[id]||[]; if (s.length && prFlags(id,k,s).some(Boolean)) return true; } }
+  return false;
+}
+function briefTag(){
+  const plan=buildDay(T), type=plan.def.type, st=streak(), nowH=new Date().getHours();
+  if (typeof campDaysOut==='function'){ const d=campDaysOut(); if (d!=null && d>=0 && d<=56) return 'camp'; }
+  if (recentPR()) return 'pr';
+  if ([7,14,21,30,50,60,75,100,150,200,365].includes(st) && dayScore(T)>0.08) return 'milestone';
+  if (st>0 && nowH>=18 && dayScore(T)<=0.08) return 'streakRisk';
+  if (daysSinceStart()>=2 && dayScore(dkey(-1))<=0.08 && dayScore(dkey(-2))<=0.08 && daysLogged()>0) return 'comeback';
+  if (deloadActive()) return 'deload';
+  if (daysLogged()<7 && daysSinceStart()<10) return 'firstWeek';
+  if (typeof chDay==='function'){ const c=chDay(); if (c!=null && c>=1 && c<=90 && strHash(T)%3===0) return 'challenge'; }
+  if ((S.fights[T]||[]).length || type==='strike' || type==='ground' || type==='engine') return 'fight';
+  if (type==='strength' || (S.cust[T]&&S.cust[T].items.length)) return 'lift';
+  if (type==='craft' || type==='recover') return 'craft';
+  return 'general';
+}
+function briefLine(tag){
+  const d0=S.days[T]||{}, qmode=S.motiv.qmode||'mix';
+  if (d0.bPin!=null && REAL_QUOTES[d0.bPin]){ const r=REAL_QUOTES[d0.bPin]; return {t:r.q,quote:r}; }
+  if (qmode!=='off'){
+    const qs=REAL_QUOTES.filter(r=>r.tags.includes(tag)), shift0=d0.bShift||0;
+    const pool=qs.length?qs:REAL_QUOTES.filter(r=>r.tags.includes('general'));
+    const pct=tag==='general'?35:45;
+    if (qmode==='only' || (strHash(T+'q')+shift0*37)%100<pct) { const r=pool[(strHash(T+tag+'q')+shift0)%pool.length]; return {t:r.q,quote:r}; }
+  }
+  const mine=(S.motiv.quotes||[]).filter(q=>q&&q.trim());
+  const pool=(BRIEF_LINES[tag]||BRIEF_LINES.general).map(t=>({t,mine:false}))
+    .concat(mine.map(t=>({t,mine:true})));
+  const shift=(S.days[T]&&S.days[T].bShift)||0;
+  /* general days lean on your own quotes more: they're the ones that hit hardest */
+  if (mine.length && tag==='general' && (strHash(T+'m')+shift)%3===0) return {t:mine[(strHash(T)+shift)%mine.length],mine:true};
+  return pool[(strHash(T+tag)+shift)%pool.length];
+}
+function Briefing(){
+  const d=day(T), tag=briefTag(), line=briefLine(tag), st=streak();
+  const nowH=new Date().getHours();
+  const head=nowH<12?'MORNING BRIEF':nowH<18?'AFTERNOON CHECK':'EVENING CHECK';
+  const dl=daysLogged(), next=MILESTONES.find(m=>dl<m.d);
+  const why=(S.motiv.why||'').trim();
+  const links=(S.motiv.links||[]).filter(l=>l&&l.url);
+  const extra=[];
+  if (typeof campBriefStat==='function'){ const c=campBriefStat(); if (c) extra.push(c); }
+  if (typeof chBriefStat==='function'){ const c=chBriefStat(); if (c) extra.push(c); }
+  if (d.bCol){
+    return `<button class="brief col" data-act="b-col" aria-expanded="false">
+      <span class="brtag">${esc(BRIEF_TAG_LABEL[tag])}</span><span class="brmini">${esc(line.t)}</span>${svg('chevD',13,'var(--faint)')}</button>`;
+  }
+  if (briefEdit) return BriefEditor();
+  return `<div class="brief">
+    <div class="brhead"><span class="brtag">${head} · ${esc(BRIEF_TAG_LABEL[tag])}</span>
+      <button class="brx" data-act="b-col" aria-label="Collapse the briefing for today">${svg('chevD',14,'var(--faint)').replace('<svg','<svg style="transform:rotate(180deg)"')}</button></div>
+    <div class="brline">${esc(line.t)}</div>
+    ${line.mine?'<div class="brsrc">— from your list</div>':''}
+    ${line.quote?`<div class="brsrc"><b style="color:var(--text)">— ${esc(line.quote.who)}</b> <span class="qtier" style="color:${QUOTE_TIER[line.quote.t][1]};border-color:${QUOTE_TIER[line.quote.t][1]}">${QUOTE_TIER[line.quote.t][0]}</span><br>${esc(line.quote.src)}</div>`:''}
+    ${why?`<button class="brwhy" data-act="b-edit"><i>YOUR WHY</i>${esc(why)}</button>`
+         :`<button class="brwhy empty" data-act="b-edit"><i>YOUR WHY</i>Write the one sentence you'd want to read on your worst morning. ${svg('edit',11,'var(--amber)')}</button>`}
+    <div class="brstats">
+      <span>${svg('flame',11,st>0?'var(--amber)':'var(--faint)')} ${st} day streak</span>
+      ${next?`<span>${next.d-dl} to ${esc(next.l)}</span>`:''}
+      ${extra.map(x=>`<span>${x}</span>`).join('')}
+    </div>
+    <div class="brlinks">
+      ${links.map((l,i)=>`<button class="brlink" data-act="b-open" data-v="${i}">${svg('play',10,'var(--amber)')} ${esc(l.label||'Play')}</button>`).join('')}
+      <button class="brlink ghost" data-act="b-next">ANOTHER LINE</button>
+      <button class="brlink ghost" data-act="b-edit">${svg('edit',10)} EDIT</button>
+    </div></div>`;
+}
+function BriefEditor(){
+  const m=S.motiv;
+  return `<div class="brief"><div class="brhead"><span class="brtag">YOUR BRIEFING</span>
+      <button class="chip on" data-act="b-done">DONE</button></div>
+    <label class="f" style="margin-top:8px"><span>Your why — shown every day</span>
+      <textarea data-bm="why" maxlength="280" placeholder="e.g. So nobody I love ever has to wonder if I can protect them.">${esc(m.why||'')}</textarea></label>
+    <div class="eyebrow" style="margin:14px 0 6px">QUOTES FROM REAL ATHLETES</div>
+    <div class="chips" style="padding:0">${[['mix','Mixed in'],['only','Always'],['off','Off']].map(([v,l])=>`<button class="chip ${(m.qmode||'mix')===v?'on':''}" data-act="b-qmode" data-v="${v}">${l}</button>`).join('')}</div>
+    <button class="linkbtn" data-act="b-browse" style="margin-top:8px">${briefBrowse?'HIDE':'BROWSE'} ${REAL_QUOTES.length} QUOTES AND THEIR SOURCES</button>
+    ${briefBrowse?`<div class="qbrowse">${REAL_QUOTES.map((r,i)=>`<div class="qb"><div class="qbq">${esc(r.q)}</div>
+      <div class="qbw"><b>${esc(r.who)}</b> <span class="qtier" style="color:${QUOTE_TIER[r.t][1]};border-color:${QUOTE_TIER[r.t][1]}">${QUOTE_TIER[r.t][0]}</span></div>
+      <div class="qbs">${esc(r.src)}</div><button class="chip ${(S.days[T]&&S.days[T].bPin===i)?'on':''}" data-act="b-pin" data-v="${i}" style="margin-top:6px">${(S.days[T]&&S.days[T].bPin===i)?'PINNED FOR TODAY':'SHOW TODAY'}</button></div>`).join('')}
+      <div class="note" style="padding:8px 0 0;border:none">SOURCED = traced to a dated origin. REPORTED = credible secondary source. ATTRIBUTED = widely credited, original not found, so the exact wording may differ. Found a better source? Tell me and I'll fix it.</div></div>`:''}
+    <div class="eyebrow" style="margin:14px 0 6px">YOUR OWN LINES (${(m.quotes||[]).length})</div>
+    ${(m.quotes||[]).map((q,i)=>`<div class="bredrow"><span>${esc(q)}</span><button class="x" data-act="b-rmq" data-v="${i}" aria-label="Remove line">${svg('x',12)}</button></div>`).join('')}
+    <div class="bredadd"><input type="text" id="b_q" maxlength="240" placeholder="A quote or reminder that works on you"><button class="chip on" data-act="b-addq">ADD</button></div>
+    <div class="eyebrow" style="margin:14px 0 6px">PLAY BUTTONS — YOUR SPEECHES, PLAYLISTS, VIDEOS</div>
+    ${(m.links||[]).map((l,i)=>`<div class="bredrow"><span><b>${esc(l.label)}</b> <small>${esc(l.url)}</small></span><button class="x" data-act="b-rml" data-v="${i}" aria-label="Remove link">${svg('x',12)}</button></div>`).join('')}
+    <div class="bredadd"><input type="text" id="b_ll" maxlength="30" placeholder="Label" style="flex:1"><input type="url" id="b_lu" placeholder="https://..." style="flex:2"><button class="chip on" data-act="b-addl">ADD</button></div>
+    <div class="note" style="padding:10px 0 0;border:none">Links open in their own app (YouTube, Spotify...). Your lines mix into the daily rotation.</div></div>`;
+}
+function bAct(a,v){
+  const d=day(T);
+  switch(a){
+    case 'b-col': d.bCol=!d.bCol; commit(); return;
+    case 'b-next': d.bShift=(d.bShift||0)+1; delete d.bPin; commit(); return;
+    case 'b-qmode': S.motiv.qmode=v; delete d.bPin; commit(); return;
+    case 'b-browse': briefBrowse=!briefBrowse; return;
+    case 'b-pin': d.bPin=d.bPin===+v?null:+v; commit(); return;
+    case 'b-edit': briefEdit=true; d.bCol=false; return;
+    case 'b-done': briefEdit=false; commit(); return;
+    case 'b-addq': { const el=document.getElementById('b_q'), q=(el&&el.value||'').trim();
+      if (!q){ toast('Type a line first'); return 'norender'; }
+      S.motiv.quotes.push(q); commit(); toast('Added to your rotation'); return; }
+    case 'b-rmq': S.motiv.quotes.splice(+v,1); commit(); return;
+    case 'b-addl': {
+      const l=(document.getElementById('b_ll')||{}).value||'', u=((document.getElementById('b_lu')||{}).value||'').trim();
+      if (!/^https?:\/\/\S+\.\S+/i.test(u)){ toast('Paste a full link starting with https://'); return 'norender'; }
+      S.motiv.links.push({label:l.trim()||'Play',url:u}); commit(); toast('Play button added'); return; }
+    case 'b-rml': S.motiv.links.splice(+v,1); commit(); return;
+    case 'b-open': { const l=S.motiv.links[+v]; if (l&&/^https?:\/\//i.test(l.url)) window.open(l.url,'_blank','noopener'); return 'norender'; }
+  }
+}
+
+/* =========================================================== round timer == */
+/* Gym-style interval timer. Time is always derived from Date.now() against a scheduled end, never from
+   counting ticks, so a throttled/backgrounded tab can't drift: when it wakes up it simply catches up through
+   however many phases elapsed. Sound is synthesized (no audio files): a struck bell for round start, three
+   for round end, wooden clapper for the warning, short pips counting down the rest. */
+const TMR_PRESETS = [
+  ['boxing','Boxing',3,180,60,10,'boxing'],['pro','Pro boxing',12,180,60,10,'boxing'],['muaythai','Muay Thai',5,180,120,10,'muaythai'],
+  ['mma','MMA',3,300,60,10,'mma'],['mma5','MMA 5×5',5,300,60,10,'mma'],['bjj','BJJ rolls',6,360,60,30,'bjj'],
+  ['wrestling','Wrestling',3,120,30,10,'wrestling'],['bag','Bag rounds',6,180,30,10,'pads'],['tabata','Tabata',8,20,10,3,'conditioning'],
+  ['custom','Custom',null,null,null,null,'other']];
+const TMR_PREP = 10;
+let tmrOpen=false, tmrIv=null, tmrAudio=null, tmrLock=null,
+    tmr={phase:'idle',round:1,end:0,remain:0,paused:false,warned:false,lastPip:-1,t0:0,from:null};
+
+function tmrCfg(){
+  const pr=S.tpref||{}, p=TMR_PRESETS.find(x=>x[0]===pr.preset)||TMR_PRESETS[0];
+  if (p[0]==='custom'){ const c=pr.custom||{}; return {id:'custom',label:'Custom',rounds:c.rounds||3,work:c.work||180,rest:c.rest??60,warn:c.warn??10,disc:c.disc||'other'}; }
+  return {id:p[0],label:p[1],rounds:p[2],work:p[3],rest:p[4],warn:p[5],disc:p[6]};
+}
+function tmrTotal(c){ return c.rounds*c.work+Math.max(0,c.rounds-1)*c.rest; }
+
+/* ---------- sound ---------- */
+function tmrCtx(){
+  try{
+    if (!tmrAudio){ const AC=window.AudioContext||window.webkitAudioContext; if (!AC) return null; tmrAudio=new AC(); }
+    if (tmrAudio.state==='suspended') tmrAudio.resume();
+    return tmrAudio;
+  }catch(e){ return null; }
+}
+function tmrBell(n){
+  const ac=tmrCtx(); if (!ac) return;
+  for (let k=0;k<n;k++){
+    const t0=ac.currentTime+k*0.42;
+    /* inharmonic partials are what make it read as metal rather than a beep */
+    [[523,0.55],[1046,0.28],[1569,0.18],[2350,0.12],[3140,0.07]].forEach(([f,g])=>{
+      const o=ac.createOscillator(), v=ac.createGain();
+      o.type='sine'; o.frequency.value=f;
+      v.gain.setValueAtTime(0.0001,t0); v.gain.exponentialRampToValueAtTime(g,t0+0.005); v.gain.exponentialRampToValueAtTime(0.0001,t0+1.6);
+      o.connect(v).connect(ac.destination); o.start(t0); o.stop(t0+1.65);
+    });
+  }
+}
+function tmrClack(n){
+  const ac=tmrCtx(); if (!ac) return;
+  for (let k=0;k<n;k++){
+    const t0=ac.currentTime+k*0.16, len=0.05;
+    const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*len),ac.sampleRate), d=buf.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,4);
+    const src=ac.createBufferSource(), bp=ac.createBiquadFilter(), g=ac.createGain();
+    src.buffer=buf; bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=3; g.gain.value=0.9;
+    src.connect(bp).connect(g).connect(ac.destination); src.start(t0);
+  }
+}
+function tmrPip(hi){
+  const ac=tmrCtx(); if (!ac) return;
+  const o=ac.createOscillator(), v=ac.createGain(), t0=ac.currentTime;
+  o.type='square'; o.frequency.value=hi?1320:880;
+  v.gain.setValueAtTime(0.0001,t0); v.gain.exponentialRampToValueAtTime(0.12,t0+0.005); v.gain.exponentialRampToValueAtTime(0.0001,t0+0.15);
+  o.connect(v).connect(ac.destination); o.start(t0); o.stop(t0+0.16);
+}
+const tmrBuzz = p => { try{ navigator.vibrate&&navigator.vibrate(p); }catch(e){} };
+
+/* ---------- wake lock: keep the screen on while rounds are running ---------- */
+async function tmrWake(on){
+  try{
+    if (on && 'wakeLock' in navigator && !tmrLock){ tmrLock=await navigator.wakeLock.request('screen'); tmrLock.addEventListener('release',()=>{ tmrLock=null; }); }
+    if (!on && tmrLock){ await tmrLock.release(); tmrLock=null; }
+  }catch(e){ tmrLock=null; }
+}
+document.addEventListener('visibilitychange',()=>{
+  if (document.visibilityState==='visible' && tmrOpen && ['prep','work','rest'].includes(tmr.phase) && !tmr.paused) tmrWake(true);
+});
+
+/* ---------- engine ---------- */
+function tmrDur(phase,c){ return (phase==='prep'?TMR_PREP:phase==='work'?c.work:c.rest)*1000; }
+function tmrStart(){
+  const c=tmrCfg(); tmrCtx();
+  tmr={phase:'prep',round:1,end:Date.now()+TMR_PREP*1000,remain:0,paused:false,warned:false,lastPip:-1,t0:Date.now(),from:tmr.from,cfg:c,workSec:null};
+  clearInterval(tmrIv); tmrIv=setInterval(tmrTick,100); tmrWake(true); tmrPip(false);
+}
+/* move to the next phase; `quiet` when catching up after the tab slept so we don't fire a burst of bells */
+function tmrAdvance(quiet){
+  const c=tmr.cfg;
+  if (tmr.phase==='prep'){ tmr.phase='work'; if(!quiet){ tmrBell(1); tmrBuzz([300]); } }
+  else if (tmr.phase==='work'){
+    if (tmr.round>=c.rounds){ tmrFinish(quiet); return; }
+    tmr.phase=c.rest>0?'rest':'work'; if (!c.rest) tmr.round++;
+    if(!quiet){ tmrBell(c.rest>0?3:1); tmrBuzz([200,100,200,100,200]); }
+  }
+  else if (tmr.phase==='rest'){ tmr.phase='work'; tmr.round++; if(!quiet){ tmrBell(1); tmrBuzz([300]); } }
+  tmr.end+=tmrDur(tmr.phase,c); tmr.warned=false; tmr.lastPip=-1;
+}
+function tmrFinish(quiet){
+  tmr.phase='done'; tmr.doneAt=Date.now(); clearInterval(tmrIv); tmrWake(false);
+  if (!quiet){ tmrBell(3); tmrBuzz([400,150,400,150,600]); }
+  render();
+}
+function tmrTick(){
+  if (!tmrOpen || tmr.paused || !['prep','work','rest'].includes(tmr.phase)) return;
+  let now=Date.now(), changed=false, guard=0;
+  while (now>=tmr.end && tmr.phase!=='done' && guard++<500){ const behind=now-tmr.end>1500; tmrAdvance(behind); changed=true; }
+  if (tmr.phase==='done') return;
+  const left=tmr.end-now, c=tmr.cfg, sec=Math.ceil(left/1000);
+  if (tmr.phase==='work' && c.warn>0 && !tmr.warned && left<=c.warn*1000 && c.work>c.warn){ tmr.warned=true; tmrClack(2); tmrBuzz([80,60,80]); }
+  if ((tmr.phase==='rest'||tmr.phase==='prep') && sec<=3 && sec>=1 && tmr.lastPip!==sec){ tmr.lastPip=sec; tmrPip(false); }
+  if (changed){ render(); return; }
+  tmrPaint(left);
+}
+function tmrPaint(left){
+  const t=document.getElementById('tmr_t'), bar=document.getElementById('tmr_bar'), ov=document.querySelector('.tmr');
+  if (!t) return;
+  t.textContent=fmtDur(Math.ceil(left/1000));
+  const dur=tmrDur(tmr.phase,tmr.cfg); if (bar) bar.style.width=clamp((1-left/dur)*100,0,100)+'%';
+  if (ov) ov.classList.toggle('warn', tmr.phase==='work' && tmr.cfg.warn>0 && left<=tmr.cfg.warn*1000);
+}
+
+/* ---------- UI ---------- */
+function TimerOverlay(){
+  if (!tmrOpen) return '';
+  const c=tmr.phase==='idle'?tmrCfg():tmr.cfg;
+  if (tmr.phase==='idle'){
+    const pr=S.tpref||{}, isC=(pr.preset||'boxing')==='custom';
+    const stepper=(f,label,val,fmt)=>`<div class="tst"><div class="sfl">${label}</div><div class="sfi">
+        <button class="stp" data-act="t-adj" data-v="${f}" data-v2="-1" aria-label="Less ${label}">−</button>
+        <span class="tval">${fmt(val)}</span>
+        <button class="stp" data-act="t-adj" data-v="${f}" data-v2="1" aria-label="More ${label}">+</button></div></div>`;
+    return `<div class="tmr idle" role="dialog" aria-label="Round timer">
+      <div class="sheethead"><div><div class="eyebrow">ROUND TIMER</div><div class="sheetsub">${c.rounds} × ${fmtDur(c.work)}${c.rest?` · ${fmtDur(c.rest)} rest`:''} · ${fmtDur(tmrTotal(c))} total</div></div>
+        <button class="chip on" data-act="t-close">CLOSE</button></div>
+      <div class="sheetbody" style="padding:14px var(--pad)">
+        <div class="eyebrow" style="margin-bottom:8px">PRESET</div>
+        <div class="chips" style="padding:0">${TMR_PRESETS.map(p=>`<button class="chip ${(pr.preset||'boxing')===p[0]?'on':''}" data-act="t-preset" data-v="${p[0]}">${p[1]}</button>`).join('')}</div>
+        <div class="tgrid">
+          ${stepper('rounds','ROUNDS',c.rounds,v=>v)}
+          ${stepper('work','ROUND',c.work,fmtDur)}
+          ${stepper('rest','REST',c.rest,fmtDur)}
+          ${stepper('warn','WARNING',c.warn,v=>v?v+'s':'off')}
+        </div>
+        ${isC?'':'<div class="note" style="padding:8px 0 0;border:none">Change any number and it becomes your Custom preset.</div>'}
+        <div class="note" style="padding:10px 0 0;border:none">Bell to start a round, three bells to end it, clapper for the warning. If your iPhone's silent switch is on, the bells can be muted, so flip it off before you start. The screen stays awake while it runs, and it vibrates on every bell.</div>
+      </div>
+      <div class="sheetfoot"><button class="btn" data-act="t-start" style="padding:18px;font-size:var(--fs-title)">${svg('play',14,'var(--ink)')} START</button></div></div>`;
+  }
+  if (tmr.phase==='done'){
+    const total=Math.round(((tmr.doneAt||Date.now())-tmr.t0)/1000)-TMR_PREP;
+    const ex=tmr.from&&tmr.from.kind==='ex'?exInfo(tmr.from.id):null;
+    return `<div class="tmr done" role="dialog" aria-label="Round timer finished">
+      <div class="tbig"><div class="tphase">DONE</div><div class="ttime" style="font-size:64px">${c.rounds} ROUNDS</div>
+        <div class="tround">${fmtDur(tmr.workSec!=null?tmr.workSec:c.rounds*c.work)} of work · ${fmtDur(Math.max(0,total))} total</div></div>
+      <div class="tctl col">
+        ${ex?`<button class="btn" data-act="t-logex">LOG AS A SET OF ${esc(ex.n.toUpperCase())}</button>`
+            :`<button class="btn" data-act="t-logfight">LOG AS A FIGHT SESSION</button>`}
+        <div style="display:flex;gap:8px"><button class="btn ghost" data-act="t-again" style="flex:1">AGAIN</button>
+          <button class="btn ghost" data-act="t-close" style="flex:1">CLOSE</button></div></div></div>`;
+  }
+  const left=tmr.paused?tmr.remain:Math.max(0,tmr.end-Date.now());
+  const ph={prep:'GET READY',work:'FIGHT',rest:'REST'}[tmr.phase];
+  return `<div class="tmr ${tmr.phase} ${tmr.paused?'paused':''}" role="dialog" aria-label="Round timer running">
+    <div class="ttop"><span>${esc(c.label.toUpperCase())}</span><button class="chip" data-act="t-stop">END</button></div>
+    <div class="tbig"><div class="tphase">${tmr.paused?'PAUSED':ph}</div>
+      <div class="ttime" id="tmr_t">${fmtDur(Math.ceil(left/1000))}</div>
+      <div class="tround">${tmr.phase==='prep'?`${c.rounds} rounds coming`:`ROUND ${tmr.round} OF ${c.rounds}`}</div>
+      <div class="tbarw"><div class="tbar" id="tmr_bar" style="width:${clamp((1-left/tmrDur(tmr.phase,c))*100,0,100)}%"></div></div>
+      <div class="tdots">${Array.from({length:c.rounds},(_,i)=>`<span class="${i+1<tmr.round||(i+1===tmr.round&&tmr.phase==='rest')?'on':i+1===tmr.round&&tmr.phase==='work'?'cur':''}"></span>`).join('')}</div></div>
+    <div class="tctl">
+      <button class="btn ghost" data-act="t-skip" style="flex:1">SKIP ${svg('chev',12)}</button>
+      <button class="btn" data-act="t-pause" style="flex:2;padding:20px">${tmr.paused?'RESUME':'PAUSE'}</button></div></div>`;
+}
+function tmrOpenFor(from){ tmrOpen=true; tmr={phase:'idle',round:1,end:0,remain:0,paused:false,warned:false,lastPip:-1,t0:0,from:from||null}; }
+function tAct(a,v,v2){
+  if (!S.tpref) S.tpref={preset:'boxing',custom:{}};
+  switch(a){
+    case 't-open': tmrOpenFor(null); return;
+    case 't-openex': tmrOpenFor({kind:'ex',id:v}); return;
+    case 't-close': clearInterval(tmrIv); tmrWake(false); tmrOpen=false; tmr.phase='idle'; return;
+    case 't-preset': S.tpref.preset=v; commit(); return;
+    case 't-adj': {
+      const c=tmrCfg(), step={rounds:1,work:c.work>=120?30:10,rest:c.rest>=60?15:5,warn:5}[v], lim={rounds:[1,30],work:[10,1200],rest:[0,600],warn:[0,60]}[v];
+      const cur={rounds:c.rounds,work:c.work,rest:c.rest,warn:c.warn,disc:c.disc};   // remembers which sport it was tuned from
+      cur[v]=clamp(cur[v]+step*(+v2),lim[0],lim[1]);
+      S.tpref.custom=cur; S.tpref.preset='custom'; commit(); return;
+    }
+    case 't-start': tmrStart(); return;
+    case 't-again': tmrStart(); return;
+    case 't-pause':
+      if (tmr.paused){ tmr.end=Date.now()+tmr.remain; tmr.paused=false; tmrWake(true); }
+      else { tmr.remain=Math.max(0,tmr.end-Date.now()); tmr.paused=true; tmrWake(false); }
+      return;
+    case 't-skip': if (['prep','work','rest'].includes(tmr.phase)){ if (tmr.paused){ tmr.paused=false; } tmr.end=Date.now(); tmrAdvance(false); if (tmr.phase!=='done') tmr.end=Date.now()+tmrDur(tmr.phase,tmr.cfg); } return;
+    case 't-stop': {
+      /* ending early still counts what you did: rounds started, minutes elapsed */
+      const c=tmr.cfg, cur=tmr.paused?tmr.remain:Math.max(0,tmr.end-Date.now());
+      const done=tmr.phase==='prep'?0:tmr.phase==='work'?tmr.round-1:tmr.round;           // full rounds only; the one in progress doesn't count
+      const partial=tmr.phase==='work'?Math.round(c.work-cur/1000):0;
+      if (done<1 && partial<30){ clearInterval(tmrIv); tmrWake(false); tmr.phase='idle'; return; }
+      tmr.workSec=done*c.work+partial;
+      tmr.cfg={...c,rounds:Math.max(done,1)}; tmrFinish(true); return 'norender';
+    }
+    case 't-logfight': {
+      const c=tmr.cfg, mins=Math.max(1,Math.round((((tmr.doneAt||Date.now())-tmr.t0)/1000-TMR_PREP)/60));
+      fightOpen=true; fightEdit=null; fdraft={disc:c.disc||'other',min:String(mins),rounds:String(c.rounds),rpe:0,worked:'',caught:''};
+      clearInterval(tmrIv); tmrOpen=false; tmr.phase='idle'; view='today'; toast('Rate the effort and save it'); return;
+    }
+    case 't-logex': {
+      const id=tmr.from&&tmr.from.id, vd=VD(), cw=S.cust[vd];
+      const work=tmr.workSec!=null?tmr.workSec:tmr.cfg.rounds*tmr.cfg.work;
+      if (cw && id){ (cw.sets[id]=cw.sets[id]||[]).push({t:work}); if (!cw.t0) cw.t0=Date.now(); commit(); toast(`Logged ${fmtDur(work)} of ${exInfo(id).n}`); }
+      clearInterval(tmrIv); tmrOpen=false; tmr.phase='idle'; return;
+    }
+  }
+}
+
+/* ============================================================ muscle map == */
+/* Weekly working sets per muscle, from custom workouts AND the program's own logged lifts. The library only
+   stores a primary muscle, so compound lifts get half-set credit for their obvious helpers by name
+   (bench -> triceps/shoulders, rows -> biceps, squats -> glutes, hinges -> glutes/low back...). It's an
+   estimate, good for spotting what you're neglecting, not a lab measurement. Targets are the usual
+   evidence-based hypertrophy ranges: ~10-20 hard sets a week for big muscles, less for small ones. */
+const MM_REG = [
+  ['chest','Chest',10,20],['back','Back / lats',10,20],['shoulders','Shoulders',8,18],['traps','Traps',4,12],
+  ['biceps','Biceps',6,16],['triceps','Triceps',6,16],['forearms','Forearms',4,12],['core','Core',6,16],
+  ['quads','Quads',10,20],['hams','Hamstrings',8,16],['glutes','Glutes',8,18],['calves','Calves',6,16],
+  ['hips','Hips / adductors',3,10],['lowback','Low back',3,10],['neck','Neck',3,10]];
+const MM_RL = Object.fromEntries(MM_REG.map(r=>[r[0],r]));
+const MM_SEC = [   // [name pattern, primary groups it applies to (or null = any), helpers credited at 0.5]
+  [/bench press|chest press|push-?up|\bdip\b|floor press|svend|squeeze press/i,null,['triceps','shoulders']],
+  [/overhead press|shoulder press|military|push press|pike push|handstand push|arnold|landmine press|z press|jerk/i,null,['triceps']],
+  [/row\b|rows\b|pull-?up|chin-?up|pulldown|muscle-?up|pullover|rope climb/i,null,['biceps']],
+  [/row\b|rows\b|face pull|reverse fly|rear delt/i,['back','shoulders'],['traps']],
+  [/squat|lunge|leg press|step-?up|split squat|hack|pistol|belt squat|sled push/i,['quads'],['glutes']],
+  [/deadlift|good morning|hip hinge|romanian|\brdl\b|swing|clean|snatch|rack pull/i,null,['glutes','lowback']],
+  [/deadlift|clean|snatch|rack pull|shrug|farmer/i,['hams','lowback','full','forearms'],['traps']],
+  [/hip thrust|glute bridge/i,null,['hams']],
+  [/farmer|suitcase|carry|walk\b/i,['forearms','core','full'],['core','forearms']],
+  [/upright row|high pull/i,null,['shoulders']],
+  [/close-grip|diamond/i,['chest'],['triceps']],
+  [/nordic|leg curl|hamstring curl|glute-?ham/i,null,['calves']],
+];
+const MM_COUNT_KINDS = {wr:1,bw:1,carry:1};
+function exMuscles(E){
+  const out={};
+  if (E.mu==='full'){ ['quads','glutes','back','shoulders','core'].forEach(m=>out[m]=0.5); }
+  else if (MM_RL[E.mu]) out[E.mu]=1;
+  else return out;    // cardio, sport, combat, mobility, plyo: not counted as hypertrophy sets
+  for (const [rx,prim,helpers] of MM_SEC){
+    if (!rx.test(E.n)) continue;
+    if (prim && !prim.includes(E.mu)) continue;
+    helpers.forEach(h=>{ if (h!==E.mu && (out[h]||0)<0.5) out[h]=0.5; });
+  }
+  return out;
+}
+/* timed holds count for the groups where a hold IS the training (planks, hangs, neck bridges, copenhagens) */
+function mmCountable(E){ return MM_COUNT_KINDS[E.k] || (E.k==='time' && ['core','forearms','neck','hips','lowback'].includes(E.mu)); }
+function mmTally(fromOff,toOff){
+  const tot={}, by={};
+  for (let o=fromOff;o<=toOff;o++){
+    const k=dkey(o);
+    const add=(id,n)=>{ const E=exInfo(id); if (!n || !mmCountable(E)) return;
+      for (const [m,w] of Object.entries(exMuscles(E))){ tot[m]=(tot[m]||0)+n*w; (by[m]=by[m]||{})[E.n]=(by[m][E.n]||0)+n*w; } };
+    const cw=S.cust[k]; if (cw) for (const id of cw.items) add(id,(cw.sets[id]||[]).length);
+    const g=S.gym[k]; if (g) for (const key of Object.keys(g)){ const id=EXLINK_ID[key]; if (id) add(id,(g[key]||[]).length); }
+  }
+  return {tot,by};
+}
+function mmState(n,r){ if (!n) return 'none'; if (n<r[2]) return 'low'; if (n>r[3]) return 'high'; return 'good'; }
+const MM_FILL = {none:'#1A1E24',low:'#2B4556',good:'#E0A03A',high:'#B4553A'};
+
+/* body drawn as machined panels; left-side polygons are mirrored for the right */
+const MM_SHAPES = {
+  front:[
+    ['neck',[[54,31],[66,31],[67,39],[53,39]],false],
+    ['shoulders',[[40,40],[51,40],[48,53],[37,60],[34,50]]],
+    ['chest',[[60,42],[60,62],[47,64],[41,57],[44,46],[52,41]]],
+    ['biceps',[[36,62],[45,63],[43,84],[35,86],[32,74]]],
+    ['forearms',[[33,89],[43,87],[40,112],[32,114],[29,100]]],
+    ['core',[[48,66],[72,66],[71,104],[60,111],[49,104]],false],
+    ['core',[[42,67],[47,67],[48,104],[44,101],[40,84]]],
+    ['hips',[[53,113],[60,117],[67,113],[64,136],[60,140],[56,136]],false],
+    ['quads',[[44,109],[52,113],[55,137],[54,171],[45,173],[39,150],[40,124]]],
+    ['calves',[[43,181],[52,181],[52,214],[47,226],[42,212]]],
+  ],
+  back:[
+    ['neck',[[54,31],[66,31],[67,37],[53,37]],false],
+    ['traps',[[51,35],[69,35],[79,44],[68,58],[60,63],[52,58],[41,44]],false],
+    ['shoulders',[[35,46],[45,43],[47,55],[36,61],[32,53]]],
+    ['back',[[47,58],[58,64],[58,98],[50,96],[42,80],[41,64]]],
+    ['lowback',[[51,99],[69,99],[71,112],[49,112]],false],
+    ['triceps',[[34,63],[44,63],[42,85],[34,87],[31,75]]],
+    ['forearms',[[33,90],[43,88],[40,112],[32,114],[29,100]]],
+    ['glutes',[[46,113],[59,115],[59,137],[48,137],[43,125]]],
+    ['hams',[[44,139],[58,139],[56,172],[46,174],[41,156]]],
+    ['calves',[[42,179],[54,179],[54,206],[48,224],[41,206]]],
+  ]};
+function mmSVG(tot,sel){
+  const poly=(pts,dx)=>pts.map(([x,y])=>`${x+dx},${y}`).join(' ');
+  const mirror=pts=>pts.map(([x,y])=>[120-x,y]).reverse();
+  const fig=(side,dx)=>{
+    let g=`<circle cx="${60+dx}" cy="18" r="11" fill="none" stroke="#2C323A" stroke-width="1.2"/>`;
+    g+=`<rect x="${27+dx}" y="116" width="7" height="12" fill="#15181C" stroke="#2C323A"/><rect x="${86+dx}" y="116" width="7" height="12" fill="#15181C" stroke="#2C323A"/>`;
+    g+=`<rect x="${41+dx}" y="228" width="12" height="7" fill="#15181C" stroke="#2C323A"/><rect x="${67+dx}" y="228" width="12" height="7" fill="#15181C" stroke="#2C323A"/>`;
+    for (const [mu,pts,mir] of MM_SHAPES[side]){
+      const r=MM_RL[mu], st=mmState(tot[mu]||0,r), on=sel===mu;
+      const attrs=`fill="${MM_FILL[st]}" stroke="${on?'#DDE3EA':'#0B0C0E'}" stroke-width="${on?1.6:1}" data-act="mm-sel" data-v="${mu}" style="cursor:pointer"`;
+      g+=`<polygon points="${poly(pts,dx)}" ${attrs}><title>${r[1]}: ${Math.round((tot[mu]||0)*10)/10} sets</title></polygon>`;
+      if (mir!==false) g+=`<polygon points="${poly(mirror(pts),dx)}" ${attrs}/>`;
+    }
+    g+=`<text x="${60+dx}" y="252" text-anchor="middle" font-size="7" letter-spacing="2" fill="#737C86" font-family="monospace">${side.toUpperCase()}</text>`;
+    return g;
+  };
+  return `<svg class="mmsvg" viewBox="0 0 250 258" role="img" aria-label="Muscle map: weekly sets per muscle">${fig('front',0)}${fig('back',130)}</svg>`;
+}
+let mmSel=null, mmWin=0;   // 0 = last 7 days, 1 = the 7 before that
+function MuscleMap(){
+  const off=mmWin*7, cur=mmTally(-6-off,-off), prev=mmTally(-13-off,-7-off);
+  const rows=MM_REG.map(r=>({r,n:cur.tot[r[0]]||0,p:prev.tot[r[0]]||0}));
+  const under=rows.filter(x=>x.n<x.r[2]).length, inR=rows.filter(x=>x.n>=x.r[2]&&x.n<=x.r[3]).length;
+  const total=Object.values(cur.tot).reduce((a,b)=>a+b,0);
+  const sel=mmSel?rows.find(x=>x.r[0]===mmSel):null;
+  const fmt=n=>Math.round(n*10)/10;
+  return `${sect('dumb','MUSCLE MAP')}
+    <div class="seg" style="margin-bottom:10px"><button class="segbtn ${mmWin===0?'on':''}" data-act="mm-win" data-v="0">LAST 7 DAYS</button><button class="segbtn ${mmWin===1?'on':''}" data-act="mm-win" data-v="1">THE 7 BEFORE</button></div>
+    <div class="panel"><div style="padding:12px 10px 4px">${mmSVG(cur.tot,mmSel)}</div>
+      <div class="mmleg"><span><i style="background:${MM_FILL.none}"></i>none</span><span><i style="background:${MM_FILL.low}"></i>under</span><span><i style="background:${MM_FILL.good}"></i>in range</span><span><i style="background:${MM_FILL.high}"></i>a lot</span></div>
+      ${sel?`<div class="mmdet"><div class="mmdh"><b>${esc(sel.r[1])}</b><span>${fmt(sel.n)} sets · target ${sel.r[2]}–${sel.r[3]}</span></div>
+        ${Object.entries(cur.by[sel.r[0]]||{}).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="histrow"><span>${esc(n)}</span><span>${fmt(c)} set${c===1?'':'s'}</span></div>`).join('')||'<div class="note" style="padding:6px 0;border:none">Nothing hit this in the window. Add one exercise for it next session.</div>'}
+        </div>`:`<div class="note">Tap a muscle to see which exercises hit it. ${total?`${fmt(total)} working sets counted · ${inR} of ${MM_REG.length} in range · ${under} under.`:'Log sets in a workout (or on the program lifts) and this fills in.'}</div>`}
+    </div>
+    <div class="panel">${rows.map(({r,n,p})=>{ const st=mmState(n,r), d=n-p;
+      return `<button class="mmrow ${mmSel===r[0]?'on':''}" data-act="mm-sel" data-v="${r[0]}">
+        <span class="mmn">${esc(r[1])}</span>
+        <span class="mmbar"><span class="mmtgt" style="left:${r[2]/Math.max(r[3]*1.25,1)*100}%;width:${(r[3]-r[2])/Math.max(r[3]*1.25,1)*100}%"></span><span class="mmfill" style="width:${clamp(n/(r[3]*1.25)*100,0,100)}%;background:${MM_FILL[st]}"></span></span>
+        <span class="mmv">${fmt(n)}${d?`<em class="${d>0?'up':'dn'}">${d>0?'+':''}${fmt(d)}</em>`:''}</span></button>`; }).join('')}
+      <div class="note">Shaded band = target range. Numbers on the right compare with the 7 days before. Half-set credit goes to helper muscles on compound lifts, so treat this as an estimate.</div></div>`;
+}
+
+/* ======================================================== 90-day challenge == */
+/* A fixed 90-day block with a weekly check-in: photos (front/side/back) + weight, waist, body fat.
+   Measurements are written into the normal body log too, so Fuel/Target pick them up. Photos are too big
+   for the JSON backup, so they live in IndexedDB on this device (downscaled to ~1080px JPEG) and SAVE PHOTOS
+   hands them to the share sheet so they can go to the camera roll / Files. */
+const CH_LEN = 90, CH_POSES = [['front','Front'],['side','Side'],['back','Back']];
+let chDraft=null, chCmp=null, chArm=false;
+const photoURL = {};   // id -> object URL, cached for the session
+
+/* ---------- IndexedDB ---------- */
+let _idb=null;
+function idb(){
+  if (_idb) return _idb;
+  _idb=new Promise((res,rej)=>{
+    try{
+      const r=indexedDB.open('forge-photos',2);
+      r.onupgradeneeded=()=>{ const db=r.result;            // v1: photos · v2: + daily state snapshots
+        if (!db.objectStoreNames.contains('p')) db.createObjectStore('p');
+        if (!db.objectStoreNames.contains('s')) db.createObjectStore('s'); };
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+    }catch(e){ rej(e); }
+  });
+  _idb.catch(()=>{ _idb=null; });
+  return _idb;
+}
+function idbDo(mode,fn){ return idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('p',mode), st=tx.objectStore('p'); const r=fn(st);
+  tx.oncomplete=()=>res(r&&r.result); tx.onerror=()=>rej(tx.error); })); }
+const photoPut=(id,blob)=>idbDo('readwrite',st=>st.put(blob,id));
+const photoGet=id=>idbDo('readonly',st=>st.get(id));
+const photoDel=id=>idbDo('readwrite',st=>st.delete(id)).catch(()=>{});
+
+/* downscale on the phone before storing: a 12MP photo becomes ~150-250KB */
+function shrinkImage(file,max=1080){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{
+      const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+      const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*k); c.height=Math.round(img.naturalHeight*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      c.toBlob(b=>b?res(b):rej(new Error('encode failed')),'image/jpeg',0.82);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('not an image')); };
+    img.src=url;
+  });
+}
+/* fill every <img data-ph="id"> after a render (renders are synchronous strings, photos load async) */
+function hydratePhotos(){
+  document.querySelectorAll('img[data-ph]').forEach(img=>{
+    const id=img.dataset.ph; if (!id) return;
+    if (photoURL[id]){ img.src=photoURL[id]; return; }
+    photoGet(id).then(b=>{ if (!b) return; photoURL[id]=URL.createObjectURL(b);
+      document.querySelectorAll(`img[data-ph="${id}"]`).forEach(x=>x.src=photoURL[id]); }).catch(()=>{});
+  });
+}
+
+/* ---------- derived ---------- */
+function daysBetween(a,b){ const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);
+  return Math.round((new Date(y2,m2-1,d2)-new Date(y1,m1-1,d1))/86400000); }
+function addDays(k,n){ const [y,m,d]=k.split('-').map(Number), dt=new Date(y,m-1,d+n);
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`; }
+function chDay(){ const c=S.ch90; if (!c||!c.start) return null; return daysBetween(c.start,T)+1; }
+function chWeekOf(date){ return Math.max(0,Math.floor(daysBetween(S.ch90.start,date)/7)); }
+function chBriefStat(){ const d=chDay(); if (d==null) return null;
+  const t=d<1?`90-day block starts in ${1-d}d`:d>CH_LEN?'90-day block complete':`Day ${d} of 90`;
+  return `<button class="brchip" data-act="ch-open">${svg('target',10,'var(--amber)')} ${t}</button>`; }
+function chCheckin(week){ return (S.ch90.checkins||[]).find(c=>c.week===week); }
+function chDueText(){
+  const d=chDay(); if (d==null||d>CH_LEN) return '';
+  const w=chWeekOf(T);
+  if (!chCheckin(w)) return w===0?'First check-in: take your before photos today.':`Check-in for week ${w} is due. Photos + numbers, two minutes.`;
+  const next=addDays(S.ch90.start,(w+1)*7);
+  return next>addDays(S.ch90.start,CH_LEN-1) ? 'Last check-in is done. Finish the block strong.' : `Next check-in ${shortDate(next)}.`;
+}
+
+/* ---------- screen ---------- */
+function PastBlocks(){
+  const past=S.ch90.past||[]; if (!past.length) return '';
+  return `${sect('book','PAST BLOCKS')}<div class="panel">${past.map((b,i)=>{ const ks=[...b.checkins].sort((x,y)=>x.week-y.week);
+    return `<div class="fsess"><div class="fstop"><b>${esc(b.goal||'90-day block')}</b><span>${esc(shortDate(b.start))} · ${ks.length} check-in${ks.length===1?'':'s'}</span>
+      <button class="x" data-act="ch-delpast" data-v="${i}" aria-label="Delete this block and its photos">${svg('trash',12,'var(--rust)')}</button></div>
+      <div class="chthumbs">${ks.flatMap(k=>CH_POSES.map(([p])=>k.photos&&k.photos[p]?`<img data-ph="${k.photos[p]}" alt="week ${k.week} ${p}">`:'')).join('')}</div></div>`; }).join('')}</div>`;
+}
+function ViewChallenge(){
+  const c=S.ch90, imp=isImp(), wu=wUnit(), lu=imp?'in':'cm';
+  if (!c.start){
+    return `${sect('target','90-DAY CHALLENGE')}
+      <div class="panel"><div style="padding:14px 13px">
+        <div class="brline" style="margin:0 0 10px;font-size:20px">Ninety days. One block. Before and after.</div>
+        <p class="t">Every week you take three photos and a couple of numbers. Every day counts toward the grid. At the end you put day 1 next to day 90 and see what consistency actually built.</p>
+        <label class="f" style="margin-top:12px"><span>What are the 90 days for?</span><input type="text" id="ch_goal" maxlength="80" placeholder="e.g. Lose 12 lb of fat, keep every lift" value="${esc(c.goal||'')}"></label>
+        <label class="f" style="margin-top:10px"><span>Start date</span><input type="date" id="ch_start" value="${T}"></label>
+        <button class="btn" data-act="ch-start" style="margin-top:14px">START THE 90 DAYS</button>
+      </div><div class="note">Photos stay on this phone. They're not in the JSON backup, so use SAVE PHOTOS now and then to copy them to your camera roll.</div></div>${PastBlocks()}
+      ${(S.ch90.past||[]).length?`<button class="btn ghost" data-act="ch-save" style="margin-bottom:14px">SAVE PHOTOS FROM PAST BLOCKS</button>`:''}`;
+  }
+  const d=chDay(), day=Math.min(Math.max(d,1),CH_LEN), endK=addDays(c.start,CH_LEN-1);
+  let hit=0, best=0, run=0;
+  const cells=Array.from({length:CH_LEN},(_,i)=>{ const k=addDays(c.start,i), fut=k>T, sc=fut?0:dayScore(k);
+    if (!fut){ if (sc>0.08){ hit++; run++; best=Math.max(best,run); } else if (k!==T) run=0; }
+    return `<div class="chc ${k===T?'today':''} ${fut?'fut':''}" style="${!fut&&sc>0.02?`background:${heatColor(sc)}`:''}" title="${k}"></div>`; }).join('');
+  const passed=clamp(d,0,CH_LEN);
+  const cks=[...(c.checkins||[])].sort((a,b)=>a.week-b.week);
+  const first=cks[0], last=cks[cks.length-1];
+  const delta=(k,cv,u)=>first&&last&&first!==last&&first[k]!=null&&last[k]!=null?`${last[k]-first[k]>0?'+':''}${Math.round(cv(last[k]-first[k])*10)/10} ${u}`:'—';
+  const wconv=v=>imp?v*2.20462:v, lconv=v=>imp?v/2.54:v;
+  const w=chWeekOf(T), due=d<=CH_LEN && !chCheckin(w);
+  return `${sect('target','90-DAY CHALLENGE')}
+    <div class="panel chhero"><div class="chday">${d<1?`<span>STARTS IN</span><b>${1-d}</b><span>DAYS</span>`:`<span>DAY</span><b>${d>CH_LEN?90:day}</b><span>OF 90</span>`}</div>
+      <div style="flex:1;min-width:0">${c.goal?`<div class="chgoal">${esc(c.goal)}</div>`:''}
+        <div class="bar" style="margin-top:8px"><div class="barfill" style="width:${passed/CH_LEN*100}%;background:var(--amber)"></div></div>
+        <div class="chsub">${esc(shortDate(c.start))} → ${esc(shortDate(endK))} · ${hit}/${passed} days on · best run ${best}</div></div></div>
+    <div class="panel"><div class="chgrid">${cells}</div>
+      <div class="note">${d>CH_LEN?'Block complete. Compare day 1 with your last check-in below.':esc(chDueText())}</div>
+      ${d>=1&&d<=CH_LEN?`<button class="btn ${due?'':'ghost'}" data-act="ch-checkin" style="${due?'':'border:none;border-top:1px solid var(--rule)'}">${svg('plus',13,due?'var(--ink)':'currentColor')} ${chCheckin(w)?'EDIT THIS WEEK\'S CHECK-IN':'CHECK IN NOW'}</button>`:''}</div>
+    ${chDraft?ChForm():''}
+    ${cks.length?`${sect('trend','CHANGE SINCE DAY 1')}
+    <div class="stats"><div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${delta('weight',wconv,wu)}</div><div class="l">WEIGHT</div></div>
+      <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${delta('waist',lconv,lu)}</div><div class="l">WAIST</div></div>
+      <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${delta('bf',x=>x,'%')}</div><div class="l">BODY FAT</div></div></div>
+    ${ChCompare(cks)}
+    ${sect('book','CHECK-INS')}<div class="panel">${cks.slice().reverse().map(k=>`<div class="fsess"><div class="fstop"><b>Week ${k.week}</b>
+        <span>${esc(shortDate(k.date))}${k.weight!=null?` · ${Math.round(wconv(k.weight)*10)/10} ${wu}`:''}${k.waist!=null?` · ${Math.round(lconv(k.waist)*10)/10} ${lu}`:''}${k.bf!=null?` · ${k.bf}%`:''}</span>
+        <button class="x" data-act="ch-del" data-v="${k.week}" aria-label="Delete week ${k.week} check-in">${svg('x',12)}</button></div>
+        <div class="chthumbs">${CH_POSES.map(([p])=>k.photos&&k.photos[p]?`<img data-ph="${k.photos[p]}" alt="${p}">`:'').join('')}</div>
+        ${k.note?`<div class="fsl">${esc(k.note)}</div>`:''}</div>`).join('')}</div>`:''}
+    ${PastBlocks()}
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn ghost" data-act="ch-save" style="flex:1">SAVE PHOTOS</button>
+      <button class="btn ghost" data-act="ch-end" style="flex:1;color:var(--rust)">${chArm?'TAP AGAIN TO END':'END / RESTART'}</button></div>`;
+}
+function ChForm(){
+  const imp=isImp(), dr=chDraft;
+  return `<div class="panel"><div style="padding:13px"><div class="eyebrow" style="margin-bottom:10px">WEEK ${dr.week} CHECK-IN</div>
+    <div class="chposes">${CH_POSES.map(([p,l])=>`<label class="chpose">${dr.photos[p]?`<img data-ph="${dr.photos[p]}" alt="${l}">`:`<span>${svg('plus',16,'var(--faint)')}</span>`}
+        <i>${l.toUpperCase()}</i><input type="file" accept="image/*" data-ph-pose="${p}" hidden></label>`).join('')}</div>
+    <div class="note" style="padding:8px 0 0;border:none">Same spot, same light, same time of day. Relaxed, then flexed if you want.</div>
+    <div class="grid3" style="padding:12px 0 0">
+      <label class="f"><span>Weight (${imp?'lb':'kg'})</span><input type="text" inputmode="decimal" data-chd="weight" value="${esc(dr.weight)}"></label>
+      <label class="f"><span>Waist (${imp?'in':'cm'})</span><input type="text" inputmode="decimal" data-chd="waist" value="${esc(dr.waist)}"></label>
+      <label class="f"><span>Body fat %</span><input type="text" inputmode="decimal" data-chd="bf" value="${esc(dr.bf)}"></label></div>
+    <label class="f" style="margin-top:10px"><span>Note</span><textarea data-chd="note" placeholder="Energy, sleep, what changed this week.">${esc(dr.note)}</textarea></label>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-act="ch-submit" style="flex:2">SAVE CHECK-IN</button>
+      <button class="btn ghost" data-act="ch-cancel" style="flex:1">CANCEL</button></div></div></div>`;
+}
+function ChCompare(cks){
+  if (cks.length<2) return `<div class="panel"><div class="empty">Two check-ins and a side-by-side comparison appears here.</div></div>`;
+  const a=cks.find(k=>k.week===(chCmp&&chCmp[0]))||cks[0], b=cks.find(k=>k.week===(chCmp&&chCmp[1]))||cks[cks.length-1];
+  const sel=(i,cur)=>`<select data-chcmp="${i}">${cks.map(k=>`<option value="${k.week}" ${k.week===cur.week?'selected':''}>Wk ${k.week} · ${shortDate(k.date)}</option>`).join('')}</select>`;
+  return `${sect('eye','SIDE BY SIDE')}<div class="panel"><div class="grid2 chsel">${sel(0,a)}${sel(1,b)}</div>
+    ${CH_POSES.map(([p,l])=>(a.photos&&a.photos[p])||(b.photos&&b.photos[p])?`<div class="chcmp"><div>${a.photos&&a.photos[p]?`<img data-ph="${a.photos[p]}" alt="${l} week ${a.week}">`:'<span>no photo</span>'}</div>
+      <div>${b.photos&&b.photos[p]?`<img data-ph="${b.photos[p]}" alt="${l} week ${b.week}">`:'<span>no photo</span>'}</div><i>${l.toUpperCase()}</i></div>`:'').join('')}</div>`;
+}
+function chAct(a,v){
+  const c=S.ch90, imp=isImp();
+  switch(a){
+    case 'ch-open': view='build'; buildSub='ch90'; window.scrollTo(0,0); return;
+    case 'ch-start': {
+      const st=(document.getElementById('ch_start')||{}).value||T;
+      c.start=st; c.goal=((document.getElementById('ch_goal')||{}).value||'').trim(); c.checkins=[]; chArm=false;
+      commit();
+      if (st>T){ toast(`Starts ${shortDate(st)}. Your first check-in opens that day.`); return; }
+      toast('Day 1. Take your before photos.'); chAct('ch-checkin'); return;
+    }
+    case 'ch-checkin': {
+      const w=chWeekOf(T), ex=chCheckin(w), L=latestField('weight'), Wa=latestField('waist');
+      const src=ex||{};
+      /* a weeks-old number must not be saved back as "today's" measurement, so only fresh ones pre-fill */
+      const fresh=(f,k)=>f&&daysBetween(f.date,T)<=3?f[k]:null;
+      const wv=src.weight??fresh(L,'weight'), wa=src.waist??fresh(Wa,'waist');
+      chDraft={week:w,photos:{...(src.photos||{})},
+        weight:wv!=null?String(Math.round((imp?wv*2.20462:wv)*10)/10):'', waist:wa!=null?String(Math.round((imp?wa/2.54:wa)*10)/10):'',
+        bf:src.bf!=null?String(src.bf):'', note:src.note||''};
+      return;
+    }
+    case 'ch-cancel': chDraft=null; return;
+    case 'ch-submit': {
+      const dr=chDraft; if (!dr) return;
+      const wv=num(dr.weight), wa=num(dr.waist), bf=num(dr.bf);
+      if (wv!=null && !((imp?wv/2.20462:wv)>25 && (imp?wv/2.20462:wv)<350)){ toast('That weight looks off'); return 'norender'; }
+      if (bf!=null && !(bf>=2&&bf<=60)){ toast('Body fat should be 2-60%'); return 'norender'; }
+      const rec={week:dr.week,date:T,photos:dr.photos,note:(dr.note||'').trim(),
+        weight:wv!=null?Math.round((imp?wv/2.20462:wv)*100)/100:null, waist:wa!=null?Math.round((imp?wa*2.54:wa)*10)/10:null, bf:bf!=null?bf:null};
+      const old=chCheckin(dr.week);
+      if (old) Object.values(old.photos||{}).forEach(id=>{ if (!Object.values(rec.photos).includes(id)) photoDel(id); });
+      c.checkins=(c.checkins||[]).filter(k=>k.week!==dr.week).concat(rec);
+      /* also into the normal body log so Fuel / Target / trends use it */
+      const L={...(S.log.find(x=>x.date===T)||{}),date:T};
+      if (rec.weight!=null) L.weight=rec.weight; if (rec.waist!=null) L.waist=rec.waist; if (rec.bf!=null) L.bf=rec.bf;
+      if (rec.weight!=null||rec.waist!=null||rec.bf!=null) S.log=[...S.log.filter(x=>x.date!==T),L].sort((x,y)=>x.date>y.date?1:-1);
+      chDraft=null; commit(); toast(`Week ${rec.week} check-in saved`); return;
+    }
+    case 'ch-del': {
+      const k=chCheckin(+v); if (!k) return;
+      if (chArm!=='d'+v){ chArm='d'+v; toast('Tap the X again to delete this check-in and its photos'); return 'norender'; }
+      Object.values(k.photos||{}).forEach(photoDel); c.checkins=c.checkins.filter(x=>x.week!==+v); chArm=false; commit(); return;
+    }
+    case 'ch-end': {
+      if (chArm!==true){ chArm=true; return; }
+      /* archive the block instead of dropping it: its check-ins hold the only reference to the photos in IndexedDB */
+      if ((c.checkins||[]).length) (c.past=c.past||[]).push({start:c.start,goal:c.goal,checkins:c.checkins});
+      c.start=null; c.goal=''; c.checkins=[]; chArm=false; chDraft=null; commit();
+      toast('Block ended and filed under Past blocks.'); return;
+    }
+    case 'ch-delpast': {
+      const b=(c.past||[])[+v]; if (!b) return;
+      if (chArm!=='p'+v){ chArm='p'+v; toast('Tap again to delete that block and its photos'); return 'norender'; }
+      b.checkins.forEach(k=>Object.values(k.photos||{}).forEach(photoDel)); c.past.splice(+v,1); chArm=false; commit(); return;
+    }
+    case 'ch-save': chSavePhotos(); return 'norender';
+  }
+}
+async function chSavePhotos(){
+  const ids=[];
+  (S.ch90.past||[]).forEach((b,bi)=>b.checkins.forEach(k=>CH_POSES.forEach(([p])=>{ if (k.photos&&k.photos[p]) ids.push([`forge-block${bi+1}-wk${k.week}-${p}.jpg`,k.photos[p]]); })));
+  (S.ch90.checkins||[]).forEach(k=>CH_POSES.forEach(([p])=>{ if (k.photos&&k.photos[p]) ids.push([`forge-wk${k.week}-${p}.jpg`,k.photos[p]]); }));
+  if (!ids.length){ toast('No photos yet'); return; }
+  const files=[]; for (const [name,id] of ids){ const b=await photoGet(id).catch(()=>null); if (b) files.push(new File([b],name,{type:'image/jpeg'})); }
+  try{
+    if (navigator.canShare && navigator.canShare({files})){ await navigator.share({files,title:'FORGE progress photos'}); return; }
+  }catch(e){ if (e && e.name==='AbortError') return; }
+  files.forEach((f,i)=>setTimeout(()=>{ const u=URL.createObjectURL(f), a=document.createElement('a'); a.href=u; a.download=f.name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),2000); },i*350));
+  toast(`Downloading ${files.length} photos`);
+}
+document.addEventListener('change', e=>{
+  const s=e.target; if (!s.dataset || s.dataset.chcmp==null) return;
+  const cks=[...S.ch90.checkins].sort((a,b)=>a.week-b.week);
+  chCmp=chCmp||[cks[0].week,cks[cks.length-1].week]; chCmp[+s.dataset.chcmp]=+s.value; render();
+});
+/* a photo was picked for a pose in the check-in form */
+document.addEventListener('change', async e=>{
+  const inp=e.target; if (!inp.matches || !inp.matches('input[type=file][data-ph-pose]') || !chDraft) return;
+  const f=inp.files&&inp.files[0]; if (!f) return;
+  const pose=inp.dataset.phPose;
+  try{
+    const blob=await shrinkImage(f), id='ph_'+Date.now().toString(36)+'_'+pose;
+    await photoPut(id,blob);
+    if (chDraft.photos[pose] && !(chCheckin(chDraft.week)&&Object.values(chCheckin(chDraft.week).photos||{}).includes(chDraft.photos[pose]))) photoDel(chDraft.photos[pose]);
+    chDraft.photos[pose]=id;
+    /* update just this slot: a full re-render here would replace the other pose inputs, and a photo
+       picked for one of them while this one was still saving would be lost */
+    const slot=document.querySelector(`input[data-ph-pose="${pose}"]`), lab=slot&&slot.closest('.chpose');
+    if (lab){ const old=lab.querySelector('img,span'); const img=document.createElement('img'); img.dataset.ph=id; img.alt=pose;
+      if (old) old.replaceWith(img); else lab.prepend(img); hydratePhotos(); }
+    else render();
+  }catch(err){ toast('Could not read that photo'); }
+});
+
+/* ======================================================= data safety == */
+/* Three layers, cheapest first:
+   1. daily snapshots in IndexedDB (last 7 days) - undo for a bad import or a fat-fingered delete
+   2. a weekly nudge to save a real backup file (share sheet -> Files / iCloud on iPhone)
+   3. import straight from that file, no copy-paste
+   None of it can save you from losing the phone except #2, which is why it nags. */
+const SNAP_KEEP = 7;
+let snapList=null, snapArm=null;
+function snapPut(key,json){ return idb().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('s','readwrite'); tx.objectStore('s').put(json,key); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); })); }
+function snapKeys(){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.transaction('s').objectStore('s').getAllKeys(); r.onsuccess=()=>res(r.result.sort().reverse()); r.onerror=()=>rej(r.error); })); }
+function snapGet(key){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.transaction('s').objectStore('s').get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); }
+function snapDelete(key){ return idb().then(db=>new Promise(res=>{ const tx=db.transaction('s','readwrite'); tx.objectStore('s').delete(key); tx.oncomplete=res; tx.onerror=res; })); }
+/* one snapshot per day, taken the first time the app opens that day (before anything changes) */
+async function snapDaily(){
+  try{
+    const keys=await snapKeys();
+    if (!keys.includes(T)) await snapPut(T,JSON.stringify(S));
+    const all=await snapKeys(), days=all.filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)), undos=all.filter(k=>k.startsWith('undo-'));
+    for (const k of days.slice(SNAP_KEEP)) await snapDelete(k);
+    for (const k of undos.slice(3)) await snapDelete(k);          // the three most recent undo points are kept
+    snapList=undos.slice(0,3).concat(days.slice(0,SNAP_KEEP));
+  }catch(e){ snapList=[]; }
+}
+function backupAge(){ const b=S.meta.lastBackup; return b?daysBetween(b,T):null; }
+function hasRealData(){ return daysLogged()>=3 || Object.keys(S.cust).length>0 || S.log.length>0 || Object.keys(S.fights).length>0; }
+function backupDue(){
+  if (!hasRealData()) return false;
+  if (S.meta.backupSnooze && T<S.meta.backupSnooze) return false;
+  const a=backupAge();
+  return a==null ? daysSinceStart()>=7 : a>=7;
+}
+function BackupBanner(){
+  if (!backupDue()) return '';
+  const a=backupAge();
+  return `<div class="banner" style="align-items:center">${svg('shield',14,'var(--amber)')}
+    <div style="flex:1"><b>${a==null?'No backup yet.':`Last backup ${a} days ago.`}</b> Everything lives on this phone only. Save a copy to Files or iCloud in one tap.</div>
+    <div style="display:flex;flex-direction:column;gap:6px"><button class="chip on" data-act="s-backup">BACK UP</button><button class="chip" data-act="s-snooze">LATER</button></div></div>`;
+}
+async function doBackup(){
+  const txt=JSON.stringify(S), name=`forge-backup-${T}.json`;
+  let how='downloaded';
+  try{
+    const file=new File([txt],name,{type:'application/json'});
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'FORGE backup'}); how='shared'; }
+    else throw new Error('no share');
+  }catch(e){
+    if (e && e.name==='AbortError'){ toast('Backup cancelled'); return; }
+    try{ const url=URL.createObjectURL(new Blob([txt],{type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500); }catch(err){}
+  }
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});
+  S.meta.lastBackup=T; delete S.meta.backupSnooze; commit(); render();
+  toast(how==='shared'?'Backup saved — keep it somewhere off this phone':'Backup downloaded (also copied to clipboard)');
+}
+function SnapshotPanel(){
+  const list=snapList||[];
+  const a=backupAge();
+  return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Photos from the 90-day challenge aren't in the file; use SAVE PHOTOS there.</div>
+    ${list.length?`<div class="eyebrow" style="padding:4px 13px 6px">AUTOMATIC SNAPSHOTS ON THIS PHONE</div>
+    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')?`<b>Undo a restore</b> <span style="color:var(--faint)">(your state at ${esc(new Date(+k.slice(5)).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
+      <button class="chip" data-act="s-restore" data-v="${k}">${snapArm===k?'TAP TO CONFIRM':'RESTORE'}</button></div>`).join('')}
+    <div class="note">One snapshot a day, the last ${SNAP_KEEP} kept, taken when you first open the app. Restoring replaces everything with that day's state (today's state is snapshotted first, so you can undo).</div>`:''}`;
+}
+async function snapRestore(k){
+  try{
+    const json=await snapGet(k); if (!json){ toast('Snapshot not found'); return; }
+    if (!k.startsWith('undo-')) await snapPut('undo-'+Date.now(),JSON.stringify(S)).catch(()=>{});   // a new key each time: restoring twice must not erase the first undo point
+    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(json));
+    S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true; normalizeCustom();
+    WEEK=WEEKS[S.profile.program]||WEEK_STD; snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
+  }catch(e){ toast('Could not restore that snapshot'); }
+}
+
+/* ---------- calendar export (.ics) ---------- */
+/* A home-screen web app can't wake the phone, but the phone's own calendar can. This writes the next 7 days
+   of scheduled blocks as calendar events with a 15-minute alert. Import it once a week (re-importing adds copies). */
+function icsEsc(t){ return String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+/* RFC 5545 folds at 75 octets, not characters: "·" and "—" are multi-byte in UTF-8 */
+const icsEnc = new TextEncoder();
+function icsFold(line){
+  const out=[]; let cur='', bytes=0;
+  for (const ch of line){
+    const b=icsEnc.encode(ch).length;
+    if (bytes+b>(out.length?74:75)){ out.push(cur); cur=' '; bytes=1; }
+    cur+=ch; bytes+=b;
+  }
+  out.push(cur); return out.join('\r\n');
+}
+function icsTime(dateKey,mins){
+  const extra=Math.floor(mins/1440), k=extra?addDays(dateKey,extra):dateKey, m=((mins%1440)+1440)%1440;
+  return k.replace(/-/g,'')+'T'+pad(Math.floor(m/60))+pad(m%60)+'00';
+}
+function buildICS(full){
+  const now=new Date(), stamp=now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())+'T'+pad(now.getUTCHours())+pad(now.getUTCMinutes())+'00Z';
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FORGE//Training//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:FORGE'];
+  let n=0;
+  for (let o=0;o<7;o++){
+    const k=dkey(o), plan=buildDay(k), cw=S.cust[k];
+    for (const e of plan.entries){
+      if (e.fixed) continue;
+      if (!full && e.id!=='train') continue;
+      let title=e.l, desc=e.sub||'';
+      if (e.id==='train'){
+        if (cw && cw.mode==='replace' && cw.items.length){ title=cw.name||'My workout'; desc=cw.items.map(id=>exInfo(id).n).join(', ')||'Your own session'; }
+        else { title=`${plan.def.title}${cw&&cw.items.length?' + '+(cw.name||'extra workout'):''}`; desc=plan.def.blocks.map(b=>b.l).join('\n'); }
+        title='FORGE · '+title;
+      }
+      lines.push('BEGIN:VEVENT',`UID:${k}-${e.id}@forge`,`DTSTAMP:${stamp}`,`DTSTART:${icsTime(k,e.s)}`,`DTEND:${icsTime(k,e.e)}`,
+        `SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc)}`,
+        'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(title)}`,'TRIGGER:-PT15M','END:VALARM','END:VEVENT');
+      n++;
+    }
+  }
+  lines.push('END:VCALENDAR');
+  return {text:lines.map(icsFold).join('\r\n')+'\r\n',n};
+}
+function exportICS(full){
+  const {text,n}=buildICS(full);
+  if (!n){ toast('Nothing scheduled in the next 7 days'); return; }
+  const url=URL.createObjectURL(new Blob([text],{type:'text/calendar'}));
+  const a=document.createElement('a'); a.href=url; a.download=`forge-week-${T}.ics`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  S.meta.lastIcs=T; commit();
+  toast(`${n} events ready — open the file to add them to your calendar`);
+}
+function CalendarPanel(){
+  const last=S.meta.lastIcs;
+  return `<div class="panel"><div style="padding:13px">
+    <div class="lab">Put the week in your phone's calendar</div>
+    <div class="det" style="margin-bottom:10px">Your calendar's alerts fire even when FORGE is closed, so this is the reliable reminder. Each event alerts 15 minutes before.</div>
+    <div style="display:flex;gap:8px"><button class="btn" data-act="s-ics" data-v="train" style="flex:1">TRAINING ONLY</button>
+      <button class="btn ghost" data-act="s-ics" data-v="full" style="flex:1">FULL DAY PLAN</button></div></div>
+    <div class="note">Covers the next 7 days as scheduled right now${last?` · last exported ${esc(shortDate(last))}`:''}. Do it once a week (Sunday review is a good time); importing again adds a second copy.</div></div>`;
+}
+function sAct(a,v){
+  switch(a){
+    case 's-backup': doBackup(); return 'norender';
+    case 's-snooze': S.meta.backupSnooze=addDays(T,3); commit(); toast('Reminding you in 3 days'); return;
+    case 's-restore':
+      if (snapArm!==v){ snapArm=v; return; }
+      snapRestore(v); return 'norender';
+    case 's-ics': exportICS(v==='full'); return 'norender';
+    case 's-importfile': { const i=document.getElementById('importfile'); if (i) i.click(); return 'norender'; }
+  }
+}
+/* restore from a backup file instead of pasting */
+document.addEventListener('change', e=>{
+  const inp=e.target; if (inp.id!=='importfile' || !inp.files || !inp.files[0]) return;
+  const r=new FileReader();
+  r.onload=()=>{ importOpen=true; render(); const ta=document.getElementById('importtxt'); if (ta){ ta.value=String(r.result||''); } toast('Backup loaded — check it, then RESTORE'); };
+  r.onerror=()=>toast('Could not read that file');
+  r.readAsText(inp.files[0]);
+});
+
+/* ============================================================ fight camp == */
+/* A dated fight changes what every session is for. Camp = fight date + weigh-in + target weight. It drives
+   a phase label with what to prioritize, a weight-cut tracker against a straight-line path from where you
+   started, and the briefing's "fight in N days". Weight guidance is deliberately conservative: the tracker
+   flags paces that need a long water cut instead of coaching one. */
+const CAMP_PHASES = [
+  [57,'BASE','Build the engine and the skills. Volume is fine, heavy lifting stays in, sparring 1-2x a week.'],
+  [29,'BUILD','Sharpen the gameplan. Rounds get specific to your opponent and ruleset. Lifting drops to maintenance: heavy but low volume.'],
+  [15,'PEAK','Hardest sparring of camp happens here, then stops. Conditioning matches the fight\'s round structure.'],
+  [8,'TAPER','Volume down, speed up. Short sharp rounds, no new techniques, nothing you could get hurt in.'],
+  [1,'FIGHT WEEK','Light pads, mobility, sleep, food plan. Nothing new. Trust what you drilled.'],
+  [0,'FIGHT DAY','Warm up early, stay loose, breathe. You already did the work.'],
+];
+let campEdit=false, campArm=false;
+function campDaysOut(){ const c=S.camp; if (!c||!c.date) return null; return daysBetween(T,c.date); }
+function campPhase(d){ for (const p of CAMP_PHASES) if (d>=p[0]) return p; return CAMP_PHASES[CAMP_PHASES.length-1]; }
+function campBriefStat(){ const d=campDaysOut(); if (d==null||d<0) return null;
+  return `<button class="brchip" data-act="camp-open" style="color:var(--rust)">${svg('swords',10,'var(--rust)')} ${d===0?'FIGHT DAY':`Fight in ${d} day${d===1?'':'s'}`}</button>`; }
+/* where you "should" be today on a straight line from camp start to target at weigh-in */
+function campPath(){
+  const c=S.camp; if (!c||!c.target||!c.startW||!c.start||!c.weighIn) return null;
+  const span=Math.max(1,daysBetween(c.start,c.weighIn)), el=clamp(daysBetween(c.start,T),0,span);
+  return {span,el,today:c.startW+(c.target-c.startW)*el/span};
+}
+function campWeights(){ const c=S.camp; return S.log.filter(e=>e.weight!=null && e.date>=addDays(c.start,-14)).sort((a,b)=>a.date>b.date?1:-1); }
+function campCutSVG(){
+  const c=S.camp, pts=campWeights(); if (!c.target||!c.weighIn) return '';
+  const start=addDays(c.start,-14), span=Math.max(1,daysBetween(start,c.weighIn));
+  const ws=pts.map(p=>p.weight).concat([c.target,c.startW||c.target]);
+  const lo=Math.min(...ws)-0.8, hi=Math.max(...ws)+0.8;
+  const X=k=>clamp(daysBetween(start,k)/span*100,0,100), Y=w=>(1-(w-lo)/(hi-lo))*100;
+  const wc=w=>isImp()?Math.round(w*2.20462*10)/10:Math.round(w*10)/10;
+  const line=pts.map((p,i)=>`${i?'L':'M'}${X(p.date).toFixed(2)},${Y(p.weight).toFixed(2)}`).join(' ');
+  return `<svg class="cutsvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Weight vs cut path">
+      <line x1="0" x2="100" y1="${Y(c.target)}" y2="${Y(c.target)}" stroke="#7C9A5E" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>
+      ${c.startW?`<line x1="${X(c.start)}" y1="${Y(c.startW)}" x2="${X(c.weighIn)}" y2="${Y(c.target)}" stroke="#5C8CA8" stroke-width="1" vector-effect="non-scaling-stroke"/>`:''}
+      <line x1="${X(T)}" x2="${X(T)}" y1="0" y2="100" stroke="#2C323A" vector-effect="non-scaling-stroke"/>
+      ${line?`<path d="${line}" fill="none" stroke="#E0A03A" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`:''}
+    </svg>
+    <div class="cutleg"><span><i style="background:#E0A03A"></i>weigh-ins</span><span><i style="background:#5C8CA8"></i>steady path</span><span><i style="background:#7C9A5E"></i>target ${wc(c.target)} ${wUnit()}</span></div>`;
+}
+function CampPanel(){
+  const c=S.camp, imp=isImp(), wu=wUnit(), wc=w=>Math.round((imp?w*2.20462:w)*10)/10;
+  if (campEdit || !c.date){
+    if (!campEdit) return `<div class="panel"><button class="wlhead" data-act="camp-edit"><div style="flex:1;text-align:left"><div class="wlt">${svg('swords',12,'var(--rust)')} Set up a fight camp</div>
+      <div class="wls">Fight date, weigh-in and target weight. Turns on the countdown, phase plan and weight-cut tracker.</div></div>${svg('chev',14,'var(--faint)')}</button></div>`;
+    const L=latestField('weight');
+    return `<div class="panel"><div style="padding:13px"><div class="eyebrow" style="margin-bottom:10px">FIGHT CAMP</div>
+      <div class="grid2" style="padding:0">
+        <label class="f" style="grid-column:1/-1"><span>Event / opponent</span><input type="text" id="cp_name" maxlength="50" value="${esc(c.name||'')}" placeholder="e.g. Smoker vs. Ramirez"></label>
+        <label class="f"><span>Fight date</span><input type="date" id="cp_date" value="${c.date||addDays(T,56)}"></label>
+        <label class="f"><span>Weigh-in date</span><input type="date" id="cp_wi" value="${c.weighIn||''}"></label>
+        <label class="f"><span>Target weight (${wu})</span><input type="text" inputmode="decimal" id="cp_tw" value="${c.target?wc(c.target):''}" placeholder="optional"></label>
+        <label class="f"><span>Discipline</span><select id="cp_disc">${FIGHT_DISC.map(([k,l])=>`<option value="${k}" ${c.disc===k?'selected':''}>${l}</option>`).join('')}</select></label>
+      </div>
+      <div class="note" style="padding:8px 0 0;border:none">${L?`Starting from your latest weigh-in: ${wc(L.weight)} ${wu}.`:'Log a weigh-in on Build → Log so the cut tracker has a starting point.'} Weigh-in defaults to the day before the fight.</div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-act="camp-save" style="flex:2">SAVE CAMP</button>
+        <button class="btn ghost" data-act="camp-cancel" style="flex:1">CANCEL</button></div></div></div>`;
+  }
+  const d=campDaysOut();
+  if (d<0) return `<div class="panel"><div style="padding:13px"><div class="eyebrow">FIGHT DONE · ${esc(shortDate(c.date))}</div>
+      <div class="wlt" style="margin:6px 0 10px">${esc(c.name||FIGHT_L[c.disc]||'Fight')}</div>
+      <div class="chips" style="padding:0">${['Win','Loss','Draw','No contest'].map(r=>`<button class="chip ${c.result===r?'on':''}" data-act="camp-res" data-v="${r}">${r}</button>`).join('')}</div>
+      <label class="f" style="margin-top:10px"><span>How it went</span><textarea data-camp="notes" placeholder="Method, round, what worked, what to fix in the next camp.">${esc(c.notes||'')}</textarea></label>
+      <button class="btn" data-act="camp-close" style="margin-top:12px">FILE IT + CLOSE CAMP</button></div></div>`;
+  const ph=campPhase(d), path=campPath(), L=latestField('weight');
+  let cut='';
+  if (c.target && L){
+    const toGo=L.weight-c.target, wiDays=Math.max(0,daysBetween(T,c.weighIn)), weeks=Math.max(wiDays/7,1/7);
+    const perWk=toGo>0?toGo/weeks:0, pct=perWk/L.weight*100;
+    const ahead=path?L.weight-path.today:null;
+    const status=T>c.weighIn?['WEIGH-IN DONE','var(--steel)','Weigh-in is behind you. Rehydrate, eat, and let the weight come back; nothing left to cut.']
+      : wiDays===0?(toGo<=0?['MADE WEIGHT','var(--moss)','At or under target on weigh-in day. Done.']:['WEIGH-IN DAY','var(--amber)',`${wc(toGo)} ${wu} over target. What happens now is a decision for you, your coach and the commission, not this tracker.`])
+      : toGo<=0?['ON WEIGHT','var(--moss)','You\'re at or under target. Hold it with normal eating; no need to cut further.']
+      : pct>1.5?['UNSAFE PACE','var(--rust)',`That's ${pct.toFixed(1)}% of bodyweight a week. Losing it this fast means a big water cut, which hurts performance and can be dangerous. Talk to your coach about a longer runway or the next class up.`]
+      : pct>1?['AGGRESSIVE','var(--amber)',`${pct.toFixed(1)}% of bodyweight a week is doable short-term but costs training quality. Tighten food now so fight week stays boring.`]
+      : ['ON TRACK','var(--moss)',`About ${wc(perWk)} ${wu} a week (${pct.toFixed(1)}% of bodyweight). Sustainable. Keep protein high and weigh in daily, same time.`];
+    cut=`<div class="cutbox"><div class="cuthead"><span style="color:${status[1]}">${status[0]}</span><span>${toGo>0?`${wc(toGo)} ${wu} to go`:`${wc(-toGo)} ${wu} under`} · weigh-in ${esc(shortDate(c.weighIn))} (${wiDays}d)</span></div>
+      ${campCutSVG()}
+      <div class="det" style="margin-top:8px">${esc(status[2])}${ahead!=null&&toGo>0&&T<c.weighIn&&Math.abs(ahead)>=0.25?` You're ${Math.abs(wc(ahead))} ${wu} ${ahead>0?'above':'below'} the steady path today.`:''}</div>
+      ${T<=c.weighIn?`<div class="bredadd" style="margin-top:10px"><input type="text" inputmode="decimal" id="cp_wt" placeholder="Today's weigh-in (${wu})"><button class="chip on" data-act="camp-weigh">LOG</button></div>`:''}
+      <div class="note" style="padding:8px 0 0;border:none">Fight-week water cutting is a coach-and-commission decision. This tracker only plans the slow part.</div></div>`;
+  } else if (c.target) cut=`<div class="note">Log a weigh-in and the cut tracker appears.</div>`;
+  return `<div class="panel acc"><div class="acc-bar" style="background:var(--rust)"></div>
+    <div class="camphero"><div class="chday"><span>${d===0?'TODAY':'FIGHT IN'}</span><b style="color:var(--rust)">${d===0?'!':d}</b><span>${d===0?'FIGHT':d===1?'DAY':'DAYS'}</span></div>
+      <div style="flex:1;min-width:0"><div class="wlt">${esc(c.name||FIGHT_L[c.disc]||'Fight')}</div>
+        <div class="wls">${esc(longDate(c.date))}${d>7?` · ${Math.floor(d/7)} wk ${d%7} d`:''}</div>
+        <div class="campph"><b>${ph[1]}</b> ${esc(ph[2])}</div></div></div>
+    ${cut}
+    <div style="display:flex;gap:8px;padding:0 13px 13px"><button class="btn ghost" data-act="camp-edit" style="flex:1">EDIT</button>
+      <button class="btn ghost" data-act="camp-cancelfight" style="flex:1;color:var(--rust)">${campArm?'TAP TO CONFIRM':'CANCEL CAMP'}</button></div></div>`;
+}
+function campAct(a,v){
+  const c=S.camp, imp=isImp();
+  switch(a){
+    case 'camp-open': view='wlog'; wlSub='fights'; window.scrollTo(0,0); return;
+    case 'camp-edit': campEdit=true; campArm=false; return;
+    case 'camp-cancel': campEdit=false; return;
+    case 'camp-save': {
+      const g=id=>(document.getElementById(id)||{}).value||'';
+      const date=g('cp_date'); if (!date){ toast('Pick the fight date'); return 'norender'; }
+      if (date<T){ toast('Fight date is in the past'); return 'norender'; }
+      const tw=num(g('cp_tw')), L=latestField('weight');
+      const isNew=!c.date;
+      Object.assign(c,{name:g('cp_name').trim(),date,weighIn:g('cp_wi')||addDays(date,-1),disc:g('cp_disc')||'boxing',
+        target:tw!=null?Math.round((imp?tw/2.20462:tw)*100)/100:null});
+      if (isNew||!c.start){ c.start=T; c.startW=L?L.weight:null; }
+      if (!c.startW && L) c.startW=L.weight;
+      campEdit=false; commit(); toast('Camp is on. Every session has a date now.'); return;
+    }
+    case 'camp-weigh': {
+      const w=num((document.getElementById('cp_wt')||{}).value); if (w==null){ toast('Enter your weight'); return 'norender'; }
+      const kg=imp?w/2.20462:w; if (!(kg>25&&kg<350)){ toast('That weight looks off'); return 'norender'; }
+      const rec={...(S.log.find(x=>x.date===T)||{}),date:T,weight:Math.round(kg*100)/100};
+      S.log=[...S.log.filter(x=>x.date!==T),rec].sort((x,y)=>x.date>y.date?1:-1);
+      if (!c.startW) c.startW=rec.weight;
+      commit(); toast('Weigh-in logged'); return;
+    }
+    case 'camp-cancelfight': if (!campArm){ campArm=true; return; } S.camp={}; campArm=false; commit(); toast('Camp cancelled'); return;
+    case 'camp-res': c.result=v; commit(); return;
+    case 'camp-close': (S.campHist=S.campHist||[]).push({...c}); S.camp={}; commit(); toast('Fight filed. On to the next one.'); return;
+  }
+}
+/* ---------- sparring partners ---------- */
+function partnerList(){
+  const by={};
+  for (const k of Object.keys(S.fights)) for (const f of S.fights[k]) for (const n of String(f.partner||'').split(',').map(x=>x.trim()).filter(Boolean)){
+    const key=n.toLowerCase(), e=by[key]||(by[key]={name:n,n:0,min:0,last:'',caught:'',worked:''});
+    e.n++; e.min+=+f.min||0; if (k>=e.last){ e.last=k; e.name=n; e.caught=f.caught||e.caught; e.worked=f.worked||e.worked; }
+  }
+  return Object.values(by).sort((a,b)=>a.last<b.last?1:-1);
+}
+function lastWithPartner(name,before){
+  const key=name.trim().toLowerCase(); let best=null;
+  for (const k of Object.keys(S.fights)) if (k<before) for (const f of S.fights[k])
+    if (String(f.partner||'').split(',').some(x=>x.trim().toLowerCase()===key) && (!best||k>best.k)) best={k,f};
+  return best;
+}
+function PartnersPanel(){
+  const ps=partnerList(); if (!ps.length) return '';
+  return `${sect('users','TRAINING PARTNERS')}<div class="panel">${ps.slice(0,30).map(p=>`<div class="fsess"><div class="fstop"><b>${esc(p.name)}</b>
+      <span>${p.n} session${p.n===1?'':'s'} · ${esc(fmtMin(p.min))} · last ${esc(shortDate(p.last))}</span></div>
+      ${p.caught?`<div class="fsl"><i>LAST TIME GOT CAUGHT</i>${esc(p.caught)}</div>`:''}</div>`).join('')}</div>`;
+}
+
+/* ===================================================== first run + folds == */
+/* Five short steps on a fresh install so nothing runs on silent defaults (age 22, 178 cm...). Existing users
+   with any history are marked onboarded at boot and never see it. SKIP is always one tap away. */
+let obStep=0, obD=null;
+function obInit(){
+  const p=S.profile;
+  obD={unit:p.unit,sex:p.sex,age:String(p.age||''),height:'',weight:'',wake:p.wake,sleep:p.sleep,trainPref:p.trainPref,program:p.program,why:S.motiv.why||''};
+}
+function Onboarding(){
+  if (S.meta.onboarded) return '';
+  if (!obD) obInit();
+  const d=obD, imp=d.unit==='imperial', steps=5;
+  const dots=`<div class="obdots">${Array.from({length:steps},(_,i)=>`<span class="${i<=obStep?'on':''}"></span>`).join('')}</div>`;
+  const chipRow=(field,opts)=>`<div class="chips" style="padding:0">${opts.map(([v,l])=>`<button class="chip ${d[field]===v?'on':''}" data-act="ob-set" data-v="${field}" data-v2="${v}">${l}</button>`).join('')}</div>`;
+  let body='', next='NEXT';
+  if (obStep===0){
+    body=`<div class="brand" style="font-size:34px;margin-top:8px">FORGE</div>
+      <div class="brline" style="font-size:22px;margin-top:22px">Strength, combat, a sharp mind and money that compounds. One app, one honest log.</div>
+      <p class="t" style="margin-top:16px">Two minutes of setup so every number it gives you (calories, loads, schedule) is about you, not a default.</p>`;
+    next='SET IT UP';
+  } else if (obStep===1){
+    body=`<div class="obh">Your body</div>
+      <div class="obl">Units</div>${chipRow('unit',[['imperial','lb / in'],['metric','kg / cm']])}
+      <div class="obl">Sex (for the calorie math)</div>${chipRow('sex',[['m','Male'],['f','Female']])}
+      <div class="grid3" style="padding:16px 0 0">
+        <label class="f"><span>Age</span><input type="text" inputmode="numeric" data-ob="age" value="${esc(d.age)}" placeholder="22"></label>
+        <label class="f"><span>Height (${imp?'in':'cm'})</span><input type="text" inputmode="decimal" data-ob="height" value="${esc(d.height)}" placeholder="${imp?'70':'178'}"></label>
+        <label class="f"><span>Weight (${imp?'lb':'kg'})</span><input type="text" inputmode="decimal" data-ob="weight" value="${esc(d.weight)}" placeholder="${imp?'175':'80'}"></label></div>
+      <div class="note" style="padding:10px 0 0;border:none">Weight unlocks Fuel (calories, macros) and Target (your physique numbers). You can change all of this later under the gear icon.</div>`;
+  } else if (obStep===2){
+    body=`<div class="obh">Your day</div>
+      <div class="grid2" style="padding:6px 0 0">
+        <label class="f"><span>Wake</span><input type="time" data-ob="wake" value="${esc(d.wake)}"></label>
+        <label class="f"><span>Sleep</span><input type="time" data-ob="sleep" value="${esc(d.sleep)}"></label></div>
+      <div class="obl">Train when possible</div>${chipRow('trainPref',[['morning','Morning'],['midday','Midday'],['evening','Evening']])}
+      <div class="note" style="padding:12px 0 0;border:none">FORGE schedules training, meals and reading into the gaps around your fixed commitments. Add classes, work and team practice later in My Week.</div>`;
+  } else if (obStep===3){
+    body=`<div class="obh">Your program</div>
+      ${Object.entries(PROGRAMS).map(([k,pr])=>`<button class="startopt ${d.program===k?'sel':''}" data-act="ob-set" data-v="program" data-v2="${k}"><b>${pr.n}</b><span>${esc(pr.d)}</span></button>`).join('')}
+      <div class="note" style="padding:4px 0 0;border:none">Any day can still be swapped, edited into your own workout, or have fighting added on top.</div>`;
+  } else {
+    body=`<div class="obh">Your why</div>
+      <p class="t">One sentence you'd want to read on your worst morning. It sits at the top of Today, every day.</p>
+      <textarea data-ob="why" maxlength="280" style="min-height:96px" placeholder="e.g. So nobody I love ever has to wonder if I can protect them.">${esc(d.why)}</textarea>
+      <div class="note" style="padding:10px 0 0;border:none">Optional. You can write it later by tapping YOUR WHY on Today.</div>`;
+    next='START DAY 1';
+  }
+  return `<div class="ob" role="dialog" aria-label="Set up FORGE">
+    <div class="sheethead">${dots}<button class="chip" data-act="ob-skip">SKIP</button></div>
+    <div class="sheetbody" style="padding:18px var(--pad)">${body}</div>
+    <div class="sheetfoot" style="display:flex;gap:8px">${obStep>0?`<button class="btn ghost" data-act="ob-back" style="flex:1">BACK</button>`:''}
+      <button class="btn" data-act="ob-next" style="flex:2">${next}</button></div></div>`;
+}
+function obAct(a,v,v2){
+  const d=obD||(obInit(),obD);
+  switch(a){
+    case 'ob-set': {
+      if (v==='unit' && d.unit!==v2){   // convert anything typed so far
+        const h=num(d.height), w=num(d.weight);
+        if (h!=null) d.height=String(Math.round((v2==='metric'?h*2.54:h/2.54)*10)/10);
+        if (w!=null) d.weight=String(Math.round((v2==='metric'?w/2.20462:w*2.20462)*10)/10);
+      }
+      d[v]=v2; return;
+    }
+    case 'ob-back': obStep=Math.max(0,obStep-1); return;
+    case 'ob-skip': S.meta.onboarded=true; commit(); toast('Skipped. Everything is under the gear icon.'); return;
+    case 'ob-next': {
+      if (obStep===1){
+        const imp=d.unit==='imperial', age=num(d.age), h=num(d.height), w=num(d.weight);
+        if (age!=null && !(age>=12&&age<=90)){ toast('Age looks off'); return 'norender'; }
+        const cm=h==null?null:(imp?h*2.54:h), kg=w==null?null:(imp?w/2.20462:w);
+        if (cm!=null && !(cm>120&&cm<230)){ toast(`Height looks off — ${imp?'inches':'cm'}?`); return 'norender'; }
+        if (kg!=null && !(kg>30&&kg<300)){ toast('Weight looks off'); return 'norender'; }
+      }
+      if (obStep<4){ obStep++; return; }
+      obFinish(); return;
+    }
+  }
+}
+function obFinish(){
+  const d=obD, p=S.profile, imp=d.unit==='imperial';
+  p.unit=d.unit; p.sex=d.sex; p.wake=d.wake||p.wake; p.sleep=d.sleep||p.sleep; p.trainPref=d.trainPref; p.program=d.program;
+  const age=num(d.age), h=num(d.height), w=num(d.weight);
+  if (age!=null) p.age=Math.round(age);
+  if (h!=null) p.height=Math.round((imp?h*2.54:h)*10)/10;
+  if (w!=null){ const kg=Math.round((imp?w/2.20462:w)*100)/100;
+    S.log=[...S.log.filter(x=>x.date!==T),{...(S.log.find(x=>x.date===T)||{}),date:T,weight:kg}].sort((a,b)=>a.date>b.date?1:-1); }
+  if ((d.why||'').trim()) S.motiv.why=d.why.trim();
+  WEEK=WEEKS[p.program]||WEEK_STD;
+  S.meta.onboarded=true; view='today'; viewOff=0; commit();
+  toast('Day 1. Go.');
+}
+
+/* ---------- collapsible Today sections ---------- */
+/* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
+   is remembered. After-action opens by itself in the evening (or once you've written in it). */
+const FOLD_DEF = {
+  rail:()=>false, food:()=>true, habits:()=>true, last14:()=>false,
+  review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
+};
+function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
+function foldHead(k,ico,title,summary){
+  const open=foldOpen(k);
+  return `<button class="sect fold" data-act="fold" data-v="${k}" aria-expanded="${open}">${svg(ico,13,'var(--amber)')}<h2>${title}</h2>
+    ${summary?`<span class="foldsum">${summary}</span>`:''}<div class="line"></div><span class="chev ${open?'open':''}" style="padding:0">${svg('chev',12)}</span></button>`;
 }
 
 /* ================================================================ header == */
@@ -3083,7 +4554,7 @@ function ViewToday(){
   const vd=VD();
   const plan=buildDay(vd), d=day(vd), meta=DTYPE[plan.def.type];
   /* a custom workout set to "replace" stands in for the planned session: same timeline slot, its own progress */
-  const cw=S.cust[vd], rep=!!cw && cw.mode==='replace';
+  const cw=S.cust[vd], rep=!!cw && cw.mode==='replace' && cw.items.length>0;   // an empty replacement hides nothing
   const trainTotal = rep ? cw.items.length : plan.def.blocks.length;
   const trainDone = rep ? cwStats(cw).ex : plan.def.blocks.filter(b=>d.blocks[b.id]).length;
   const trainAll = rep ? cwDone(cw) : (trainDone===trainTotal && trainDone>0);
@@ -3151,6 +4622,8 @@ function ViewToday(){
       </div>
       <button class="badge" data-act="swapopen">${DTYPE[plan.def.type].label} ⇄</button>
     </div>
+    ${vd===T?Briefing():''}
+    ${vd===T?BackupBanner():''}
     ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
       ${svg('rot',13,'var(--steel)')}<div>Viewing another day — everything you tick here saves to <b>${longDate(vd)}</b>. Tap to return to today.</div></button>`:''}
 
@@ -3164,7 +4637,7 @@ function ViewToday(){
       ${WEEK.map((w,i)=>`<button class="chip ${w.id===plan.def.id?'on':''}" data-act="swap" data-v="${w.id}">${w.short} · ${DTYPE[w.type].label}</button>`).join('')}
     </div><div class="note">Swaps only affect ${vd===T?'today':'this date'}. The weekly rotation stays put.</div></div>`:''}
 
-    ${vd===T?DayRail(plan):''}
+    ${vd===T?foldHead('rail','clock','SCHEDULE VIEW','drag to retime')+(foldOpen('rail')?DayRail(plan):''):''}
 
     ${vd===T?(()=>{ const dsw=daysSinceWeight(), neverLogged=dsw==null, stale=dsw!=null&&dsw>=7;
       if (!neverLogged&&!stale) return '';
@@ -3198,8 +4671,8 @@ function ViewToday(){
     ${dowIdx(T)===6?`<button class="panel banner steel" data-act="view" data-v="codex" style="width:100%;text-align:left">
       ${svg('trend',14,'var(--steel)')}<div><b>Sunday.</b> Your weekly review is ready on Codex - two minutes, then plan the week.</div></button>`:''}
 
-    ${sect('food','FOOD — '+Math.round(ft.kcal)+' KCAL '+(vd===T?'TODAY':'THIS DAY'))}
-    <div class="panel">
+    ${foldHead('food','food','FOOD',`${Math.round(ft.kcal).toLocaleString()}${N?` / ${N.kcal.toLocaleString()}`:''} kcal · ${Math.round(ft.p)}g P`)}
+    ${foldOpen('food')?`<div class="panel">
       ${N?`<div class="fuelbar">
         ${[['kcal',ft.kcal,N.kcal,'var(--amber)'],['P',ft.p,N.protein,'var(--rust)'],['C',ft.c,N.carbs,'var(--steel)'],['F',ft.f,N.fat,'var(--moss)']].map(([l,v,t2,c])=>`
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
@@ -3242,25 +4715,25 @@ function ViewToday(){
         <div class="note" style="padding-top:0">Check the label for carbs and fat if you have it — kcal and protein alone can't determine the split (two unknowns, one equation). Leave blank only if you don't have the numbers; totals below will undercount by that amount.</div>
         <div style="padding:0 13px 13px"><button class="btn ghost" data-act="addcustomfood">ADD CUSTOM</button></div>
       </div>`:''}
-    </div>
+    </div>`:''}
 
-    ${sect('act','DAILY HABITS')}
-    <div class="panel"><div class="habits">${HABITS.map(h=>`
+    ${foldHead('habits','act','DAILY HABITS',`${HABITS.filter(h=>d.habits[h.id]).length}/${HABITS.length}`)}
+    ${foldOpen('habits')?`<div class="panel"><div class="habits">${HABITS.map(h=>`
       <button class="hab ${d.habits[h.id]?'on':''}" data-act="habit" data-v="${h.id}">
         <div class="habdot" style="${d.habits[h.id]?'background:var(--moss);border-color:var(--moss)':''}">${d.habits[h.id]?svg('check',12,'var(--ink)',3):''}</div>
-        <div class="hl">${h.l}</div></button>`).join('')}</div></div>
+        <div class="hl">${h.l}</div></button>`).join('')}</div></div>`:''}
 
-    ${sect('book','AFTER-ACTION')}
-    <div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
+    ${foldHead('review','book','AFTER-ACTION',`${['win','miss','next'].filter(k=>d.rv[k]).length}/3 written`)}
+    ${foldOpen('review')?`<div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
       <label class="f"><span>One thing that worked</span><textarea data-in="rv.win" placeholder="Be specific.">${esc(d.rv.win||'')}</textarea></label>
       <label class="f"><span>One thing that didn't</span><textarea data-in="rv.miss" placeholder="The fact and the cause. No self-flagellation.">${esc(d.rv.miss||'')}</textarea></label>
       <label class="f"><span>Tomorrow's one thing</span><textarea data-in="rv.next" placeholder="If only one thing gets done tomorrow, this is it.">${esc(d.rv.next||'')}</textarea></label>
-    </div><div class="note">Five minutes here compounds harder than an extra thirty in the gym.</div></div>
+    </div><div class="note">Five minutes here compounds harder than an extra thirty in the gym.</div></div>`:''}
 
-    ${sect('trend','LAST 14 DAYS')}
-    <div class="panel"><div class="heat">${Array.from({length:14},(_,i)=>{
+    ${foldHead('last14','trend','LAST 14 DAYS',`${dl} days logged`)}
+    ${foldOpen('last14')?`<div class="panel"><div class="heat">${Array.from({length:14},(_,i)=>{
       const k=dkey(-(13-i)); return `<div class="cell" style="background:${heatColor(dayScore(k))}"></div>`;}).join('')}</div>
-      <div class="note">${dl} days logged${next?` · ${next.d-dl} to ${next.l}`:''}</div></div>
+      <div class="note">${dl} days logged${next?` · ${next.d-dl} to ${next.l}`:''}</div></div>`:''}
   </div>`;
 }
 let openBlock2=null;
@@ -3368,8 +4841,10 @@ function ViewPlan(){
         ${chk(S.notif.on,'var(--amber)')}
         <div style="flex:1"><div class="lab">Session reminders</div>
         <div class="det">Pings 15 minutes before each scheduled block, and at start time</div></div></button>
-      <div class="note">Honest limits: these fire while FORGE is open or recently used - a home-screen web app can't wake your phone from fully closed like a native app. Best combo: turn this on, and put training in your phone calendar as the backstop.</div>
+      <div class="note">Honest limits: these fire while FORGE is open or recently used - a home-screen web app can't wake your phone from fully closed like a native app. Best combo: turn this on, and use the calendar export right below as the backstop that always fires.</div>
     </div>
+
+    ${CalendarPanel()}
 
     ${sect('plus','ONE-OFF EVENT — A SPECIFIC DATE ONLY')}
     <div class="panel"><div style="padding:13px">
@@ -3708,8 +5183,8 @@ function SuppSection(){
 
 /* =============================================================== build === */
 function ViewBuild(){
-  const tabs=[['target','TARGET'],['fuel','FUEL'],['log','LOG']];
-  const body = buildSub==='target'?ViewTarget() : buildSub==='fuel'?ViewFuel() : ViewLog();
+  const tabs=[['target','TARGET'],['fuel','FUEL'],['log','LOG'],['ch90','90 DAY']];
+  const body = buildSub==='target'?ViewTarget() : buildSub==='fuel'?ViewFuel() : buildSub==='ch90'?ViewChallenge() : ViewLog();
   return `<div class="view wrap">
     <div class="segwrap"><div class="seg">${tabs.map(([k,l])=>`
       <button class="segbtn ${buildSub===k?'on':''}" data-act="buildsub" data-v="${k}">${l}</button>`).join('')}</div></div>
@@ -3891,7 +5366,7 @@ function ViewCodex(){
     <div class="panel"><div style="padding:14px 13px 4px">
       <p class="t"><b>Your data survives code updates.</b> Progress lives in the browser's storage for this web address, completely separate from the code. Push a new version to GitHub, reload - everything is still there. What kills it: clearing the browser's site data, or moving to a different URL.</p>
       <p class="t">Nothing is uploaded anywhere. Phone and laptop keep separate files.</p>
-      <p class="t">Export a backup monthly and before changing phones.</p>
+      <p class="t">Back up weekly (FORGE reminds you) and before changing phones. BACK UP NOW opens the share sheet: pick Save to Files or iCloud Drive.</p>
     </div>
     ${importOpen?`<div style="padding:0 13px 13px">
       <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what EXPORT BACKUP gave you, then RESTORE."></textarea></label>
@@ -3901,8 +5376,11 @@ function ViewCodex(){
         <button class="btn ghost" data-act="importcancel" style="max-width:90px">CANCEL</button>
       </div>
     </div>`:`<div style="padding:0 13px 13px;display:flex;gap:8px">
-      <button class="btn ghost" data-act="export">EXPORT BACKUP</button>
-      <button class="btn ghost" data-act="import">IMPORT</button></div>`}</div>
+      <button class="btn ghost" data-act="s-backup">BACK UP NOW</button>
+      <button class="btn ghost" data-act="s-importfile">RESTORE FILE</button>
+      <button class="btn ghost" data-act="import">PASTE</button></div>`}
+    <input type="file" id="importfile" accept="application/json,.json,text/plain" hidden>
+    ${SnapshotPanel()}</div>
 
     <div class="closing">
       The character you're modelling this on is fiction, and the fiction skips the only part that matters: a decade of
@@ -3945,7 +5423,7 @@ function render(){
      itself just changed; every other re-render of the same tab skips it. */
   if (view!==lastRenderedView) body=body.replace('class="view wrap"','class="view wrap enter"');
   lastRenderedView=view;
-  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
+  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+TimerOverlay()+Onboarding()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
   const strip=document.getElementById('strip');
   if (strip){
@@ -3958,7 +5436,8 @@ function render(){
     const now=new Date(); const mins=now.getHours()*60+now.getMinutes();
     rnow.style.top=clamp((mins-wake)*px,0,rail.offsetHeight)+'px';
   }
-  document.body.classList.toggle('lock', !!document.querySelector('.sheet'));
+  document.body.classList.toggle('lock', !!document.querySelector('.sheet,.tmr,.ob'));
+  hydratePhotos();
   const xq=document.getElementById('exq');
   if (xq && exFocus && view==='today'){
     xq.focus(); const l=xq.value.length; xq.setSelectionRange(l,l);
@@ -4023,6 +5502,16 @@ document.addEventListener('click', e => {
     if (wAct(a,v,v2,el)!=='norender') render();
     return;
   }
+  if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^ob-/.test(a)){ if (obAct(a,v,v2,el)!=='norender') render(); return; }
+  if (a==='fold'){ S.ui.fold[v]=!foldOpen(v); commit(); render(); return; }
+  if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
+  if (a==='mm-sel'){ mmSel=mmSel===v?null:v; render(); return; }
+  if (a==='mm-win'){ mmWin=+v||0; render(); return; }
+  if (a==='mm-open'){ view='wlog'; wlSub='body'; mmSel=null; render(); window.scrollTo(0,0); return; }
 
   switch(a){
     case 'addoneoff': {
@@ -4268,16 +5757,7 @@ document.addEventListener('click', e => {
       S.nw=[...S.nw.filter(x=>x.date!==dt),{date:dt,v:val}].sort((x,y)=>x.date>y.date?1:-1);
       commit(); render(); toast('Recorded'); return;
     }
-    case 'export': {
-      const txt=JSON.stringify(S);
-      if(navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});
-      try{
-        const url=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
-        const a2=document.createElement('a'); a2.href=url; a2.download=`forge-backup-${T}.json`; a2.click();
-        setTimeout(()=>URL.revokeObjectURL(url),1000);
-      }catch(err){}
-      toast('Backup copied to clipboard'); return;
-    }
+    case 'export': { doBackup(); return; }
     /* in-app textarea instead of prompt() — multi-line paste into prompt()
        is unreliable on iOS Safari / home-screen PWAs, the app's primary
        target per the README, and a backup blob is well past one line. */
@@ -4299,6 +5779,7 @@ document.addEventListener('click', e => {
         && Array.isArray(parsed.log);
       if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
       S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
+      S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;   // restoring a backup is never a first run
       normalizeCustom();
       importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
     }
@@ -4318,6 +5799,10 @@ document.addEventListener('input', e => {
     if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value)); }
     return;
   }
+  if (t.dataset && t.dataset.ob){ if (obD) obD[t.dataset.ob]=t.value; return; }
+  if (t.dataset && t.dataset.camp){ S.camp[t.dataset.camp]=t.value; commit(); return; }
+  if (t.dataset && t.dataset.chd){ if (chDraft) chDraft[t.dataset.chd]=t.value; return; }
+  if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commit(); } return; }
   if (t.id==='foodq'){ foodQ=t.value; foodFocus=true; render(); return; }   // search must filter live
@@ -4423,12 +5908,17 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     if (!S.meta.rowSplit){ S.meta.rowSplit=true; rowMigrated=true; }
     if (rowMigrated) commit();
   }
+  if (S.meta.onboarded==null){
+    S.meta.onboarded = !!saved && (S.log.length>0 || Object.keys(S.gym).length>0 || Object.keys(S.cust).length>0 || daysLogged()>0);
+    commit();
+  }
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
     S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely
     commit();
   }
   render();
+  snapDaily().then(()=>{ if (view==='codex') render(); });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
