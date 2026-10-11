@@ -513,6 +513,17 @@ input[type=date],input[type=time]{min-height:40px}
 .chcmp i{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-style:normal;font-size:var(--fs-label);letter-spacing:.16em;padding:3px 7px;background:rgba(0,0,0,.65);color:var(--text)}
 .chsel select{padding-right:26px;font-size:15px}
 .brchip{display:inline-flex;align-items:center;gap:5px;color:var(--amber);font-size:var(--fs-detail)}
+
+/* ---------- fight camp ---------- */
+.camphero{display:flex;align-items:center;gap:14px;padding:14px 13px}
+.campph{margin-top:8px;font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
+.campph b{color:var(--rust);letter-spacing:.12em;margin-right:4px}
+.cutbox{margin:0 13px 13px;padding:11px;border:1px solid var(--rule);background:var(--sunk)}
+.cuthead{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-caption);letter-spacing:.06em;color:var(--faint);margin-bottom:8px}
+.cuthead span:first-child{font-weight:700;letter-spacing:.14em}
+.cutsvg{display:block;width:100%;height:110px;background:#0C0F13;border:1px solid var(--rule)}
+.cutleg{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:var(--fs-caption);color:var(--faint)}
+.cutleg i{display:inline-block;width:9px;height:3px;margin-right:5px;vertical-align:2px}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -1626,6 +1637,7 @@ const DEFAULTS = {
   motiv:{ why:'', quotes:[], links:[] },   // daily briefing: your why, your own lines, your play buttons
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
+  camp:{}, campHist:[],                    // fight camp: { name, date, weighIn, target(kg), disc, start, startW }
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
@@ -2489,6 +2501,8 @@ function normalizeCustom(){
   if (!S.tpref.custom||typeof S.tpref.custom!=='object') S.tpref.custom={};
   S.ch90 = Object.assign({start:null,goal:'',checkins:[]}, (S.ch90&&typeof S.ch90==='object')?S.ch90:{});
   if (!Array.isArray(S.ch90.checkins)) S.ch90.checkins=[];
+  if (!S.camp||typeof S.camp!=='object'||Array.isArray(S.camp)) S.camp={};
+  if (!Array.isArray(S.campHist)) S.campHist=[];
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
@@ -2807,6 +2821,7 @@ function FightSection(vd){
         <span>${esc(fmtMin(+f.min||0))}${f.rounds?` · ${f.rounds} rounds`:''}${f.rpe?` · RPE ${f.rpe}`:''}</span>
         <button class="x" data-act="f-edit" data-v="${i}" aria-label="Edit session">${svg('edit',12)}</button>
         <button class="x" data-act="f-del" data-v="${i}" aria-label="Delete session">${svg('x',12)}</button></div>
+      ${f.partner?`<div class="fsd">With ${esc(f.partner)}</div>`:''}
       ${diff!=null&&diff!==0?`<div class="fsd">${diff>0?'+':''}${diff} min vs last ${esc(FIGHT_L[f.disc]||'')} (${esc(shortDate(lf.k))})</div>`:''}
       ${f.worked?`<div class="fsl"><i>WORKED</i>${esc(f.worked)}</div>`:''}
       ${f.caught?`<div class="fsl"><i>GOT CAUGHT</i>${esc(f.caught)}</div>`:''}</div>`; }).join('');
@@ -2822,6 +2837,11 @@ function FightSection(vd){
         <label class="f"><span>Rounds</span><input type="text" inputmode="numeric" data-fd="rounds" value="${esc(d.rounds)}" placeholder="optional"></label>
         <label class="f"><span>Effort</span><input type="text" value="${d.rpe?d.rpe+' · '+RPE_WORD(d.rpe):'tap below'}" readonly aria-label="Effort"></label></div>
       <div class="rpe">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="${d.rpe===n?'on':''}" data-act="f-rpe" data-v="${n}">${n}</button>`).join('')}</div>
+      <label class="f" style="margin-top:12px"><span>Partner(s) · optional</span><input type="text" data-fd="partner" id="fd_partner" value="${esc(d.partner||'')}" placeholder="Who you drilled or sparred with" maxlength="80"></label>
+      ${(()=>{ const recent=partnerList().slice(0,6).filter(p=>!String(d.partner||'').toLowerCase().split(',').map(x=>x.trim()).includes(p.name.toLowerCase()));
+        const lw=(d.partner||'').split(',').map(x=>x.trim()).filter(Boolean).map(n=>[n,lastWithPartner(n,vd)]).filter(x=>x[1]);
+        return (recent.length?`<div class="exchips" style="padding:6px 0 0;flex-wrap:wrap">${recent.map(p=>`<button class="chip" data-act="f-partner" data-v="${esc(p.name)}">+ ${esc(p.name)}</button>`).join('')}</div>`:'')
+          + lw.map(([n,x])=>`<div class="fsd" style="margin-top:6px">Last with ${esc(n)}: ${esc(shortDate(x.k))}${x.f.caught?` · got caught: ${esc(x.f.caught)}`:''}</div>`).join(''); })()}
       <label class="f" style="margin-top:12px"><span>One thing that worked</span><textarea data-fd="worked" placeholder="Be specific.">${esc(d.worked)}</textarea></label>
       <label class="f" style="margin-top:10px"><span>One thing that got you caught</span><textarea data-fd="caught" placeholder="The fact and the cause.">${esc(d.caught)}</textarea></label>
       ${fightEdit==null?`<button class="btn ghost" data-act="t-open" style="margin-top:12px">${svg('clock',13)} RUN IT ON THE ROUND TIMER</button>`:''}
@@ -2888,13 +2908,14 @@ function wlLifts(){
 }
 function wlFights(){
   const all=[]; for (const k of Object.keys(S.fights)) for (const f of S.fights[k]) all.push({k,f});
-  if (!all.length) return `<div class="panel" style="margin-top:14px"><div class="empty">Log a fighting session from Today and your mat time builds up here.</div></div>`;
+  const camp=`${sect('swords','FIGHT CAMP')}${CampPanel()}`;
+  if (!all.length) return camp+`<div class="panel"><div class="empty">Log a fighting session from Today and your mat time builds up here.</div></div>`;
   all.sort((a,b)=>a.k<b.k?1:-1);
   const wkStart=dkey(-dowIdx(T)), wk=all.filter(x=>x.k>=wkStart && x.k<=T);
   const min=a=>a.reduce((s,x)=>s+(+x.f.min||0),0);
   const by={}; for (const x of all) by[x.f.disc]=(by[x.f.disc]||0)+(+x.f.min||0);
   const d28=dkey(-27), m28=all.filter(x=>x.k>=d28 && x.k<=T);
-  return `${sect('swords','MAT + RING TIME')}<div class="stats">
+  return `${camp}${sect('swords','MAT + RING TIME')}<div class="stats">
     <div class="stat"><div class="v">${wk.length}</div><div class="l">THIS WEEK</div></div>
     <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${esc(fmtMin(min(wk)))}</div><div class="l">TIME THIS WEEK</div></div>
     <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${esc(fmtMin(min(m28)))}</div><div class="l">LAST 28 DAYS</div></div></div>
@@ -2902,7 +2923,9 @@ function wlFights(){
       <div class="bar"><div class="barfill" style="width:${clamp(m/Math.max(...Object.values(by))*100,3,100)}%;background:var(--rust)"></div></div></div>`).join('')}</div>
     ${sect('book','SESSIONS')}<div class="panel">${all.slice(0,60).map(({k,f})=>`<div class="fsess"><div class="fstop"><b>${esc(FIGHT_L[f.disc]||'Session')}</b>
       <span>${esc(shortDate(k))} · ${esc(fmtMin(+f.min||0))}${f.rounds?` · ${f.rounds} rds`:''}${f.rpe?` · RPE ${f.rpe}`:''}</span></div>
-      ${f.worked?`<div class="fsl"><i>WORKED</i>${esc(f.worked)}</div>`:''}${f.caught?`<div class="fsl"><i>GOT CAUGHT</i>${esc(f.caught)}</div>`:''}</div>`).join('')}</div>`;
+      ${f.partner?`<div class="fsd">With ${esc(f.partner)}</div>`:''}
+      ${f.worked?`<div class="fsl"><i>WORKED</i>${esc(f.worked)}</div>`:''}${f.caught?`<div class="fsl"><i>GOT CAUGHT</i>${esc(f.caught)}</div>`:''}</div>`).join('')}</div>
+    ${PartnersPanel()}`;
 }
 function wlRoutines(){
   const rts=S.routines||[];
@@ -3064,6 +3087,7 @@ function wAct(a,v,v2,el){
       return;
     }
     case 'f-rpe': if (fdraft) fdraft.rpe=fdraft.rpe===+v?0:+v; return;
+    case 'f-partner': if (fdraft){ const cur=String(fdraft.partner||'').split(',').map(x=>x.trim()).filter(Boolean); if (!cur.includes(v)) cur.push(v); fdraft.partner=cur.join(', '); } return;
     case 'f-save': {
       if (!fdraft) return;
       if (!fdraft.disc){ toast('Pick what you trained'); return 'norender'; }
@@ -3071,7 +3095,8 @@ function wAct(a,v,v2,el){
       if (min<1){ toast('Enter the minutes'); return 'norender'; }
       const rec={id:fightEdit!=null&&S.fights[vd][fightEdit]?S.fights[vd][fightEdit].id:Date.now().toString(36),
         disc:fdraft.disc,min,rounds:Math.round(num(fdraft.rounds)||0)||0,rpe:fdraft.rpe||0,
-        worked:(fdraft.worked||'').trim(),caught:(fdraft.caught||'').trim()};
+        worked:(fdraft.worked||'').trim(),caught:(fdraft.caught||'').trim(),
+        partner:String(fdraft.partner||'').split(',').map(x=>x.trim()).filter(Boolean).join(', ')};
       if (!S.fights[vd]) S.fights[vd]=[];
       if (fightEdit!=null && S.fights[vd][fightEdit]) S.fights[vd][fightEdit]=rec; else S.fights[vd].push(rec);
       fightOpen=false; fightEdit=null; fdraft=null; commit(); toast(`${FIGHT_L[rec.disc]} logged — ${fmtMin(min)}`); return;
@@ -3079,7 +3104,7 @@ function wAct(a,v,v2,el){
     case 'f-edit': {
       const f=(S.fights[vd]||[])[+v]; if (!f) return;
       fightOpen=true; fightEdit=+v;
-      fdraft={disc:f.disc,min:String(f.min||''),rounds:f.rounds?String(f.rounds):'',rpe:f.rpe||0,worked:f.worked||'',caught:f.caught||''};
+      fdraft={disc:f.disc,min:String(f.min||''),rounds:f.rounds?String(f.rounds):'',rpe:f.rpe||0,worked:f.worked||'',caught:f.caught||'',partner:f.partner||''};
       return;
     }
     case 'f-del': {
@@ -4090,6 +4115,149 @@ document.addEventListener('change', e=>{
   r.onerror=()=>toast('Could not read that file');
   r.readAsText(inp.files[0]);
 });
+
+/* ============================================================ fight camp == */
+/* A dated fight changes what every session is for. Camp = fight date + weigh-in + target weight. It drives
+   a phase label with what to prioritize, a weight-cut tracker against a straight-line path from where you
+   started, and the briefing's "fight in N days". Weight guidance is deliberately conservative: the tracker
+   flags paces that need a long water cut instead of coaching one. */
+const CAMP_PHASES = [
+  [57,'BASE','Build the engine and the skills. Volume is fine, heavy lifting stays in, sparring 1-2x a week.'],
+  [29,'BUILD','Sharpen the gameplan. Rounds get specific to your opponent and ruleset. Lifting drops to maintenance: heavy but low volume.'],
+  [15,'PEAK','Hardest sparring of camp happens here, then stops. Conditioning matches the fight\'s round structure.'],
+  [8,'TAPER','Volume down, speed up. Short sharp rounds, no new techniques, nothing you could get hurt in.'],
+  [1,'FIGHT WEEK','Light pads, mobility, sleep, food plan. Nothing new. Trust what you drilled.'],
+  [0,'FIGHT DAY','Warm up early, stay loose, breathe. You already did the work.'],
+];
+let campEdit=false, campArm=false;
+function campDaysOut(){ const c=S.camp; if (!c||!c.date) return null; return daysBetween(T,c.date); }
+function campPhase(d){ for (const p of CAMP_PHASES) if (d>=p[0]) return p; return CAMP_PHASES[CAMP_PHASES.length-1]; }
+function campBriefStat(){ const d=campDaysOut(); if (d==null||d<0) return null;
+  return `<button class="brchip" data-act="camp-open" style="color:var(--rust)">${svg('swords',10,'var(--rust)')} ${d===0?'FIGHT DAY':`Fight in ${d} day${d===1?'':'s'}`}</button>`; }
+/* where you "should" be today on a straight line from camp start to target at weigh-in */
+function campPath(){
+  const c=S.camp; if (!c||!c.target||!c.startW||!c.start||!c.weighIn) return null;
+  const span=Math.max(1,daysBetween(c.start,c.weighIn)), el=clamp(daysBetween(c.start,T),0,span);
+  return {span,el,today:c.startW+(c.target-c.startW)*el/span};
+}
+function campWeights(){ const c=S.camp; return S.log.filter(e=>e.weight!=null && e.date>=addDays(c.start,-14)).sort((a,b)=>a.date>b.date?1:-1); }
+function campCutSVG(){
+  const c=S.camp, pts=campWeights(); if (!c.target||!c.weighIn) return '';
+  const start=addDays(c.start,-14), span=Math.max(1,daysBetween(start,c.weighIn));
+  const ws=pts.map(p=>p.weight).concat([c.target,c.startW||c.target]);
+  const lo=Math.min(...ws)-0.8, hi=Math.max(...ws)+0.8;
+  const X=k=>clamp(daysBetween(start,k)/span*100,0,100), Y=w=>(1-(w-lo)/(hi-lo))*100;
+  const wc=w=>isImp()?Math.round(w*2.20462*10)/10:Math.round(w*10)/10;
+  const line=pts.map((p,i)=>`${i?'L':'M'}${X(p.date).toFixed(2)},${Y(p.weight).toFixed(2)}`).join(' ');
+  return `<svg class="cutsvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Weight vs cut path">
+      <line x1="0" x2="100" y1="${Y(c.target)}" y2="${Y(c.target)}" stroke="#7C9A5E" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>
+      ${c.startW?`<line x1="${X(c.start)}" y1="${Y(c.startW)}" x2="${X(c.weighIn)}" y2="${Y(c.target)}" stroke="#5C8CA8" stroke-width="1" vector-effect="non-scaling-stroke"/>`:''}
+      <line x1="${X(T)}" x2="${X(T)}" y1="0" y2="100" stroke="#2C323A" vector-effect="non-scaling-stroke"/>
+      ${line?`<path d="${line}" fill="none" stroke="#E0A03A" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`:''}
+    </svg>
+    <div class="cutleg"><span><i style="background:#E0A03A"></i>weigh-ins</span><span><i style="background:#5C8CA8"></i>steady path</span><span><i style="background:#7C9A5E"></i>target ${wc(c.target)} ${wUnit()}</span></div>`;
+}
+function CampPanel(){
+  const c=S.camp, imp=isImp(), wu=wUnit(), wc=w=>Math.round((imp?w*2.20462:w)*10)/10;
+  if (campEdit || !c.date){
+    if (!campEdit) return `<div class="panel"><button class="wlhead" data-act="camp-edit"><div style="flex:1;text-align:left"><div class="wlt">${svg('swords',12,'var(--rust)')} Set up a fight camp</div>
+      <div class="wls">Fight date, weigh-in and target weight. Turns on the countdown, phase plan and weight-cut tracker.</div></div>${svg('chev',14,'var(--faint)')}</button></div>`;
+    const L=latestField('weight');
+    return `<div class="panel"><div style="padding:13px"><div class="eyebrow" style="margin-bottom:10px">FIGHT CAMP</div>
+      <div class="grid2" style="padding:0">
+        <label class="f" style="grid-column:1/-1"><span>Event / opponent</span><input type="text" id="cp_name" maxlength="50" value="${esc(c.name||'')}" placeholder="e.g. Smoker vs. Ramirez"></label>
+        <label class="f"><span>Fight date</span><input type="date" id="cp_date" value="${c.date||addDays(T,56)}"></label>
+        <label class="f"><span>Weigh-in date</span><input type="date" id="cp_wi" value="${c.weighIn||''}"></label>
+        <label class="f"><span>Target weight (${wu})</span><input type="text" inputmode="decimal" id="cp_tw" value="${c.target?wc(c.target):''}" placeholder="optional"></label>
+        <label class="f"><span>Discipline</span><select id="cp_disc">${FIGHT_DISC.map(([k,l])=>`<option value="${k}" ${c.disc===k?'selected':''}>${l}</option>`).join('')}</select></label>
+      </div>
+      <div class="note" style="padding:8px 0 0;border:none">${L?`Starting from your latest weigh-in: ${wc(L.weight)} ${wu}.`:'Log a weigh-in on Build → Log so the cut tracker has a starting point.'} Weigh-in defaults to the day before the fight.</div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-act="camp-save" style="flex:2">SAVE CAMP</button>
+        <button class="btn ghost" data-act="camp-cancel" style="flex:1">CANCEL</button></div></div></div>`;
+  }
+  const d=campDaysOut();
+  if (d<0) return `<div class="panel"><div style="padding:13px"><div class="eyebrow">FIGHT DONE · ${esc(shortDate(c.date))}</div>
+      <div class="wlt" style="margin:6px 0 10px">${esc(c.name||FIGHT_L[c.disc]||'Fight')}</div>
+      <div class="chips" style="padding:0">${['Win','Loss','Draw','No contest'].map(r=>`<button class="chip ${c.result===r?'on':''}" data-act="camp-res" data-v="${r}">${r}</button>`).join('')}</div>
+      <label class="f" style="margin-top:10px"><span>How it went</span><textarea data-camp="notes" placeholder="Method, round, what worked, what to fix in the next camp.">${esc(c.notes||'')}</textarea></label>
+      <button class="btn" data-act="camp-close" style="margin-top:12px">FILE IT + CLOSE CAMP</button></div></div>`;
+  const ph=campPhase(d), path=campPath(), L=latestField('weight');
+  let cut='';
+  if (c.target && L){
+    const toGo=L.weight-c.target, wiDays=Math.max(0,daysBetween(T,c.weighIn)), weeks=Math.max(wiDays/7,1/7);
+    const perWk=toGo>0?toGo/weeks:0, pct=perWk/L.weight*100;
+    const ahead=path?L.weight-path.today:null;
+    const status=toGo<=0?['ON WEIGHT','var(--moss)','You\'re at or under target. Hold it with normal eating; no need to cut further.']
+      : pct>1.5?['UNSAFE PACE','var(--rust)',`That's ${pct.toFixed(1)}% of bodyweight a week. Losing it this fast means a big water cut, which hurts performance and can be dangerous. Talk to your coach about a longer runway or the next class up.`]
+      : pct>1?['AGGRESSIVE','var(--amber)',`${pct.toFixed(1)}% of bodyweight a week is doable short-term but costs training quality. Tighten food now so fight week stays boring.`]
+      : ['ON TRACK','var(--moss)',`About ${wc(perWk)} ${wu} a week (${pct.toFixed(1)}% of bodyweight). Sustainable. Keep protein high and weigh in daily, same time.`];
+    cut=`<div class="cutbox"><div class="cuthead"><span style="color:${status[1]}">${status[0]}</span><span>${toGo>0?`${wc(toGo)} ${wu} to go`:`${wc(-toGo)} ${wu} under`} · weigh-in ${esc(shortDate(c.weighIn))} (${wiDays}d)</span></div>
+      ${campCutSVG()}
+      <div class="det" style="margin-top:8px">${esc(status[2])}${ahead!=null&&toGo>0&&Math.abs(ahead)>=0.25?` You're ${Math.abs(wc(ahead))} ${wu} ${ahead>0?'above':'below'} the steady path today.`:''}</div>
+      <div class="bredadd" style="margin-top:10px"><input type="text" inputmode="decimal" id="cp_wt" placeholder="Today's weigh-in (${wu})"><button class="chip on" data-act="camp-weigh">LOG</button></div>
+      <div class="note" style="padding:8px 0 0;border:none">Fight-week water cutting is a coach-and-commission decision. This tracker only plans the slow part.</div></div>`;
+  } else if (c.target) cut=`<div class="note">Log a weigh-in and the cut tracker appears.</div>`;
+  return `<div class="panel acc"><div class="acc-bar" style="background:var(--rust)"></div>
+    <div class="camphero"><div class="chday"><span>${d===0?'TODAY':'FIGHT IN'}</span><b style="color:var(--rust)">${d===0?'!':d}</b><span>${d===0?'FIGHT':d===1?'DAY':'DAYS'}</span></div>
+      <div style="flex:1;min-width:0"><div class="wlt">${esc(c.name||FIGHT_L[c.disc]||'Fight')}</div>
+        <div class="wls">${esc(longDate(c.date))}${d>7?` · ${Math.floor(d/7)} wk ${d%7} d`:''}</div>
+        <div class="campph"><b>${ph[1]}</b> ${esc(ph[2])}</div></div></div>
+    ${cut}
+    <div style="display:flex;gap:8px;padding:0 13px 13px"><button class="btn ghost" data-act="camp-edit" style="flex:1">EDIT</button>
+      <button class="btn ghost" data-act="camp-cancelfight" style="flex:1;color:var(--rust)">${campArm?'TAP TO CONFIRM':'CANCEL CAMP'}</button></div></div>`;
+}
+function campAct(a,v){
+  const c=S.camp, imp=isImp();
+  switch(a){
+    case 'camp-open': view='wlog'; wlSub='fights'; window.scrollTo(0,0); return;
+    case 'camp-edit': campEdit=true; campArm=false; return;
+    case 'camp-cancel': campEdit=false; return;
+    case 'camp-save': {
+      const g=id=>(document.getElementById(id)||{}).value||'';
+      const date=g('cp_date'); if (!date){ toast('Pick the fight date'); return 'norender'; }
+      if (date<T){ toast('Fight date is in the past'); return 'norender'; }
+      const tw=num(g('cp_tw')), L=latestField('weight');
+      const isNew=!c.date;
+      Object.assign(c,{name:g('cp_name').trim(),date,weighIn:g('cp_wi')||addDays(date,-1),disc:g('cp_disc')||'boxing',
+        target:tw!=null?Math.round((imp?tw/2.20462:tw)*100)/100:null});
+      if (isNew||!c.start){ c.start=T; c.startW=L?L.weight:null; }
+      if (!c.startW && L) c.startW=L.weight;
+      campEdit=false; commit(); toast('Camp is on. Every session has a date now.'); return;
+    }
+    case 'camp-weigh': {
+      const w=num((document.getElementById('cp_wt')||{}).value); if (w==null){ toast('Enter your weight'); return 'norender'; }
+      const kg=imp?w/2.20462:w; if (!(kg>25&&kg<350)){ toast('That weight looks off'); return 'norender'; }
+      const rec={...(S.log.find(x=>x.date===T)||{}),date:T,weight:Math.round(kg*100)/100};
+      S.log=[...S.log.filter(x=>x.date!==T),rec].sort((x,y)=>x.date>y.date?1:-1);
+      if (!c.startW) c.startW=rec.weight;
+      commit(); toast('Weigh-in logged'); return;
+    }
+    case 'camp-cancelfight': if (!campArm){ campArm=true; return; } S.camp={}; campArm=false; commit(); toast('Camp cancelled'); return;
+    case 'camp-res': c.result=v; commit(); return;
+    case 'camp-close': (S.campHist=S.campHist||[]).push({...c}); S.camp={}; commit(); toast('Fight filed. On to the next one.'); return;
+  }
+}
+/* ---------- sparring partners ---------- */
+function partnerList(){
+  const by={};
+  for (const k of Object.keys(S.fights)) for (const f of S.fights[k]) for (const n of String(f.partner||'').split(',').map(x=>x.trim()).filter(Boolean)){
+    const key=n.toLowerCase(), e=by[key]||(by[key]={name:n,n:0,min:0,last:'',caught:'',worked:''});
+    e.n++; e.min+=+f.min||0; if (k>=e.last){ e.last=k; e.name=n; e.caught=f.caught||e.caught; e.worked=f.worked||e.worked; }
+  }
+  return Object.values(by).sort((a,b)=>a.last<b.last?1:-1);
+}
+function lastWithPartner(name,before){
+  const key=name.trim().toLowerCase(); let best=null;
+  for (const k of Object.keys(S.fights)) if (k<before) for (const f of S.fights[k])
+    if (String(f.partner||'').split(',').some(x=>x.trim().toLowerCase()===key) && (!best||k>best.k)) best={k,f};
+  return best;
+}
+function PartnersPanel(){
+  const ps=partnerList(); if (!ps.length) return '';
+  return `${sect('users','TRAINING PARTNERS')}<div class="panel">${ps.slice(0,30).map(p=>`<div class="fsess"><div class="fstop"><b>${esc(p.name)}</b>
+      <span>${p.n} session${p.n===1?'':'s'} · ${esc(fmtMin(p.min))} · last ${esc(shortDate(p.last))}</span></div>
+      ${p.caught?`<div class="fsl"><i>LAST TIME GOT CAUGHT</i>${esc(p.caught)}</div>`:''}</div>`).join('')}</div>`;
+}
 
 /* ================================================================ header == */
 function Header(){
@@ -5122,6 +5290,7 @@ document.addEventListener('click', e => {
   }
   if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
   if (a==='mm-sel'){ mmSel=mmSel===v?null:v; render(); return; }
@@ -5413,6 +5582,7 @@ document.addEventListener('input', e => {
     if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value)); }
     return;
   }
+  if (t.dataset && t.dataset.camp){ S.camp[t.dataset.camp]=t.value; commit(); return; }
   if (t.dataset && t.dataset.chd){ if (chDraft) chDraft[t.dataset.chd]=t.value; return; }
   if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
