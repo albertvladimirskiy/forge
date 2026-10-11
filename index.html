@@ -577,6 +577,8 @@ body.lock{overflow:hidden}
 .xlist{border-top:1px solid var(--rule)}
 .xc{border-bottom:1px solid var(--rule)}
 .xc.open{background:#0C0F13}
+.xc.ss{border-left:3px solid var(--steel)}
+.sstag{display:block;font-size:var(--fs-label);letter-spacing:.14em;color:var(--steel);font-weight:700;margin-bottom:2px}
 .xhead{display:flex;align-items:stretch}
 .xmain{flex:1;min-width:0;display:flex;align-items:flex-start;gap:11px;padding:12px 4px 12px 13px;text-align:left}
 .xdot{width:18px;height:18px;min-width:18px;margin-top:1px;border:1.5px solid #3C424A;display:flex;align-items:center;justify-content:center}
@@ -2741,6 +2743,7 @@ function normalizeCustom(){
     const c=Object.assign(newCW('with'),S.cust[k]);
     if (!Array.isArray(c.items)) c.items=[];
     if (!c.sets||typeof c.sets!=='object'||Array.isArray(c.sets)) c.sets={};
+    if (!c.sup||typeof c.sup!=='object'||Array.isArray(c.sup)) c.sup={};
     S.cust[k]=c;
   }
   for (const k in S.fights) if (!Array.isArray(S.fights[k])) delete S.fights[k];
@@ -2761,7 +2764,7 @@ function normalizeCustom(){
   if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
 }
 function curCW(){ return S.cust[VD()]; }
-function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
+function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},sup:{},note:'',t0:null,t1:null,fin:false}; }
 function cwStats(cw){
   let sets=0, ex=0, vol=0;
   for (const id of cw.items){
@@ -2789,6 +2792,23 @@ function custRatio(k){
   const f=(S.fights&&S.fights[k])||[];
   if (f.some(x=>(+x.min||0)>=30)) r=Math.max(r,0.7);
   return r;
+}
+
+/* ---------- supersets ---------- */
+/* cw.sup[id] = true means "this exercise is paired with the one right after it". Consecutive linked exercises form a group
+   (a pair, or a circuit): you alternate between them and the rest timer waits for the last one. Reordering or removing an
+   exercise unlinks around it, so a link can never silently point at a different neighbour. */
+function ssGroups(cw){
+  const out=[]; let cur=[];
+  cw.items.forEach((id,i)=>{ cur.push(id); if (!(cw.sup[id] && i<cw.items.length-1)){ out.push(cur); cur=[]; } });
+  return out;
+}
+function ssOf(cw,id){ const g=ssGroups(cw).find(x=>x.includes(id)); return g&&g.length>1?g:null; }
+function ssUnlinkAround(cw,ids){ ids.forEach(id=>{ const i=cw.items.indexOf(id); delete cw.sup[id]; if (i>0) delete cw.sup[cw.items[i-1]]; }); }
+/* carry links over when a workout is rebuilt from a past one or a routine (only between exercises that stayed adjacent) */
+function ssCopy(cw,srcSup,srcItems){
+  cw.sup={};
+  (srcItems||[]).forEach((id,i)=>{ if (srcSup&&srcSup[id] && cw.items.includes(id) && cw.items[cw.items.indexOf(id)+1]===srcItems[i+1]) cw.sup[id]=true; });
 }
 
 /* ---------- starting points for a workout ---------- */
@@ -3053,16 +3073,18 @@ function platesText(w,id){
 }
 function exCardHTML(cw,id,idx,vd){
   const E=exInfo(id), sets=cw.sets[id]||[], open=cwOpen===id;
+  const multi=ssGroups(cw).filter(g=>g.length>1), grp=multi.find(g=>g.includes(id))||null, gno=multi.indexOf(grp)+1;
+  const ssTag=grp?`<span class="sstag">${grp.length>2?'CIRCUIT':'SUPERSET'} ${gno} · ${grp.indexOf(id)+1}/${grp.length}</span>`:'';
   const last=lastBefore(id,vd), fav=(S.cpref.fav||{})[id];
   const prs=prFlags(id,vd,sets);
   const head=`<div class="xhead"><button class="xmain" data-act="w-open" data-v="${id}" aria-expanded="${open}">
       <span class="xdot ${workSets(sets).length?'on':''}">${workSets(sets).length?svg('check',9,'var(--ink)',3.5):''}</span>
-      <span class="xt"><b>${esc(E.n)}</b><i>${esc(EX_MUL[E.mu]||'')} · ${esc(EX_EQL[E.eq]||'')}</i>
+      <span class="xt">${ssTag}<b>${esc(E.n)}</b><i>${esc(EX_MUL[E.mu]||'')} · ${esc(EX_EQL[E.eq]||'')}</i>
         ${last&&!open?`<em>LAST ${esc(shortDate(last.date))} · ${esc(fmtSets(E.k,last.sets))}</em>`:''}
         ${exNote(id)&&!open?`<span class="xnote">${esc(exNote(id))}</span>`:''}</span>
       <span class="xs">${workSets(sets).length?workSets(sets).length+' set'+(workSets(sets).length>1?'s':''):''}</span></button>
     <button class="chev ${open?'open':''}" data-act="w-open" data-v="${id}" aria-label="${open?'Collapse':'Expand'} ${esc(E.n)}">${svg('chev',14)}</button></div>`;
-  if (!open) return `<div class="xc ${sets.length?'has':''}">${head}</div>`;
+  if (!open) return `<div class="xc ${sets.length?'has':''} ${grp?'ss':''}">${head}</div>`;
   const best=bestSet(id), bestHere=best?bestLabel(E.k,best):null;
   const bench=last
     ? `<div class="bench"><div class="benchl">${svg('rot',10,'var(--steel)')} LAST TIME · ${esc(shortDate(last.date))}</div>
@@ -3076,7 +3098,8 @@ function exCardHTML(cw,id,idx,vd){
       <button class="x" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="w-del" data-v="${id}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`).join('');
   const hist=cwHist===id ? histHTML(id,vd,E) : '';
-  return `<div class="xc open ${sets.length?'has':''}">${head}
+  const linked=!!(cw.sup[id] || (idx>0 && cw.sup[cw.items[idx-1]]));
+  return `<div class="xc open ${sets.length?'has':''} ${grp?'ss':''}">${head}
     <div class="xbody">${bench}
       ${exNoteHTML(id)}
       ${rows?`<div class="eyebrow" style="margin:12px 0 4px">TODAY</div>${rows}`:''}
@@ -3088,6 +3111,8 @@ function exCardHTML(cw,id,idx,vd){
         <button data-act="w-hist" data-v="${id}">${svg('trend',11)} HISTORY</button>
         <button data-act="w-exrest" data-v="${id}" aria-label="Rest after this exercise: ${restLabel((S.cpref.restEx||{})[id])}. Tap to change.">${svg('clock',11)} REST: ${restLabel((S.cpref.restEx||{})[id])}</button>
         ${(E.k==='time'||E.k==='cardio')&&(E.mu==='combat'||/round|shadow|bag|spar|roll|mitt|pad|tabata|rope/i.test(E.n))?`<button data-act="t-openex" data-v="${id}">${svg('clock',11)} ROUND TIMER</button>`:''}
+        ${!cw.sup[id]&&idx<cw.items.length-1?`<button data-act="w-ss" data-v="${id}">${svg('rot',11)} ${linked?'ADD NEXT TO CIRCUIT':'SUPERSET WITH NEXT'}</button>`:''}
+        ${linked?`<button data-act="w-ssun" data-v="${id}">${svg('x',11)} UNLINK SUPERSET</button>`:''}
         ${idx>0?`<button data-act="w-mv" data-v="${id}" data-v2="-1" aria-label="Move up">${svg('arrowUp',11)}</button>`:''}
         ${idx<cw.items.length-1?`<button data-act="w-mv" data-v="${id}" data-v2="1" aria-label="Move down">${svg('arrowDown',11)}</button>`:''}
         <button data-act="w-rmex" data-v="${id}" style="color:var(--rust)">${svg('trash',11,'var(--rust)')} ${armRm===id?'TAP TO CONFIRM':'REMOVE'}</button>
@@ -3321,7 +3346,11 @@ function wAct(a,v,v2,el){
       if (v==='last'){ const k=lastCustBefore(vd); if (k){ ids=S.cust[k].items.slice(); if (!cw.name) cw.name=S.cust[k].name||''; } }
       else if (v==='plan'){ ids=planItemIds(buildDay(vd).def); }
       else if (v.startsWith('rt:')){ const r=(S.routines||[]).find(x=>x.id===v.slice(3)); if (r){ ids=r.items.slice(); if (!cw.name) cw.name=r.name; } }
-      cw.items=ids; cwOpen=ids[0]||null; commit();
+      cw.items=ids; cwOpen=ids[0]||null;
+      if (v==='last'){ const k=lastCustBefore(vd); if (k) ssCopy(cw,S.cust[k].sup,S.cust[k].items); }
+      else if (v.startsWith('rt:')){ const r=(S.routines||[]).find(x=>x.id===v.slice(3)); if (r) ssCopy(cw,r.sup,r.items); }
+      else cw.sup={};
+      commit();
       toast(ids.length?`${ids.length} exercises loaded`:'Nothing to load'); return;
     }
     case 'w-mode': if (cw){ cw.mode=v==='replace'?'replace':'with'; commit(); } return;
@@ -3366,15 +3395,23 @@ function wAct(a,v,v2,el){
     case 'w-fav': S.cpref.fav[v]=!S.cpref.fav[v]; if(!S.cpref.fav[v]) delete S.cpref.fav[v]; exFocus=exPickOpen; commit(); return;
     case 'w-open': cwOpen=cwOpen===v?null:v; cwHist=null; editSet=null; touch(); return;
     case 'w-hist': cwHist=cwHist===v?null:v; return;
+    case 'w-ss': {
+      if (!cw) return; const i=cw.items.indexOf(v); if (i<0) return;
+      if (i<cw.items.length-1) cw.sup[v]=true;
+      commit(); return;
+    }
+    case 'w-ssun': { if (!cw) return; ssUnlinkAround(cw,[v]); commit(); return; }
     case 'w-mv': {
       if (!cw) return; const i=cw.items.indexOf(v), j=i+(+v2);
       if (i<0||j<0||j>=cw.items.length) return;
+      ssUnlinkAround(cw,[cw.items[i],cw.items[j]]);
       [cw.items[i],cw.items[j]]=[cw.items[j],cw.items[i]]; commit(); return;
     }
     case 'w-rmex': {
       if (!cw) return;
       const has=(cw.sets[v]||[]).length>0;
       if (has && armRm!==v){ armRm=v; return; }
+      ssUnlinkAround(cw,[v]);
       cw.items=cw.items.filter(x=>x!==v); delete cw.sets[v]; if (cwOpen===v) cwOpen=null; armRm=null; commit(); return;
     }
     case 'w-step': {
@@ -3424,9 +3461,11 @@ function wAct(a,v,v2,el){
       if (!cw.t0) cw.t0=Date.now();
       if (cw.fin){ cw.fin=false; cw.t1=null; }
       commit();
-      if (!s.wu && E.k!=='time' && E.k!=='cardio' && restFor(id)>0) restStart(restFor(id));      // no timer after a warm-up
+      const grp=s.wu?null:ssOf(cw,id), gi=grp?grp.indexOf(id):-1, lastInGrp=!grp||gi===grp.length-1;
+      if (!s.wu && E.k!=='time' && E.k!=='cardio' && lastInGrp && restFor(id)>0) restStart(restFor(id));      // no timer after a warm-up, or between the exercises of a superset
+      if (grp){ cwOpen=grp[(gi+1)%grp.length]; }                                        // alternate: A -> B -> rest -> A
       if (isPR){ toast(`New PR — ${fmtSet(E.k,s)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
-      else toast(s.wu?`Warm-up: ${fmtSet(E.k,s)}`:`Set ${workSets(before).length+1}: ${fmtSet(E.k,s)}`);
+      else toast(s.wu?`Warm-up: ${fmtSet(E.k,s)}`:`Set ${workSets(before).length+1}: ${fmtSet(E.k,s)}${grp&&!lastInGrp?` · next: ${exInfo(grp[gi+1]).n}`:''}`);
       return;
     }
     case 'w-edit': {
@@ -3471,7 +3510,7 @@ function wAct(a,v,v2,el){
       if (!cw || !cw.items.length){ toast('Add some exercises first'); return 'norender'; }
       const name=(cw.name||'').trim()||`Routine ${(S.routines.length||0)+1}`;
       const ex=S.routines.find(r=>r.name.toLowerCase()===name.toLowerCase());
-      if (ex) ex.items=cw.items.slice(); else S.routines.push({id:Date.now().toString(36),name,items:cw.items.slice()});
+      if (ex){ ex.items=cw.items.slice(); ex.sup={...cw.sup}; } else S.routines.push({id:Date.now().toString(36),name,items:cw.items.slice(),sup:{...cw.sup}});
       if (!cw.name) cw.name=name;
       commit(); toast(ex?`Routine “${name}” updated`:`Saved as routine “${name}”`); return;
     }
@@ -3536,7 +3575,9 @@ function wAct(a,v,v2,el){
       const src=S.cust[v]; if (!src) return;
       if (!S.cust[vd]) S.cust[vd]=newCW('with');
       const t=S.cust[vd]; if (!t.name) t.name=src.name||'';
+      const fresh=!t.items.length;
       src.items.forEach(id=>{ if (!t.items.includes(id)) t.items.push(id); });
+      if (fresh) ssCopy(t,src.sup,src.items);
       view='today'; cwOpen=t.items[0]||null; commit(); window.scrollTo(0,0); toast('Workout loaded — benchmarks are filled in'); return;
     }
     case 'wl-delday': {
@@ -3547,7 +3588,9 @@ function wAct(a,v,v2,el){
       const r=(S.routines||[]).find(x=>x.id===v); if (!r) return;
       if (!S.cust[vd]) S.cust[vd]=newCW('with');
       const t=S.cust[vd]; if (!t.name) t.name=r.name;
+      const fresh=!t.items.length;
       r.items.forEach(id=>{ if (!t.items.includes(id)) t.items.push(id); });
+      if (fresh) ssCopy(t,r.sup,r.items);
       view='today'; cwOpen=t.items[0]||null; commit(); window.scrollTo(0,0); toast(`${r.name} loaded`); return;
     }
     case 'wl-rtdel': S.routines=S.routines.filter(r=>r.id!==v); commit(); toast('Routine deleted'); return;
