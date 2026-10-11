@@ -201,6 +201,7 @@ input[type=date],input[type=time]{min-height:40px}
 .btn.ghost:active{background:var(--panel2)}
 .chips{display:flex;gap:6px;padding:12px 13px 2px;flex-wrap:wrap}
 .chip{padding:7px 12px;border:1px solid var(--rule);font-size:var(--fs-detail);color:var(--faint);letter-spacing:.05em;transition:all .2s}
+.chip:disabled{opacity:.35}
 .chip.on{border-color:var(--amber);color:var(--text);background:var(--panel2)}
 
 /* ---------- bars / stats ---------- */
@@ -3127,6 +3128,23 @@ function histHTML(id,vd,E){
     ${sparkline(pts,'#E0A03A',70)}${lines}</div>`;
 }
 
+/* ---------- water ---------- */
+/* Logged per day in millilitres (d.water). The daily target is the Fuel tab's 40 ml per kg of bodyweight; it needs a
+   weigh-in, but logging works without one. US units add in 8 and 16 oz steps, metric in 250 and 500 ml. */
+const ML_OZ=29.5735;
+const WATER_STEPS=()=>isImp()?[['8 oz',8*ML_OZ],['16 oz',16*ML_OZ]]:[['250 ml',250],['500 ml',500]];
+const waterShow=ml=>isImp()?`${Math.round(ml/ML_OZ)} oz`:(ml>=1000?`${Math.round(ml/100)/10} L`:`${Math.round(ml)} ml`);
+function WaterRow(d,N){
+  const ml=d.water||0, target=N?+N.water*1000:0, pct=target?clamp(ml/target*100,0,100):0;
+  const [small,big]=WATER_STEPS();
+  return `<div class="fb" style="padding:2px 13px 13px"><div class="fbtop"><span>WATER</span><span style="color:var(--text)">${waterShow(ml)}${target?`<span style="color:var(--faint)"> / ${waterShow(target)}</span>`:''}</span></div>
+    ${target?`<div class="bar"><div class="barfill" id="waterfill" style="width:${pct}%;background:${ml>=target?'var(--moss)':'var(--steel)'}"></div></div>`:''}
+    <div style="display:flex;gap:8px;margin-top:9px">
+      <button class="chip" data-act="water" data-v="${-Math.round(small[1])}" aria-label="Remove ${small[0]} of water" ${ml>0?'':'disabled'}>−</button>
+      <button class="chip on" data-act="water" data-v="${Math.round(small[1])}" aria-label="Add ${small[0]} of water">+ ${small[0]}</button>
+      <button class="chip on" data-act="water" data-v="${Math.round(big[1])}" aria-label="Add ${big[0]} of water">+ ${big[0]}</button></div></div>`;
+}
+
 /* ---------- share a workout as plain text ---------- */
 /* One line per exercise, warm-ups marked, RPE and PRs inline, then a totals line. Pastes cleanly into a message or a note. */
 function workoutSummary(date){
@@ -5222,6 +5240,7 @@ function ViewToday(){
       ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}
       ${vd===T&&new Date().getHours()>=18&&N.protein>0&&ft.p<N.protein*0.5?`<div class="note" style="color:var(--amber);border-top:none;padding-top:0">${svg('target',10,'var(--amber)')} Only ${Math.round(ft.p)}g protein logged with evening here — most of that gap won't get made up after tonight. Front-load the next meal.</div>`:''}`
       :`<button class="note" data-act="golog" style="border-top:none;width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on Build → Log and targets appear here. Tap to go there now.</span></button>`}
+      ${WaterRow(d,N)}
       ${d.food.length?`<div class="foodlist">${d.food.map((f,i)=>`
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
           <span style="color:var(--dim);font-size:var(--fs-detail)">${Math.round(f.kcal*f.q)} kcal</span>
@@ -6228,6 +6247,7 @@ function handleClick(e){
       ['cf_n','cf_k','cf_p','cf_c','cf_f'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
       commit(); render(); toast(`${n} added`); return;
     }
+    case 'water': d.water=Math.max(0,Math.round((d.water||0)+(+v))); commit(); break;
     case 'delfood': d.food.splice(+v,1); commit(); break;
     case 'addmyfood': case 'addrecent': {
       const f=a==='addmyfood'?S.myfoods[+v]:recentFoods()[+v]; if (!f) return;

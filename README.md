@@ -26,6 +26,10 @@ separate from the code files. So:
 | Clear Safari/Chrome site data | ❌ gone |
 | Different device | separate file per device |
 
+Fuel and Target use the **7-day average** of your weigh-ins (not a single reading) for calorie, macro, activity and strength-standard
+math; the weight chart draws it as a dashed line. Today's food panel also tracks **water** against 40 ml per kg of bodyweight, and
+has COPY YESTERDAY'S FOOD, RECENT foods and saved MY FOODS.
+
 Insurance: **Codex → Export backup** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
 **Import** to restore. Do it monthly.
 
@@ -79,6 +83,12 @@ plain-text "repeat it if that was a grind" nudge (the prescription itself is unc
 (iOS can't vibrate; BELL / SILENT is in the workout panel, and each exercise can override the default rest length). Bar weight and
 the plates your gym has live under **Plan → Barbell + plates**, with a per-lift BAR button for EZ or trap bars; the plate line
 picks the fewest plates that make the weight.
+
+More on custom workouts: **SUPERSET WITH NEXT** links an exercise to the one below it (link again for a circuit); logging a set
+moves to the partner and the rest timer waits for the last exercise of the group. Each exercise has a saved **note** (a cue
+shown when it's open, and as a one-liner when collapsed). Under LAST TIME a **NEXT TIME** line suggests a weight from your last
+working sets and RPE; it never changes anything by itself. **SHARE WORKOUT SUMMARY** (and SHARE on past workouts) sends a plain
+text recap through the share sheet or the clipboard.
 
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 
