@@ -610,6 +610,7 @@ body.lock{overflow:hidden}
 .histrow span:first-child{color:var(--text);flex:none}
 .histrow span:last-child{text-align:right;min-width:0}
 .histrow:last-child{border-bottom:none}
+.setedit{flex:1;min-width:0;text-align:left;color:inherit;padding:2px 0}
 .startbox{padding:12px 13px 4px;border-top:1px solid var(--rule)}
 .startopt{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;background:var(--panel2);border:1px solid var(--rule2)}
 .startopt b{font-size:var(--fs-title)}
@@ -2101,6 +2102,15 @@ function checkPR(ex,w,r,date){
   if (!prev || val>prev.e1rm+0.01){ S.prs[ex]={w,r,e1rm:val,date:date||T}; return true; }
   return false;
 }
+/* the stored record is "best set ever logged", so after a set is edited or deleted it has to be worked out again */
+function rebuildPR(ex){
+  let best=null;
+  for (const k of gymSessions(ex)) for (const st of S.gym[k][ex]){
+    const v=e1rmVal(ex,st.w,st.r);
+    if (!best || v>best.e1rm+0.01) best={w:st.w,r:st.r,e1rm:v,date:k};
+  }
+  if (best) S.prs[ex]=best; else delete S.prs[ex];
+}
 function bestStreakEver(){
   let max=0,cur=0;
   for (let i=1100;i>=0;i--){ const s=dayScore(dkey(-i)); if(s>0.08){ cur++; if(cur>max)max=cur; } else cur=0; }
@@ -2385,6 +2395,7 @@ function rxLine(b){
 }
 function exGymHTML(ex,label){
   const sets=(S.gym[VD()]&&S.gym[VD()][ex])||[];
+  const ge=gymEdit&&gymEdit.ex===ex&&gymEdit.vd===VD()&&sets[gymEdit.i]?gymEdit:null, gs=ge?sets[ge.i]:null;
   const rx=prescribe(ex);
   const flagged=S.flags[ex];
   const pr=S.prs[ex];
@@ -2393,14 +2404,16 @@ function exGymHTML(ex,label){
     <div class="eyebrow" style="margin-bottom:8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
     ${sets.map((s,i)=>{ const isPR = pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r;
       return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
-      <span style="flex:1">${dispExact(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</span>
+      <button class="setedit" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${dispExact(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</button>
       ${s.r>=EXS[ex].reps?svg('check',12,'var(--moss)',3):`<span style="font-size:var(--fs-caption);color:var(--rust)">-${EXS[ex].reps-s.r}</span>`}
+      <button class="x" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`;}).join('')}
+    ${ge?`<div class="note" style="border:1px solid var(--amber);color:var(--amber);margin-bottom:8px">EDITING SET ${ge.i+1} · change the numbers, then save</div>`:''}
     <div class="setadd">
-      <input type="number" step="0.5" id="sw_${ex}" inputmode="decimal" placeholder="${rx&&rx.w?dispLoad(rx.w,ex).replace(' ','&nbsp;'):'weight'}">
+      <input type="number" step="0.5" id="sw_${ex}" inputmode="decimal" placeholder="${rx&&rx.w?dispLoad(rx.w,ex).replace(' ','&nbsp;'):'weight'}" value="${gs?wIn(gs.w):''}">
       <span class="setx">×</span>
-      <input type="number" id="sr_${ex}" inputmode="numeric" placeholder="${EXS[ex].reps}">
-      <button class="chip on" data-act="addset" data-v="${ex}">LOG SET</button>
+      <input type="number" id="sr_${ex}" inputmode="numeric" placeholder="${EXS[ex].reps}" value="${gs?gs.r:''}">
+      <button class="chip on" data-act="addset" data-v="${ex}">${ge?'SAVE':'LOG SET'}</button>${ge?`<button class="chip" data-act="geditcancel">CANCEL</button>`:''}
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
       <span style="font-size:var(--fs-caption);color:var(--faint)">Blank weight = prescribed. Blank reps = target.</span>
@@ -2626,7 +2639,7 @@ function exSearch(q,mu,eq){
 let exPickOpen=false, exQ='', exMu='', exEq='', exCreate=false, exFocus=false,
     cwOpen=null, cwHist=null, armDiscard=false, armRm=null,
     fightOpen=false, fightEdit=null, fdraft=null,
-    armFight=null, wlSub='workouts', wlOpenEx=null, wlOpenDay=null, cdraft={}, rest=null, restIv=null;
+    armFight=null, wlSub='workouts', wlOpenEx=null, wlOpenDay=null, cdraft={}, rest=null, restIv=null, editSet=null, gymEdit=null;
 
 /* backups from before this feature, or a hand-edited one, can lack these keys or have the wrong shapes */
 function normalizeCustom(){
@@ -2900,8 +2913,11 @@ function setEntryHTML(id,vd,E){
   else if (E.k==='carry') fields=fld('w','WEIGHT',wUnit(),'0')+fld('d','DISTANCE','m','0');
   else fields=fld('tm','MIN','','0')+fld('ts','SEC','','0')+fld('d','DISTANCE',dUnit(E.k)+' · optional','');
   const plates = E.eq==='barbell' && (E.k==='wr') ? `<div class="platehint" id="plate_${id}">${platesText(num(val('w')))}</div>` : '';
-  return `<div class="setadd2 ${E.k==='cardio'?'three':''}">${fields}</div>${plates}
-    <button class="btn" data-act="w-log" data-v="${id}" style="margin-top:9px">LOG SET</button>`;
+  const ed=editSet&&editSet.id===id&&editSet.vd===vd?editSet:null;
+  return `${ed?`<div class="note" style="border:1px solid var(--amber);color:var(--amber);margin-top:12px">EDITING SET ${ed.i+1} · change the numbers, then save</div>`:''}
+    <div class="setadd2 ${E.k==='cardio'?'three':''}">${fields}</div>${plates}
+    <div style="display:flex;gap:8px;margin-top:9px"><button class="btn" data-act="w-log" data-v="${id}" style="flex:2">${ed?`SAVE SET ${ed.i+1}`:'LOG SET'}</button>
+      ${ed?`<button class="btn ghost" data-act="w-editcancel" style="flex:1">CANCEL</button>`:''}</div>`;
 }
 /* plates per side for a barbell load (20 kg / 45 lb bar) */
 function platesText(w){
@@ -2933,7 +2949,8 @@ function exCardHTML(cw,id,idx,vd){
     : `<div class="bench"><div class="benchl">${svg('target',10,'var(--amber)')} FIRST TIME</div>
         <div class="benchv"><span>Whatever you log here becomes the benchmark next time.</span></div></div>`;
   const rows=sets.map((s,i)=>`<div class="setrow">${prs[i]?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
-      <span style="flex:1">${esc(fmtSet(E.k,s))}${prs[i]?' <span class="prtag">PR</span>':''}${(E.k==='wr'&&s.r>1)?` <span class="e1">≈${e1Txt(s.w,s.r)} 1RM</span>`:''}</span>
+      <button class="setedit" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${esc(fmtSet(E.k,s))}${prs[i]?' <span class="prtag">PR</span>':''}${(E.k==='wr'&&s.r>1)?` <span class="e1">≈${e1Txt(s.w,s.r)} 1RM</span>`:''}</button>
+      <button class="x" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="w-del" data-v="${id}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`).join('');
   const hist=cwHist===id ? histHTML(id,vd,E) : '';
   return `<div class="xc open ${sets.length?'has':''}">${head}
@@ -3214,7 +3231,7 @@ function wAct(a,v,v2,el){
       touch(); commit(); toast(`${exInfo(v).n} added`); return;
     }
     case 'w-fav': S.cpref.fav[v]=!S.cpref.fav[v]; if(!S.cpref.fav[v]) delete S.cpref.fav[v]; exFocus=exPickOpen; commit(); return;
-    case 'w-open': cwOpen=cwOpen===v?null:v; cwHist=null; touch(); return;
+    case 'w-open': cwOpen=cwOpen===v?null:v; cwHist=null; editSet=null; touch(); return;
     case 'w-hist': cwHist=cwHist===v?null:v; return;
     case 'w-mv': {
       if (!cw) return; const i=cw.items.indexOf(v), j=i+(+v2);
@@ -3262,6 +3279,11 @@ function wAct(a,v,v2,el){
         s={}; if (t>0) s.t=t; if (d>0) s.d=d;
       }
       if (!cw.sets[id]) cw.sets[id]=[];
+      if (editSet && editSet.id===id && editSet.vd===vd && cw.sets[id][editSet.i]){
+        const n=editSet.i+1; cw.sets[id][editSet.i]=s; editSet=null; delete cdraft[dk]; commit();
+        toast(`Set ${n} updated: ${fmtSet(E.k,s)}`); return;
+      }
+      editSet=null;
       const before=cw.sets[id].slice();
       cw.sets[id].push(s);
       const isPR=prFlags(id,vd,cw.sets[id]).pop();
@@ -3274,7 +3296,19 @@ function wAct(a,v,v2,el){
       else toast(`Set ${before.length+1}: ${fmtSet(E.k,s)}`);
       return;
     }
+    case 'w-edit': {
+      const E=exInfo(v), st=cw&&(cw.sets[v]||[])[+v2]; if (!st) return;
+      editSet={id:v,i:+v2,vd}; cwOpen=v;
+      const dr=cdraft[vd+'|'+v]={};     // every field set explicitly, so a blank one stays blank instead of being prefilled
+      if (E.k==='wr'){ dr.w=wIn(st.w); dr.r=String(st.r); }
+      else if (E.k==='bw'){ dr.w=st.w>0?wIn(st.w):''; dr.r=String(st.r); }
+      else if (E.k==='carry'){ dr.w=wIn(st.w); dr.d=dIn(st.d,E.k); }
+      else { const t=st.t||0; dr.tm=Math.floor(t/60)?String(Math.floor(t/60)):''; dr.ts=t%60?String(t%60):''; if (E.k==='cardio') dr.d=st.d>0?dIn(st.d,E.k):''; }
+      return;
+    }
+    case 'w-editcancel': { if (editSet) delete cdraft[editSet.vd+'|'+editSet.id]; editSet=null; return; }
     case 'w-del': {
+      editSet=null;
       if (cw && cw.sets[v]){ cw.sets[v].splice(+v2,1); if (!cw.sets[v].length) delete cw.sets[v]; commit(); }
       return;
     }
@@ -5786,7 +5820,7 @@ document.addEventListener('click', e => {
       if (S.extra[v]){ S.extra[v].splice(+v2,1); if(!S.extra[v].length) delete S.extra[v]; }
       commit(); break;
     }
-    case 'view': view=v; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; editSet=null; gymEdit=null; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
     case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
@@ -5980,10 +6014,18 @@ document.addEventListener('click', e => {
       if (w==null&&!E.added){ toast('Enter a weight'); return; }
       if (w==null) w=0;
       if (w<0 || r<1){ toast('Weight and reps must be positive'); return; }
+      const ge=gymEdit&&gymEdit.ex===ex&&gymEdit.vd===VD()&&S.gym[VD()]&&S.gym[VD()][ex]&&S.gym[VD()][ex][gymEdit.i]?gymEdit:null;
+      if (ge){      // editing: needs real numbers, not the prescription a blank box would fall back to
+        const rw=inLoad((document.getElementById('sw_'+ex)||{}).value), rr=num((document.getElementById('sr_'+ex)||{}).value);
+        if ((rw==null&&!E.added) || rr==null){ toast('Enter weight and reps to save the change'); return; }
+        S.gym[VD()][ex][ge.i]={w:Math.round((rw??0)*100)/100, r:Math.round(rr)};
+        gymEdit=null; rebuildPR(ex); commit(); render(); toast(`Set ${ge.i+1} updated`); return;
+      }
       if (!S.gym[VD()]) S.gym[VD()]={};
       if (!S.gym[VD()][ex]) S.gym[VD()][ex]=[];
       S.gym[VD()][ex].push({w:Math.round(w*100)/100, r:Math.round(r)});
       const isPR = checkPR(ex, Math.round(w*100)/100, Math.round(r), VD());
+      ['sw_','sr_'].forEach(p=>{ const el=document.getElementById(p+ex); if (el) el.value=''; });
       commit(); render();
       const n=S.gym[VD()][ex].length;
       if (isPR){ toast(`New PR — ${dispExact(w)} × ${Math.round(r)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
@@ -5991,12 +6033,16 @@ document.addEventListener('click', e => {
       return;
     }
     case 'delset': {
+      gymEdit=null;
       if (S.gym[VD()] && S.gym[VD()][v]){
         S.gym[VD()][v].splice(+v2,1);
         if(!S.gym[VD()][v].length) delete S.gym[VD()][v];
+        rebuildPR(v);
       }
       commit(); break;
     }
+    case 'gedit': gymEdit={ex:v,i:+v2,vd:VD()}; break;
+    case 'geditcancel': gymEdit=null; break;
     case 'painflag':
       if (S.flags[v]) delete S.flags[v]; else S.flags[v]=T;
       commit(); break;
