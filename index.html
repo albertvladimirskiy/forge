@@ -3127,6 +3127,37 @@ function histHTML(id,vd,E){
     ${sparkline(pts,'#E0A03A',70)}${lines}</div>`;
 }
 
+/* ---------- share a workout as plain text ---------- */
+/* One line per exercise, warm-ups marked, RPE and PRs inline, then a totals line. Pastes cleanly into a message or a note. */
+function workoutSummary(date){
+  const cw=S.cust[date]; if (!cw) return '';
+  const lines=[`${cw.name||'Workout'} · ${longDate(date)}`];
+  const done=cw.items.filter(id=>(cw.sets[id]||[]).length);
+  for (const id of done){
+    const E=exInfo(id), ss=cw.sets[id], prs=prFlags(id,date,ss);
+    const parts=ss.map((x,i)=>fmtSet(E.k,x)+(x.wu?' (warm-up)':'')+(prs[i]?' ★PR':''));
+    lines.push(`${E.n}${ssOf(cw,id)?' (superset)':''}: ${parts.join(', ')}`);
+  }
+  const fights=(S.fights[date]||[]);
+  for (const f of fights) lines.push(`${FIGHT_L[f.disc]||'Session'}: ${fmtMin(f.min)}${f.rounds?` · ${f.rounds} rounds`:''}${f.rpe?` · effort ${f.rpe}/10`:''}`);
+  const st=cwStats(cw), bits=[];
+  if (st.ex) bits.push(`${st.ex} lift${st.ex>1?'s':''}`);
+  if (st.sets) bits.push(`${st.sets} set${st.sets>1?'s':''}`);
+  if (st.vol>0) bits.push(`${fmtVol(st.vol)} moved`);
+  if (cw.t0&&cw.t1) bits.push(`${Math.max(1,Math.round((cw.t1-cw.t0)/60000))} min`);
+  if (bits.length) lines.push('', bits.join(' · '));
+  if ((cw.note||'').trim()) lines.push('', cw.note.trim());
+  return lines.join('\n');
+}
+/* the share sheet where there is one (phones), otherwise the clipboard */
+async function shareText(title,text){
+  try{
+    if (navigator.share){ await navigator.share({title,text}); return; }
+  }catch(e){ if (e && e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Copied. Paste it anywhere.'); }
+  catch(e){ toast("Couldn't copy that"); }
+}
+
 /* ---------- the custom workout panel ---------- */
 function WorkoutSection(vd,plan){
   const cw=S.cust[vd], rep=cw&&cw.mode==='replace';
@@ -3146,7 +3177,7 @@ function WorkoutSection(vd,plan){
     <div class="panel acc xw"><div class="acc-bar" style="background:var(--amber)"></div>
       <div class="xwhead">
         <input class="xwname" type="text" data-cwin="name" placeholder="Name this workout (optional)" value="${esc(cw.name||'')}" maxlength="40" aria-label="Workout name">
-        <div class="xwstats"><span><b>${st.ex}</b>/${cw.items.length} lifts</span><span><b>${st.sets}</b> sets</span>${st.vol>0?`<span><b>${esc(fmtVol(st.vol))}</b> moved</span>`:''}</div>
+        <div class="xwstats"><span><b>${st.ex}</b>/${cw.items.length} ${cw.items.length===1?'lift':'lifts'}</span><span><b>${st.sets}</b> ${st.sets===1?'set':'sets'}</span>${st.vol>0?`<span><b>${esc(fmtVol(st.vol))}</b> moved</span>`:''}</div>
       </div>
       <div class="xmode"><span>Planned ${esc(plan.def.title)}</span>
         <div class="seg2"><button class="${rep?'on':''}" data-act="w-mode" data-v="replace">SET ASIDE</button><button class="${!rep?'on':''}" data-act="w-mode" data-v="with">KEEP BOTH</button></div></div>
@@ -3156,8 +3187,9 @@ function WorkoutSection(vd,plan){
         <div class="seg2"><button class="${S.cpref.restSound!==false?'on':''}" data-act="w-restsound" data-v="on">BELL</button><button class="${S.cpref.restSound===false?'on':''}" data-act="w-restsound" data-v="off">SILENT</button></div></div>
       ${cw.items.length===0 ? startChooserHTML(vd,plan) : `<div class="xlist">${cw.items.map((id,i)=>exCardHTML(cw,id,i,vd)).join('')}</div>`}
       <button class="btn ghost" data-act="w-pick" style="border:none;border-top:1px solid var(--rule)">${svg('plus',13)} ADD EXERCISE</button>
-      ${cw.fin?`<div class="banner moss" style="margin:12px 13px 0">${svg('check',14,'var(--moss)',3)}<div><b>Finished.</b> ${st.sets} sets across ${st.ex} lifts${st.vol>0?`, ${esc(fmtVol(st.vol))} moved`:''}${cw.t0&&cw.t1?` in ${Math.max(1,Math.round((cw.t1-cw.t0)/60000))} min`:''}. Every number above is now the benchmark next time.</div></div>`:''}
+      ${cw.fin?`<div class="banner moss" style="margin:12px 13px 0">${svg('check',14,'var(--moss)',3)}<div><b>Finished.</b> ${st.sets} ${st.sets===1?'set':'sets'} across ${st.ex} ${st.ex===1?'lift':'lifts'}${st.vol>0?`, ${esc(fmtVol(st.vol))} moved`:''}${cw.t0&&cw.t1?` in ${Math.max(1,Math.round((cw.t1-cw.t0)/60000))} min`:''}. Every number above is now the benchmark next time.</div></div>`:''}
       <div style="padding:12px 13px 0"><label class="f"><span>Notes</span><textarea data-cwin="note" placeholder="How it felt, what to change next time.">${esc(cw.note||'')}</textarea></label></div>
+ ${st.sets?`<button class="logbtn" data-act="w-share" data-v="${vd}" style="margin:12px 13px 0;width:calc(100% - 26px)">${svg('arrowUp',12,'var(--faint)')} SHARE WORKOUT SUMMARY</button>`:''}
       <div class="xfoot">
         <button class="btn" data-act="w-fin" style="flex:2">${cw.fin?'REOPEN WORKOUT':'FINISH WORKOUT'}</button>
         <button class="btn ghost" data-act="w-routine" style="flex:2">SAVE AS ROUTINE</button>
@@ -3272,12 +3304,13 @@ function wlWorkouts(){
     const cw=S.cust[k], st=cwStats(cw), open=wlOpenDay===k;
     return `<div class="panel"><button class="wlhead" data-act="wl-day" data-v="${k}" aria-expanded="${open}">
         <div style="flex:1;text-align:left"><div class="wlt">${esc(cw.name||'Workout')}</div>
-          <div class="wls">${esc(longDate(k))} · ${st.ex} lifts · ${st.sets} sets${st.vol>0?` · ${esc(fmtVol(st.vol))}`:''}</div></div>
+          <div class="wls">${esc(longDate(k))} · ${st.ex} ${st.ex===1?'lift':'lifts'} · ${st.sets} ${st.sets===1?'set':'sets'}${st.vol>0?` · ${esc(fmtVol(st.vol))}`:''}</div></div>
         <span class="chev ${open?'open':''}" style="padding:0">${svg('chev',14)}</span></button>
       ${open?`<div class="wlbody">${cw.items.filter(id=>(cw.sets[id]||[]).length).map(id=>{ const E=exInfo(id);
           return `<div class="histrow"><span>${esc(E.n)}</span><span>${esc(fmtSets(E.k,cw.sets[id]))}</span></div>`; }).join('')}
         ${cw.note?`<div class="fsl" style="margin-top:8px"><i>NOTES</i>${esc(cw.note)}</div>`:''}
         <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn ghost" data-act="wl-share" data-v="${k}" style="flex:1">SHARE</button>
           <button class="btn ghost" data-act="wl-repeat" data-v="${k}" style="flex:2">REPEAT ON ${VD()===T?'TODAY':'THIS DAY'}</button>
           <button class="btn ghost" data-act="wl-delday" data-v="${k}" style="flex:1;color:var(--rust)">DELETE</button></div></div>`:''}</div>`; }).join('');
   return h;
@@ -3480,6 +3513,7 @@ function wAct(a,v,v2,el){
     }
     case 'w-rpe': { const [key,val]=v.split('|'), dk=vd+'|'+key; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].rpe=String(cdraft[dk].rpe)===val?'':val; return; }
     case 'w-usenext': { const h=nextWeightHint(v,vd); if (!h) return 'norender'; const dk=vd+'|'+v; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].w=wIn(h.w); if (cdraft[dk].r===undefined){ const pf=prefill(v,vd); if (pf.r) cdraft[dk].r=pf.r; } return; }
+    case 'w-share': case 'wl-share': { const sm=workoutSummary(v); if (!sm){ toast('Nothing to share yet'); return 'norender'; } shareText((S.cust[v].name||'Workout')+' · FORGE',sm); return 'norender'; }
     case 'w-wu': { const dk=vd+'|'+v; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].wu=cdraft[dk].wu?'':'1'; return; }
     case 'w-ramp': {
       const E=exInfo(v); if (!cw||E.k!=='wr') return 'norender';
@@ -3504,7 +3538,7 @@ function wAct(a,v,v2,el){
       const st=cwStats(cw);
       if (!st.sets){ toast('Log at least one set first'); return 'norender'; }
       cw.fin=true; cw.t1=Date.now(); rest=null; clearInterval(restIv); commit();
-      toast(`Workout saved — ${st.sets} sets`); return;
+      toast(`Workout saved — ${st.sets} ${st.sets===1?'set':'sets'}`); return;
     }
     case 'w-routine': {
       if (!cw || !cw.items.length){ toast('Add some exercises first'); return 'norender'; }
