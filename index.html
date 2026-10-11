@@ -443,6 +443,33 @@ input[type=date],input[type=time]{min-height:40px}
 .bredrow .x{color:var(--faint);padding:6px;margin:-6px}
 .bredadd{display:flex;gap:6px;margin-top:8px}
 .bredadd input{padding:8px 9px;min-width:0}
+
+/* ---------- round timer ---------- */
+.tmr{position:fixed;inset:0;z-index:48;display:flex;flex-direction:column;background:var(--ink);padding-top:env(safe-area-inset-top)}
+.tmr.work{background:#1A0E0B}
+.tmr.work.warn{background:#2A1A08}
+.tmr.rest{background:#0B1318}
+.tmr.prep{background:#14120B}
+.ttop{display:flex;justify-content:space-between;align-items:center;padding:14px var(--pad);font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);font-weight:700}
+.tbig{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 var(--pad);text-align:center}
+.tphase{font-size:var(--fs-headline);letter-spacing:.35em;font-weight:700;color:var(--dim)}
+.tmr.work .tphase{color:var(--rust)} .tmr.work.warn .tphase{color:var(--amber)} .tmr.rest .tphase{color:var(--steel)} .tmr.prep .tphase{color:var(--amber)}
+.ttime{font-family:var(--sans);font-weight:800;font-size:min(30vw,150px);line-height:1;letter-spacing:-.02em;margin:14px 0 10px;font-variant-numeric:tabular-nums}
+.tround{font-size:var(--fs-title);letter-spacing:.18em;color:var(--dim)}
+.tbarw{width:100%;max-width:420px;height:6px;background:var(--rule);margin-top:26px}
+.tbar{height:100%;background:var(--rust);transition:width .1s linear}
+.tmr.rest .tbar{background:var(--steel)} .tmr.prep .tbar,.tmr.work.warn .tbar{background:var(--amber)}
+.tdots{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:18px;max-width:320px}
+.tdots span{width:10px;height:10px;border:1.5px solid var(--rule2)}
+.tdots span.on{background:var(--moss);border-color:var(--moss)} .tdots span.cur{background:var(--rust);border-color:var(--rust)}
+.tmr.paused .ttime{opacity:.45}
+.tctl{display:flex;gap:10px;padding:14px var(--pad) calc(18px + env(safe-area-inset-bottom))}
+.tctl.col{flex-direction:column}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.tst .sfi{align-items:stretch}
+.tval{flex:1;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  background:var(--sunk);font-family:var(--sans);font-weight:800;font-size:20px;padding:10px 0}
+.tmrbtn{color:var(--dim);border-color:var(--note-pain-border)}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -1554,6 +1581,7 @@ const DEFAULTS = {
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
   cpref:{ rest:90, fav:{}, recent:[] },
   motiv:{ why:'', quotes:[], links:[] },   // daily briefing: your why, your own lines, your play buttons
+  tpref:{ preset:'boxing', custom:{} },    // round timer
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null;
@@ -2413,6 +2441,8 @@ function normalizeCustom(){
   S.motiv = Object.assign({why:'',quotes:[],links:[]}, (S.motiv&&typeof S.motiv==='object')?S.motiv:{});
   if (typeof S.motiv.why!=='string') S.motiv.why='';
   ['quotes','links'].forEach(k=>{ if (!Array.isArray(S.motiv[k])) S.motiv[k]=[]; });
+  S.tpref = Object.assign({preset:'boxing',custom:{}}, (S.tpref&&typeof S.tpref==='object')?S.tpref:{});
+  if (!S.tpref.custom||typeof S.tpref.custom!=='object') S.tpref.custom={};
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},note:'',t0:null,t1:null,fin:false}; }
@@ -2633,6 +2663,7 @@ function exCardHTML(cw,id,idx,vd){
       <div class="xtools">
         <button data-act="w-fav" data-v="${id}">${svg('star',11,fav?'var(--amber)':'var(--faint)').replace('fill="none"',fav?'fill="var(--amber)"':'fill="none"')} ${fav?'FAVORITED':'FAVORITE'}</button>
         <button data-act="w-hist" data-v="${id}">${svg('trend',11)} HISTORY</button>
+        ${(E.k==='time'||E.k==='cardio')&&(E.mu==='combat'||/round|shadow|bag|spar|roll|mitt|pad|tabata|rope/i.test(E.n))?`<button data-act="t-openex" data-v="${id}">${svg('clock',11)} ROUND TIMER</button>`:''}
         ${idx>0?`<button data-act="w-mv" data-v="${id}" data-v2="-1" aria-label="Move up">${svg('arrowUp',11)}</button>`:''}
         ${idx<cw.items.length-1?`<button data-act="w-mv" data-v="${id}" data-v2="1" aria-label="Move down">${svg('arrowDown',11)}</button>`:''}
         <button data-act="w-rmex" data-v="${id}" style="color:var(--rust)">${svg('trash',11,'var(--rust)')} ${armRm===id?'TAP TO CONFIRM':'REMOVE'}</button>
@@ -2658,7 +2689,8 @@ function WorkoutSection(vd,plan){
   h+=`<div class="xbar">
     ${cw?'':tile('w-new',lift?'replace':'with',lift?'edit':'plus',lift?'EDIT WORKOUT':'ADD WORKOUT',
         lift?`Do your own instead of ${esc(plan.def.title)}`:'Pick your exercises. It remembers your numbers.')}
-    ${tile('f-new','',  'swords',fights.length?'ADD ANOTHER FIGHT SESSION':'ADD FIGHTING','Log mat, ring or bag time')}</div>`;
+    ${tile('f-new','',  'swords',fights.length?'ADD ANOTHER FIGHT SESSION':'ADD FIGHTING','Log mat, ring or bag time')}</div>
+    <button class="logbtn tmrbtn" data-act="t-open">${svg('clock',13,'var(--rust)')} ROUND TIMER · BOXING, MUAY THAI, MMA, BJJ, TABATA</button>`;
   if (cw){
     const st=cwStats(cw);
     h+=`${sect('dumb','YOUR WORKOUT')}
@@ -2745,6 +2777,7 @@ function FightSection(vd){
       <div class="rpe">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="${d.rpe===n?'on':''}" data-act="f-rpe" data-v="${n}">${n}</button>`).join('')}</div>
       <label class="f" style="margin-top:12px"><span>One thing that worked</span><textarea data-fd="worked" placeholder="Be specific.">${esc(d.worked)}</textarea></label>
       <label class="f" style="margin-top:10px"><span>One thing that got you caught</span><textarea data-fd="caught" placeholder="The fact and the cause.">${esc(d.caught)}</textarea></label>
+      ${fightEdit==null?`<button class="btn ghost" data-act="t-open" style="margin-top:12px">${svg('clock',13)} RUN IT ON THE ROUND TIMER</button>`:''}
       <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-act="f-save" style="flex:2">${fightEdit!=null?'SAVE CHANGES':'SAVE SESSION'}</button>
         <button class="btn ghost" data-act="f-cancel" style="flex:1">CANCEL</button></div></div>`;
   }
@@ -3306,6 +3339,214 @@ function bAct(a,v){
       S.motiv.links.push({label:l.trim()||'Play',url:u}); commit(); toast('Play button added'); return; }
     case 'b-rml': S.motiv.links.splice(+v,1); commit(); return;
     case 'b-open': { const l=S.motiv.links[+v]; if (l&&/^https?:\/\//i.test(l.url)) window.open(l.url,'_blank','noopener'); return 'norender'; }
+  }
+}
+
+/* =========================================================== round timer == */
+/* Gym-style interval timer. Time is always derived from Date.now() against a scheduled end, never from
+   counting ticks, so a throttled/backgrounded tab can't drift: when it wakes up it simply catches up through
+   however many phases elapsed. Sound is synthesized (no audio files): a struck bell for round start, three
+   for round end, wooden clapper for the warning, short pips counting down the rest. */
+const TMR_PRESETS = [
+  ['boxing','Boxing',3,180,60,10,'boxing'],['pro','Pro boxing',12,180,60,10,'boxing'],['muaythai','Muay Thai',5,180,120,10,'muaythai'],
+  ['mma','MMA',3,300,60,10,'mma'],['mma5','MMA 5×5',5,300,60,10,'mma'],['bjj','BJJ rolls',6,360,60,30,'bjj'],
+  ['wrestling','Wrestling',3,120,30,10,'wrestling'],['bag','Bag rounds',6,180,30,10,'pads'],['tabata','Tabata',8,20,10,3,'conditioning'],
+  ['custom','Custom',null,null,null,null,'other']];
+const TMR_PREP = 10;
+let tmrOpen=false, tmrIv=null, tmrAudio=null, tmrLock=null,
+    tmr={phase:'idle',round:1,end:0,remain:0,paused:false,warned:false,lastPip:-1,t0:0,from:null};
+
+function tmrCfg(){
+  const pr=S.tpref||{}, p=TMR_PRESETS.find(x=>x[0]===pr.preset)||TMR_PRESETS[0];
+  if (p[0]==='custom'){ const c=pr.custom||{}; return {id:'custom',label:'Custom',rounds:c.rounds||3,work:c.work||180,rest:c.rest??60,warn:c.warn??10,disc:c.disc||'other'}; }
+  return {id:p[0],label:p[1],rounds:p[2],work:p[3],rest:p[4],warn:p[5],disc:p[6]};
+}
+function tmrTotal(c){ return c.rounds*c.work+Math.max(0,c.rounds-1)*c.rest; }
+
+/* ---------- sound ---------- */
+function tmrCtx(){
+  try{
+    if (!tmrAudio){ const AC=window.AudioContext||window.webkitAudioContext; if (!AC) return null; tmrAudio=new AC(); }
+    if (tmrAudio.state==='suspended') tmrAudio.resume();
+    return tmrAudio;
+  }catch(e){ return null; }
+}
+function tmrBell(n){
+  const ac=tmrCtx(); if (!ac) return;
+  for (let k=0;k<n;k++){
+    const t0=ac.currentTime+k*0.42;
+    /* inharmonic partials are what make it read as metal rather than a beep */
+    [[523,0.55],[1046,0.28],[1569,0.18],[2350,0.12],[3140,0.07]].forEach(([f,g])=>{
+      const o=ac.createOscillator(), v=ac.createGain();
+      o.type='sine'; o.frequency.value=f;
+      v.gain.setValueAtTime(0.0001,t0); v.gain.exponentialRampToValueAtTime(g,t0+0.005); v.gain.exponentialRampToValueAtTime(0.0001,t0+1.6);
+      o.connect(v).connect(ac.destination); o.start(t0); o.stop(t0+1.65);
+    });
+  }
+}
+function tmrClack(n){
+  const ac=tmrCtx(); if (!ac) return;
+  for (let k=0;k<n;k++){
+    const t0=ac.currentTime+k*0.16, len=0.05;
+    const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*len),ac.sampleRate), d=buf.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,4);
+    const src=ac.createBufferSource(), bp=ac.createBiquadFilter(), g=ac.createGain();
+    src.buffer=buf; bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=3; g.gain.value=0.9;
+    src.connect(bp).connect(g).connect(ac.destination); src.start(t0);
+  }
+}
+function tmrPip(hi){
+  const ac=tmrCtx(); if (!ac) return;
+  const o=ac.createOscillator(), v=ac.createGain(), t0=ac.currentTime;
+  o.type='square'; o.frequency.value=hi?1320:880;
+  v.gain.setValueAtTime(0.0001,t0); v.gain.exponentialRampToValueAtTime(0.12,t0+0.005); v.gain.exponentialRampToValueAtTime(0.0001,t0+0.15);
+  o.connect(v).connect(ac.destination); o.start(t0); o.stop(t0+0.16);
+}
+const tmrBuzz = p => { try{ navigator.vibrate&&navigator.vibrate(p); }catch(e){} };
+
+/* ---------- wake lock: keep the screen on while rounds are running ---------- */
+async function tmrWake(on){
+  try{
+    if (on && 'wakeLock' in navigator && !tmrLock){ tmrLock=await navigator.wakeLock.request('screen'); tmrLock.addEventListener('release',()=>{ tmrLock=null; }); }
+    if (!on && tmrLock){ await tmrLock.release(); tmrLock=null; }
+  }catch(e){ tmrLock=null; }
+}
+document.addEventListener('visibilitychange',()=>{
+  if (document.visibilityState==='visible' && tmrOpen && ['prep','work','rest'].includes(tmr.phase) && !tmr.paused) tmrWake(true);
+});
+
+/* ---------- engine ---------- */
+function tmrDur(phase,c){ return (phase==='prep'?TMR_PREP:phase==='work'?c.work:c.rest)*1000; }
+function tmrStart(){
+  const c=tmrCfg(); tmrCtx();
+  tmr={phase:'prep',round:1,end:Date.now()+TMR_PREP*1000,remain:0,paused:false,warned:false,lastPip:-1,t0:Date.now(),from:tmr.from,cfg:c};
+  clearInterval(tmrIv); tmrIv=setInterval(tmrTick,100); tmrWake(true); tmrPip(false);
+}
+/* move to the next phase; `quiet` when catching up after the tab slept so we don't fire a burst of bells */
+function tmrAdvance(quiet){
+  const c=tmr.cfg;
+  if (tmr.phase==='prep'){ tmr.phase='work'; if(!quiet){ tmrBell(1); tmrBuzz([300]); } }
+  else if (tmr.phase==='work'){
+    if (tmr.round>=c.rounds){ tmrFinish(quiet); return; }
+    tmr.phase=c.rest>0?'rest':'work'; if (!c.rest) tmr.round++;
+    if(!quiet){ tmrBell(c.rest>0?3:1); tmrBuzz([200,100,200,100,200]); }
+  }
+  else if (tmr.phase==='rest'){ tmr.phase='work'; tmr.round++; if(!quiet){ tmrBell(1); tmrBuzz([300]); } }
+  tmr.end+=tmrDur(tmr.phase,c); tmr.warned=false; tmr.lastPip=-1;
+}
+function tmrFinish(quiet){
+  tmr.phase='done'; tmr.doneAt=Date.now(); clearInterval(tmrIv); tmrWake(false);
+  if (!quiet){ tmrBell(3); tmrBuzz([400,150,400,150,600]); }
+  render();
+}
+function tmrTick(){
+  if (!tmrOpen || tmr.paused || !['prep','work','rest'].includes(tmr.phase)) return;
+  let now=Date.now(), changed=false, guard=0;
+  while (now>=tmr.end && tmr.phase!=='done' && guard++<500){ const behind=now-tmr.end>1500; tmrAdvance(behind); changed=true; }
+  if (tmr.phase==='done') return;
+  const left=tmr.end-now, c=tmr.cfg, sec=Math.ceil(left/1000);
+  if (tmr.phase==='work' && c.warn>0 && !tmr.warned && left<=c.warn*1000 && c.work>c.warn){ tmr.warned=true; tmrClack(2); tmrBuzz([80,60,80]); }
+  if ((tmr.phase==='rest'||tmr.phase==='prep') && sec<=3 && sec>=1 && tmr.lastPip!==sec){ tmr.lastPip=sec; tmrPip(false); }
+  if (changed){ render(); return; }
+  tmrPaint(left);
+}
+function tmrPaint(left){
+  const t=document.getElementById('tmr_t'), bar=document.getElementById('tmr_bar'), ov=document.querySelector('.tmr');
+  if (!t) return;
+  t.textContent=fmtDur(Math.ceil(left/1000));
+  const dur=tmrDur(tmr.phase,tmr.cfg); if (bar) bar.style.width=clamp((1-left/dur)*100,0,100)+'%';
+  if (ov) ov.classList.toggle('warn', tmr.phase==='work' && tmr.cfg.warn>0 && left<=tmr.cfg.warn*1000);
+}
+
+/* ---------- UI ---------- */
+function TimerOverlay(){
+  if (!tmrOpen) return '';
+  const c=tmr.phase==='idle'?tmrCfg():tmr.cfg;
+  if (tmr.phase==='idle'){
+    const pr=S.tpref||{}, isC=(pr.preset||'boxing')==='custom';
+    const stepper=(f,label,val,fmt)=>`<div class="tst"><div class="sfl">${label}</div><div class="sfi">
+        <button class="stp" data-act="t-adj" data-v="${f}" data-v2="-1" aria-label="Less ${label}">−</button>
+        <span class="tval">${fmt(val)}</span>
+        <button class="stp" data-act="t-adj" data-v="${f}" data-v2="1" aria-label="More ${label}">+</button></div></div>`;
+    return `<div class="tmr idle" role="dialog" aria-label="Round timer">
+      <div class="sheethead"><div><div class="eyebrow">ROUND TIMER</div><div class="sheetsub">${c.rounds} × ${fmtDur(c.work)}${c.rest?` · ${fmtDur(c.rest)} rest`:''} · ${fmtDur(tmrTotal(c))} total</div></div>
+        <button class="chip on" data-act="t-close">CLOSE</button></div>
+      <div class="sheetbody" style="padding:14px var(--pad)">
+        <div class="eyebrow" style="margin-bottom:8px">PRESET</div>
+        <div class="chips" style="padding:0">${TMR_PRESETS.map(p=>`<button class="chip ${(pr.preset||'boxing')===p[0]?'on':''}" data-act="t-preset" data-v="${p[0]}">${p[1]}</button>`).join('')}</div>
+        <div class="tgrid">
+          ${stepper('rounds','ROUNDS',c.rounds,v=>v)}
+          ${stepper('work','ROUND',c.work,fmtDur)}
+          ${stepper('rest','REST',c.rest,fmtDur)}
+          ${stepper('warn','WARNING',c.warn,v=>v?v+'s':'off')}
+        </div>
+        ${isC?'':'<div class="note" style="padding:8px 0 0;border:none">Change any number and it becomes your Custom preset.</div>'}
+        <div class="note" style="padding:10px 0 0;border:none">Bell to start a round, three bells to end it, clapper for the warning. If your iPhone's silent switch is on, the bells can be muted, so flip it off before you start. The screen stays awake while it runs, and it vibrates on every bell.</div>
+      </div>
+      <div class="sheetfoot"><button class="btn" data-act="t-start" style="padding:18px;font-size:var(--fs-title)">${svg('play',14,'var(--ink)')} START</button></div></div>`;
+  }
+  if (tmr.phase==='done'){
+    const total=Math.round(((tmr.doneAt||Date.now())-tmr.t0)/1000)-TMR_PREP;
+    const ex=tmr.from&&tmr.from.kind==='ex'?exInfo(tmr.from.id):null;
+    return `<div class="tmr done" role="dialog" aria-label="Round timer finished">
+      <div class="tbig"><div class="tphase">DONE</div><div class="ttime" style="font-size:64px">${c.rounds} ROUNDS</div>
+        <div class="tround">${fmtDur(c.rounds*c.work)} of work · ${fmtDur(Math.max(0,total))} total</div></div>
+      <div class="tctl col">
+        ${ex?`<button class="btn" data-act="t-logex">LOG AS A SET OF ${esc(ex.n.toUpperCase())}</button>`
+            :`<button class="btn" data-act="t-logfight">LOG AS A FIGHT SESSION</button>`}
+        <div style="display:flex;gap:8px"><button class="btn ghost" data-act="t-again" style="flex:1">AGAIN</button>
+          <button class="btn ghost" data-act="t-close" style="flex:1">CLOSE</button></div></div></div>`;
+  }
+  const left=tmr.paused?tmr.remain:Math.max(0,tmr.end-Date.now());
+  const ph={prep:'GET READY',work:'FIGHT',rest:'REST'}[tmr.phase];
+  return `<div class="tmr ${tmr.phase} ${tmr.paused?'paused':''}" role="dialog" aria-label="Round timer running">
+    <div class="ttop"><span>${esc(c.label.toUpperCase())}</span><button class="chip" data-act="t-stop">END</button></div>
+    <div class="tbig"><div class="tphase">${tmr.paused?'PAUSED':ph}</div>
+      <div class="ttime" id="tmr_t">${fmtDur(Math.ceil(left/1000))}</div>
+      <div class="tround">${tmr.phase==='prep'?`${c.rounds} rounds coming`:`ROUND ${tmr.round} OF ${c.rounds}`}</div>
+      <div class="tbarw"><div class="tbar" id="tmr_bar" style="width:${clamp((1-left/tmrDur(tmr.phase,c))*100,0,100)}%"></div></div>
+      <div class="tdots">${Array.from({length:c.rounds},(_,i)=>`<span class="${i+1<tmr.round||(i+1===tmr.round&&tmr.phase==='rest')?'on':i+1===tmr.round&&tmr.phase==='work'?'cur':''}"></span>`).join('')}</div></div>
+    <div class="tctl">
+      <button class="btn ghost" data-act="t-skip" style="flex:1">SKIP ${svg('chev',12)}</button>
+      <button class="btn" data-act="t-pause" style="flex:2;padding:20px">${tmr.paused?'RESUME':'PAUSE'}</button></div></div>`;
+}
+function tmrOpenFor(from){ tmrOpen=true; tmr={phase:'idle',round:1,end:0,remain:0,paused:false,warned:false,lastPip:-1,t0:0,from:from||null}; }
+function tAct(a,v,v2){
+  if (!S.tpref) S.tpref={preset:'boxing',custom:{}};
+  switch(a){
+    case 't-open': tmrOpenFor(null); return;
+    case 't-openex': tmrOpenFor({kind:'ex',id:v}); return;
+    case 't-close': clearInterval(tmrIv); tmrWake(false); tmrOpen=false; tmr.phase='idle'; return;
+    case 't-preset': S.tpref.preset=v; commit(); return;
+    case 't-adj': {
+      const c=tmrCfg(), step={rounds:1,work:c.work>=120?30:10,rest:c.rest>=60?15:5,warn:5}[v], lim={rounds:[1,30],work:[10,1200],rest:[0,600],warn:[0,60]}[v];
+      const cur={rounds:c.rounds,work:c.work,rest:c.rest,warn:c.warn,disc:c.disc};   // remembers which sport it was tuned from
+      cur[v]=clamp(cur[v]+step*(+v2),lim[0],lim[1]);
+      S.tpref.custom=cur; S.tpref.preset='custom'; commit(); return;
+    }
+    case 't-start': tmrStart(); return;
+    case 't-again': tmrStart(); return;
+    case 't-pause':
+      if (tmr.paused){ tmr.end=Date.now()+tmr.remain; tmr.paused=false; tmrWake(true); }
+      else { tmr.remain=Math.max(0,tmr.end-Date.now()); tmr.paused=true; tmrWake(false); }
+      return;
+    case 't-skip': if (['prep','work','rest'].includes(tmr.phase)){ if (tmr.paused){ tmr.paused=false; } tmr.end=Date.now(); tmrAdvance(false); if (tmr.phase!=='done') tmr.end=Date.now()+tmrDur(tmr.phase,tmr.cfg); } return;
+    case 't-stop': {
+      /* ending early still counts what you did: rounds started, minutes elapsed */
+      const done=tmr.phase==='prep'?0:tmr.round;
+      if (done<1){ clearInterval(tmrIv); tmrWake(false); tmr.phase='idle'; return; }
+      tmr.cfg={...tmr.cfg,rounds:done}; tmrFinish(true); return 'norender';
+    }
+    case 't-logfight': {
+      const c=tmr.cfg, mins=Math.max(1,Math.round((((tmr.doneAt||Date.now())-tmr.t0)/1000-TMR_PREP)/60));
+      fightOpen=true; fightEdit=null; fdraft={disc:c.disc||'other',min:String(mins),rounds:String(c.rounds),rpe:0,worked:'',caught:''};
+      clearInterval(tmrIv); tmrOpen=false; tmr.phase='idle'; view='today'; toast('Rate the effort and save it'); return;
+    }
+    case 't-logex': {
+      const id=tmr.from&&tmr.from.id, vd=VD(), cw=S.cust[vd];
+      if (cw && id){ (cw.sets[id]=cw.sets[id]||[]).push({t:tmr.cfg.rounds*tmr.cfg.work}); if (!cw.t0) cw.t0=Date.now(); commit(); toast(`Logged ${fmtDur(tmr.cfg.rounds*tmr.cfg.work)} of ${exInfo(id).n}`); }
+      clearInterval(tmrIv); tmrOpen=false; tmr.phase='idle'; return;
+    }
   }
 }
 
@@ -4253,7 +4494,7 @@ function render(){
      itself just changed; every other re-render of the same tab skips it. */
   if (view!==lastRenderedView) body=body.replace('class="view wrap"','class="view wrap enter"');
   lastRenderedView=view;
-  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
+  document.getElementById('app').innerHTML=Header()+'<main>'+body+'</main>'+restBar()+ExSheet()+TimerOverlay()+Nav()+`<div class="toast ${toastMsg?'show':''}" style="${rest?'bottom:calc(132px + env(safe-area-inset-bottom))':''}">${esc(toastMsg||'')}</div>`;
   window.scrollTo(0,y);
   const strip=document.getElementById('strip');
   if (strip){
@@ -4266,7 +4507,7 @@ function render(){
     const now=new Date(); const mins=now.getHours()*60+now.getMinutes();
     rnow.style.top=clamp((mins-wake)*px,0,rail.offsetHeight)+'px';
   }
-  document.body.classList.toggle('lock', !!document.querySelector('.sheet'));
+  document.body.classList.toggle('lock', !!document.querySelector('.sheet,.tmr'));
   const xq=document.getElementById('exq');
   if (xq && exFocus && view==='today'){
     xq.focus(); const l=xq.value.length; xq.setSelectionRange(l,l);
@@ -4332,6 +4573,7 @@ document.addEventListener('click', e => {
     return;
   }
   if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
+  if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
 
   switch(a){
     case 'addoneoff': {
