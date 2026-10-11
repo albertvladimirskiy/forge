@@ -592,6 +592,9 @@ body.lock{overflow:hidden}
 .benchv{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:7px;font-size:var(--fs-title);color:var(--text)}
 .benchv span.cur{color:var(--amber);font-weight:700}
 .benchb{margin-top:7px;font-size:var(--fs-detail);color:var(--dim)}
+.exnote{margin-top:12px}
+.exnote textarea{min-height:0;padding:9px 11px;font-size:16px;line-height:1.4}
+.xnote{display:block;margin-top:2px;font-style:normal;font-size:var(--fs-caption);color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .benchn{margin-top:9px;padding-top:9px;border-top:1px solid var(--rule);font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
 .benchn b{letter-spacing:.14em;font-size:var(--fs-label);color:var(--steel)}
 .benchn.up b{color:var(--amber)}
@@ -1781,7 +1784,7 @@ const DEFAULTS = {
   routines:[],        // [{ id, name, items:[exerciseId] }]
   myfoods:[],         // custom foods you chose to keep: [{ n, kcal, p, c, f }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
-  cpref:{ rest:90, fav:{}, recent:[], restEx:{}, restSound:true, bar:{}, plates:{}, barEx:{} },
+  cpref:{ rest:90, fav:{}, recent:[], restEx:{}, restSound:true, bar:{}, plates:{}, barEx:{}, notes:{} },
   motiv:{ why:'', quotes:[], links:[], qmode:'mix', qoff:[], qsolid:false },   // daily briefing: your why, your own lines, your play buttons
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
@@ -2434,7 +2437,8 @@ function exGymHTML(ex,label){
   const pr=S.prs[ex];
   return `<div class="setlog">
     ${flagged?`<div class="painnote">${svg('shield',11,'var(--rust)')} <div>${esc(PAINSWAP[ex])}<button class="unflag" data-act="painflag" data-v="${ex}">clear flag</button></div></div>`:''}
-    <div class="eyebrow" style="margin-bottom:8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
+    ${exNoteHTML(ex)}
+    <div class="eyebrow" style="margin:12px 0 8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
     ${sets.map((s,i)=>{ const isPR = pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r;
       return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
       <button class="setedit" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${dispExact(s.w)} × ${s.r}${rpeTag(s)}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</button>
@@ -2725,8 +2729,8 @@ let exPickOpen=false, exQ='', exMu='', exEq='', exCreate=false, exFocus=false,
 
 /* backups from before this feature, or a hand-edited one, can lack these keys or have the wrong shapes */
 function normalizeCustom(){
-  S.cpref = Object.assign({rest:90,fav:{},recent:[],restEx:{},restSound:true,bar:{},plates:{},barEx:{}}, S.cpref||{});
-  ['bar','plates','barEx'].forEach(k=>{ if (!S.cpref[k] || typeof S.cpref[k]!=='object' || Array.isArray(S.cpref[k])) S.cpref[k]={}; });
+  S.cpref = Object.assign({rest:90,fav:{},recent:[],restEx:{},restSound:true,bar:{},plates:{},barEx:{},notes:{}}, S.cpref||{});
+  ['bar','plates','barEx','notes'].forEach(k=>{ if (!S.cpref[k] || typeof S.cpref[k]!=='object' || Array.isArray(S.cpref[k])) S.cpref[k]={}; });
   if (!S.cpref.restEx || typeof S.cpref.restEx!=='object' || Array.isArray(S.cpref.restEx)) S.cpref.restEx={};
   if (!S.cpref.fav || typeof S.cpref.fav!=='object') S.cpref.fav={};
   if (!Array.isArray(S.cpref.recent)) S.cpref.recent=[];
@@ -2884,6 +2888,13 @@ function restBar(){
     <button data-act="w-restadd" data-v2="-15" aria-label="15 seconds less">−15</button>
     <button data-act="w-restadd" data-v2="15" aria-label="15 seconds more">+15</button>
     <button data-act="w-restskip">SKIP</button></div>`;
+}
+/* a saved cue per exercise ("seat at 4", "left shoulder: go light"), kept in S.cpref.notes by exercise id and shown whenever the
+   exercise is open, and as a one-liner on the collapsed card so it's seen before you start */
+const exNote = id => (S.cpref.notes||{})[id] || '';
+function exNoteHTML(id){
+  return `<div class="exnote"><label class="f"><span>Your note for this exercise</span>
+    <textarea data-exnote="${id}" rows="2" maxlength="200" placeholder="A cue for next time: seat height, grip, what hurts.">${esc(exNote(id))}</textarea></label></div>`;
 }
 /* how long to rest after a set of this exercise: its own setting if it has one (0 = no timer), else the workout-wide default */
 const REST_CHOICES=[null,0,45,60,90,120,180,240];
@@ -3047,7 +3058,8 @@ function exCardHTML(cw,id,idx,vd){
   const head=`<div class="xhead"><button class="xmain" data-act="w-open" data-v="${id}" aria-expanded="${open}">
       <span class="xdot ${workSets(sets).length?'on':''}">${workSets(sets).length?svg('check',9,'var(--ink)',3.5):''}</span>
       <span class="xt"><b>${esc(E.n)}</b><i>${esc(EX_MUL[E.mu]||'')} · ${esc(EX_EQL[E.eq]||'')}</i>
-        ${last&&!open?`<em>LAST ${esc(shortDate(last.date))} · ${esc(fmtSets(E.k,last.sets))}</em>`:''}</span>
+        ${last&&!open?`<em>LAST ${esc(shortDate(last.date))} · ${esc(fmtSets(E.k,last.sets))}</em>`:''}
+        ${exNote(id)&&!open?`<span class="xnote">${esc(exNote(id))}</span>`:''}</span>
       <span class="xs">${workSets(sets).length?workSets(sets).length+' set'+(workSets(sets).length>1?'s':''):''}</span></button>
     <button class="chev ${open?'open':''}" data-act="w-open" data-v="${id}" aria-label="${open?'Collapse':'Expand'} ${esc(E.n)}">${svg('chev',14)}</button></div>`;
   if (!open) return `<div class="xc ${sets.length?'has':''}">${head}</div>`;
@@ -3066,6 +3078,7 @@ function exCardHTML(cw,id,idx,vd){
   const hist=cwHist===id ? histHTML(id,vd,E) : '';
   return `<div class="xc open ${sets.length?'has':''}">${head}
     <div class="xbody">${bench}
+      ${exNoteHTML(id)}
       ${rows?`<div class="eyebrow" style="margin:12px 0 4px">TODAY</div>${rows}`:''}
       ${setEntryHTML(id,vd,E)}
       <div class="xtools">
@@ -6358,6 +6371,7 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.chd){ if (chDraft) chDraft[t.dataset.chd]=t.value; return; }
   if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
+  if (t.dataset && t.dataset.exnote){ const k=t.dataset.exnote, v=t.value.slice(0,200); if (v.trim()) S.cpref.notes[k]=v; else delete S.cpref.notes[k]; commit(); return; }
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commit(); } return; }
   if (t.id==='foodq'){ foodQ=t.value; const r=document.getElementById('foodres'); if (r) r.innerHTML=foodResultsHTML(); return; }   // filter live, swap only the list
   if (t.id==='foodg'){ foodG=t.value; return; }                              // amount box: remember, no re-render
