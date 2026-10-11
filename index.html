@@ -470,6 +470,25 @@ input[type=date],input[type=time]{min-height:40px}
 .tval{flex:1;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
   background:var(--sunk);font-family:var(--sans);font-weight:800;font-size:20px;padding:10px 0}
 .tmrbtn{color:var(--dim);border-color:var(--note-pain-border)}
+
+/* ---------- muscle map ---------- */
+.mmsvg{display:block;width:100%;max-width:440px;margin:0 auto;height:auto}
+.mmleg{display:flex;justify-content:center;gap:14px;padding:4px 13px 12px;font-size:var(--fs-caption);color:var(--faint)}
+.mmleg i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;border:1px solid var(--rule2)}
+.mmdet{padding:11px 13px 12px;border-top:1px solid var(--rule)}
+.mmdh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.mmdh b{font-size:var(--fs-title)} .mmdh span{font-size:var(--fs-detail);color:var(--faint)}
+.mmrow{display:flex;align-items:center;gap:10px;width:100%;padding:9px 13px;border-bottom:1px solid #191D22;text-align:left}
+.mmrow.on{background:var(--panel2)}
+.mmn{width:96px;flex:none;font-size:var(--fs-detail);color:var(--dim)}
+.mmbar{position:relative;flex:1;height:8px;background:var(--sunk);border:1px solid var(--rule)}
+.mmtgt{position:absolute;top:0;bottom:0;background:rgba(224,160,58,.12);border-left:1px solid rgba(224,160,58,.35);border-right:1px solid rgba(224,160,58,.35)}
+.mmfill{position:absolute;left:0;top:0;bottom:0}
+.mmv{width:58px;flex:none;text-align:right;font-size:var(--fs-title);font-weight:700}
+.mmv em{display:block;font-style:normal;font-size:var(--fs-caption);font-weight:500}
+.mmv em.up{color:var(--moss)} .mmv em.dn{color:var(--rust)}
+.logrow{display:flex;gap:8px}
+.logrow .logbtn{flex:1;padding:11px 6px}
 /* ---------- custom workouts + fighting ---------- */
 body.lock{overflow:hidden}
 .sheet{position:fixed;left:0;right:0;top:0;bottom:0;z-index:45;display:flex;flex-direction:column;background:var(--ink);
@@ -2714,7 +2733,8 @@ function WorkoutSection(vd,plan){
     </div>`;
   }
   h+=FightSection(vd);
-  h+=`<button class="logbtn" data-act="view" data-v="wlog">${svg('trend',12,'var(--faint)')} ALL WORKOUTS, LIFT PRs + ROUTINES ${svg('chev',12,'var(--faint)')}</button>`;
+  h+=`<div class="logrow"><button class="logbtn" data-act="view" data-v="wlog">${svg('trend',12,'var(--faint)')} WORKOUTS, PRs, ROUTINES</button>
+    <button class="logbtn" data-act="mm-open">${svg('dumb',12,'var(--faint)')} MUSCLE MAP</button></div>`;
   return h;
 }
 function startChooserHTML(vd,plan){
@@ -2787,9 +2807,10 @@ function FightSection(vd){
 
 /* ---------- history / PRs / routines screen ---------- */
 function ViewWorkoutLog(){
-  const tabs=[['workouts','WORKOUTS'],['lifts','LIFTS'],['fights','FIGHTING'],['routines','ROUTINES']];
+  const tabs=[['workouts','WORKOUTS'],['body','BODY'],['lifts','LIFTS'],['fights','FIGHTS'],['routines','ROUTINES']];
   let body='';
   if (wlSub==='workouts') body=wlWorkouts();
+  else if (wlSub==='body') body=MuscleMap();
   else if (wlSub==='lifts') body=wlLifts();
   else if (wlSub==='fights') body=wlFights();
   else body=wlRoutines();
@@ -3548,6 +3569,129 @@ function tAct(a,v,v2){
       clearInterval(tmrIv); tmrOpen=false; tmr.phase='idle'; return;
     }
   }
+}
+
+/* ============================================================ muscle map == */
+/* Weekly working sets per muscle, from custom workouts AND the program's own logged lifts. The library only
+   stores a primary muscle, so compound lifts get half-set credit for their obvious helpers by name
+   (bench -> triceps/shoulders, rows -> biceps, squats -> glutes, hinges -> glutes/low back...). It's an
+   estimate, good for spotting what you're neglecting, not a lab measurement. Targets are the usual
+   evidence-based hypertrophy ranges: ~10-20 hard sets a week for big muscles, less for small ones. */
+const MM_REG = [
+  ['chest','Chest',10,20],['back','Back / lats',10,20],['shoulders','Shoulders',8,18],['traps','Traps',4,12],
+  ['biceps','Biceps',6,16],['triceps','Triceps',6,16],['forearms','Forearms',4,12],['core','Core',6,16],
+  ['quads','Quads',10,20],['hams','Hamstrings',8,16],['glutes','Glutes',8,18],['calves','Calves',6,16],
+  ['hips','Hips / adductors',3,10],['lowback','Low back',3,10],['neck','Neck',3,10]];
+const MM_RL = Object.fromEntries(MM_REG.map(r=>[r[0],r]));
+const MM_SEC = [   // [name pattern, primary groups it applies to (or null = any), helpers credited at 0.5]
+  [/bench press|chest press|push-?up|\bdip\b|floor press|svend|squeeze press/i,null,['triceps','shoulders']],
+  [/overhead press|shoulder press|military|push press|pike push|handstand push|arnold|landmine press|z press|jerk/i,null,['triceps']],
+  [/row\b|rows\b|pull-?up|chin-?up|pulldown|muscle-?up|pullover|rope climb/i,null,['biceps']],
+  [/row\b|rows\b|face pull|reverse fly|rear delt/i,['back','shoulders'],['traps']],
+  [/squat|lunge|leg press|step-?up|split squat|hack|pistol|belt squat|sled push/i,['quads'],['glutes']],
+  [/deadlift|good morning|hip hinge|romanian|\brdl\b|swing|clean|snatch|rack pull/i,null,['glutes','lowback']],
+  [/deadlift|clean|snatch|rack pull|shrug|farmer/i,['hams','lowback','full','forearms'],['traps']],
+  [/hip thrust|glute bridge/i,null,['hams']],
+  [/farmer|suitcase|carry|walk\b/i,['forearms','core','full'],['core','forearms']],
+  [/upright row|high pull/i,null,['shoulders']],
+  [/close-grip|diamond/i,['chest'],['triceps']],
+  [/nordic|leg curl|hamstring curl|glute-?ham/i,null,['calves']],
+];
+const MM_COUNT_KINDS = {wr:1,bw:1,carry:1};
+function exMuscles(E){
+  const out={};
+  if (E.mu==='full'){ ['quads','glutes','back','shoulders','core'].forEach(m=>out[m]=0.5); }
+  else if (MM_RL[E.mu]) out[E.mu]=1;
+  else return out;    // cardio, sport, combat, mobility, plyo: not counted as hypertrophy sets
+  for (const [rx,prim,helpers] of MM_SEC){
+    if (!rx.test(E.n)) continue;
+    if (prim && !prim.includes(E.mu)) continue;
+    helpers.forEach(h=>{ if (h!==E.mu && (out[h]||0)<0.5) out[h]=0.5; });
+  }
+  return out;
+}
+/* timed holds count for the groups where a hold IS the training (planks, hangs, neck bridges, copenhagens) */
+function mmCountable(E){ return MM_COUNT_KINDS[E.k] || (E.k==='time' && ['core','forearms','neck','hips','lowback'].includes(E.mu)); }
+function mmTally(fromOff,toOff){
+  const tot={}, by={};
+  for (let o=fromOff;o<=toOff;o++){
+    const k=dkey(o);
+    const add=(id,n)=>{ const E=exInfo(id); if (!n || !mmCountable(E)) return;
+      for (const [m,w] of Object.entries(exMuscles(E))){ tot[m]=(tot[m]||0)+n*w; (by[m]=by[m]||{})[E.n]=(by[m][E.n]||0)+n*w; } };
+    const cw=S.cust[k]; if (cw) for (const id of cw.items) add(id,(cw.sets[id]||[]).length);
+    const g=S.gym[k]; if (g) for (const key of Object.keys(g)){ const id=EXLINK_ID[key]; if (id) add(id,(g[key]||[]).length); }
+  }
+  return {tot,by};
+}
+function mmState(n,r){ if (!n) return 'none'; if (n<r[2]) return 'low'; if (n>r[3]) return 'high'; return 'good'; }
+const MM_FILL = {none:'#1A1E24',low:'#2B4556',good:'#E0A03A',high:'#B4553A'};
+
+/* body drawn as machined panels; left-side polygons are mirrored for the right */
+const MM_SHAPES = {
+  front:[
+    ['neck',[[54,31],[66,31],[67,39],[53,39]],false],
+    ['shoulders',[[40,40],[51,40],[48,53],[37,60],[34,50]]],
+    ['chest',[[60,42],[60,62],[47,64],[41,57],[44,46],[52,41]]],
+    ['biceps',[[36,62],[45,63],[43,84],[35,86],[32,74]]],
+    ['forearms',[[33,89],[43,87],[40,112],[32,114],[29,100]]],
+    ['core',[[48,66],[72,66],[71,104],[60,111],[49,104]],false],
+    ['core',[[42,67],[47,67],[48,104],[44,101],[40,84]]],
+    ['hips',[[53,113],[60,117],[67,113],[64,136],[60,140],[56,136]],false],
+    ['quads',[[44,109],[52,113],[55,137],[54,171],[45,173],[39,150],[40,124]]],
+    ['calves',[[43,181],[52,181],[52,214],[47,226],[42,212]]],
+  ],
+  back:[
+    ['neck',[[54,31],[66,31],[67,37],[53,37]],false],
+    ['traps',[[51,35],[69,35],[79,44],[68,58],[60,63],[52,58],[41,44]],false],
+    ['shoulders',[[35,46],[45,43],[47,55],[36,61],[32,53]]],
+    ['back',[[47,58],[58,64],[58,98],[50,96],[42,80],[41,64]]],
+    ['lowback',[[51,99],[69,99],[71,112],[49,112]],false],
+    ['triceps',[[34,63],[44,63],[42,85],[34,87],[31,75]]],
+    ['forearms',[[33,90],[43,88],[40,112],[32,114],[29,100]]],
+    ['glutes',[[46,113],[59,115],[59,137],[48,137],[43,125]]],
+    ['hams',[[44,139],[58,139],[56,172],[46,174],[41,156]]],
+    ['calves',[[42,179],[54,179],[54,206],[48,224],[41,206]]],
+  ]};
+function mmSVG(tot,sel){
+  const poly=(pts,dx)=>pts.map(([x,y])=>`${x+dx},${y}`).join(' ');
+  const mirror=pts=>pts.map(([x,y])=>[120-x,y]).reverse();
+  const fig=(side,dx)=>{
+    let g=`<circle cx="${60+dx}" cy="18" r="11" fill="none" stroke="#2C323A" stroke-width="1.2"/>`;
+    g+=`<rect x="${27+dx}" y="116" width="7" height="12" fill="#15181C" stroke="#2C323A"/><rect x="${86+dx}" y="116" width="7" height="12" fill="#15181C" stroke="#2C323A"/>`;
+    g+=`<rect x="${41+dx}" y="228" width="12" height="7" fill="#15181C" stroke="#2C323A"/><rect x="${67+dx}" y="228" width="12" height="7" fill="#15181C" stroke="#2C323A"/>`;
+    for (const [mu,pts,mir] of MM_SHAPES[side]){
+      const r=MM_RL[mu], st=mmState(tot[mu]||0,r), on=sel===mu;
+      const attrs=`fill="${MM_FILL[st]}" stroke="${on?'#DDE3EA':'#0B0C0E'}" stroke-width="${on?1.6:1}" data-act="mm-sel" data-v="${mu}" style="cursor:pointer"`;
+      g+=`<polygon points="${poly(pts,dx)}" ${attrs}><title>${r[1]}: ${Math.round((tot[mu]||0)*10)/10} sets</title></polygon>`;
+      if (mir!==false) g+=`<polygon points="${poly(mirror(pts),dx)}" ${attrs}/>`;
+    }
+    g+=`<text x="${60+dx}" y="252" text-anchor="middle" font-size="7" letter-spacing="2" fill="#737C86" font-family="monospace">${side.toUpperCase()}</text>`;
+    return g;
+  };
+  return `<svg class="mmsvg" viewBox="0 0 250 258" role="img" aria-label="Muscle map: weekly sets per muscle">${fig('front',0)}${fig('back',130)}</svg>`;
+}
+let mmSel=null, mmWin=0;   // 0 = last 7 days, 1 = the 7 before that
+function MuscleMap(){
+  const off=mmWin*7, cur=mmTally(-6-off,-off), prev=mmTally(-13-off,-7-off);
+  const rows=MM_REG.map(r=>({r,n:cur.tot[r[0]]||0,p:prev.tot[r[0]]||0}));
+  const under=rows.filter(x=>x.n<x.r[2]).length, inR=rows.filter(x=>x.n>=x.r[2]&&x.n<=x.r[3]).length;
+  const total=Object.values(cur.tot).reduce((a,b)=>a+b,0);
+  const sel=mmSel?rows.find(x=>x.r[0]===mmSel):null;
+  const fmt=n=>Math.round(n*10)/10;
+  return `${sect('dumb','MUSCLE MAP')}
+    <div class="seg" style="margin-bottom:10px"><button class="segbtn ${mmWin===0?'on':''}" data-act="mm-win" data-v="0">LAST 7 DAYS</button><button class="segbtn ${mmWin===1?'on':''}" data-act="mm-win" data-v="1">THE 7 BEFORE</button></div>
+    <div class="panel"><div style="padding:12px 10px 4px">${mmSVG(cur.tot,mmSel)}</div>
+      <div class="mmleg"><span><i style="background:${MM_FILL.none}"></i>none</span><span><i style="background:${MM_FILL.low}"></i>under</span><span><i style="background:${MM_FILL.good}"></i>in range</span><span><i style="background:${MM_FILL.high}"></i>a lot</span></div>
+      ${sel?`<div class="mmdet"><div class="mmdh"><b>${esc(sel.r[1])}</b><span>${fmt(sel.n)} sets · target ${sel.r[2]}–${sel.r[3]}</span></div>
+        ${Object.entries(cur.by[sel.r[0]]||{}).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="histrow"><span>${esc(n)}</span><span>${fmt(c)} set${c===1?'':'s'}</span></div>`).join('')||'<div class="note" style="padding:6px 0;border:none">Nothing hit this in the window. Add one exercise for it next session.</div>'}
+        </div>`:`<div class="note">Tap a muscle to see which exercises hit it. ${total?`${fmt(total)} working sets counted · ${inR} of ${MM_REG.length} in range · ${under} under.`:'Log sets in a workout (or on the program lifts) and this fills in.'}</div>`}
+    </div>
+    <div class="panel">${rows.map(({r,n,p})=>{ const st=mmState(n,r), d=n-p;
+      return `<button class="mmrow ${mmSel===r[0]?'on':''}" data-act="mm-sel" data-v="${r[0]}">
+        <span class="mmn">${esc(r[1])}</span>
+        <span class="mmbar"><span class="mmtgt" style="left:${r[2]/Math.max(r[3]*1.25,1)*100}%;width:${(r[3]-r[2])/Math.max(r[3]*1.25,1)*100}%"></span><span class="mmfill" style="width:${clamp(n/(r[3]*1.25)*100,0,100)}%;background:${MM_FILL[st]}"></span></span>
+        <span class="mmv">${fmt(n)}${d?`<em class="${d>0?'up':'dn'}">${d>0?'+':''}${fmt(d)}</em>`:''}</span></button>`; }).join('')}
+      <div class="note">Shaded band = target range. Numbers on the right compare with the 7 days before. Half-set credit goes to helper muscles on compound lifts, so treat this as an estimate.</div></div>`;
 }
 
 /* ================================================================ header == */
@@ -4574,6 +4718,9 @@ document.addEventListener('click', e => {
   }
   if (/^b-/.test(a)){ if (bAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
+  if (a==='mm-sel'){ mmSel=mmSel===v?null:v; render(); return; }
+  if (a==='mm-win'){ mmWin=+v||0; render(); return; }
+  if (a==='mm-open'){ view='wlog'; wlSub='body'; mmSel=null; render(); window.scrollTo(0,0); return; }
 
   switch(a){
     case 'addoneoff': {
