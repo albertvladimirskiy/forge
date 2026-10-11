@@ -2514,6 +2514,7 @@ function normalizeCustom(){
   if (!S.tpref.custom||typeof S.tpref.custom!=='object') S.tpref.custom={};
   S.ch90 = Object.assign({start:null,goal:'',checkins:[]}, (S.ch90&&typeof S.ch90==='object')?S.ch90:{});
   if (!Array.isArray(S.ch90.checkins)) S.ch90.checkins=[];
+  if (!Array.isArray(S.ch90.past)) S.ch90.past=[];
   if (!S.camp||typeof S.camp!=='object'||Array.isArray(S.camp)) S.camp={};
   if (!Array.isArray(S.campHist)) S.campHist=[];
   S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
@@ -2975,7 +2976,7 @@ function wAct(a,v,v2,el){
     }
     case 'w-mode': if (cw){ cw.mode=v==='replace'?'replace':'with'; commit(); } return;
     case 'w-rest': S.cpref.rest=+v||0; commit(); return;
-    case 'w-restadd': if (rest){ rest.end+=(+v2)*1000; rest.total=Math.max(15,rest.total+(+v2)); if (rest.done&&rest.end>Date.now()){ rest.done=false; } restTick(); } return 'norender';
+    case 'w-restadd': if (rest){ rest.end+=(+v2)*1000; rest.total=Math.max(15,rest.total+(+v2)); if (rest.done&&rest.end>Date.now()){ rest.done=false; } restTick(); } return;   // re-render so the bar's label/colour match its state
     case 'w-restskip': rest=null; clearInterval(restIv); return;
     case 'w-pick': exPickOpen=!exPickOpen; exCreate=false; exFocus=exPickOpen; touch(); return;
     case 'w-mu': exMu=v||''; exFocus=false; return;
@@ -3094,9 +3095,13 @@ function wAct(a,v,v2,el){
       if (!fdraft) return;
       fdraft.disc=v;
       const lf=lastFight(v,vd), def=(FIGHT_DISC.find(x=>x[0]===v)||[])[2]||60;
-      if (fightEdit==null || !fdraft.min){
+      /* suggest minutes/rounds only while the fields are empty or still hold our own previous suggestion;
+         anything typed by hand, or measured by the round timer, is left alone */
+      const au=fdraft.auto, untouched=!fdraft.min || (au && fdraft.min===au.min && (fdraft.rounds||'')===au.rounds);
+      if (untouched){
         fdraft.min=String(lf&&lf.f.min?lf.f.min:def);
         fdraft.rounds=lf&&lf.f.rounds?String(lf.f.rounds):'';
+        fdraft.auto={min:fdraft.min,rounds:fdraft.rounds};
         if (!fdraft.rpe && lf && lf.f.rpe) fdraft.rpe=lf.f.rpe;
       }
       return;
@@ -3507,7 +3512,7 @@ document.addEventListener('visibilitychange',()=>{
 function tmrDur(phase,c){ return (phase==='prep'?TMR_PREP:phase==='work'?c.work:c.rest)*1000; }
 function tmrStart(){
   const c=tmrCfg(); tmrCtx();
-  tmr={phase:'prep',round:1,end:Date.now()+TMR_PREP*1000,remain:0,paused:false,warned:false,lastPip:-1,t0:Date.now(),from:tmr.from,cfg:c};
+  tmr={phase:'prep',round:1,end:Date.now()+TMR_PREP*1000,remain:0,paused:false,warned:false,lastPip:-1,t0:Date.now(),from:tmr.from,cfg:c,workSec:null};
   clearInterval(tmrIv); tmrIv=setInterval(tmrTick,100); tmrWake(true); tmrPip(false);
 }
 /* move to the next phase; `quiet` when catching up after the tab slept so we don't fire a burst of bells */
@@ -3578,7 +3583,7 @@ function TimerOverlay(){
     const ex=tmr.from&&tmr.from.kind==='ex'?exInfo(tmr.from.id):null;
     return `<div class="tmr done" role="dialog" aria-label="Round timer finished">
       <div class="tbig"><div class="tphase">DONE</div><div class="ttime" style="font-size:64px">${c.rounds} ROUNDS</div>
-        <div class="tround">${fmtDur(c.rounds*c.work)} of work · ${fmtDur(Math.max(0,total))} total</div></div>
+        <div class="tround">${fmtDur(tmr.workSec!=null?tmr.workSec:c.rounds*c.work)} of work · ${fmtDur(Math.max(0,total))} total</div></div>
       <div class="tctl col">
         ${ex?`<button class="btn" data-act="t-logex">LOG AS A SET OF ${esc(ex.n.toUpperCase())}</button>`
             :`<button class="btn" data-act="t-logfight">LOG AS A FIGHT SESSION</button>`}
@@ -3621,9 +3626,12 @@ function tAct(a,v,v2){
     case 't-skip': if (['prep','work','rest'].includes(tmr.phase)){ if (tmr.paused){ tmr.paused=false; } tmr.end=Date.now(); tmrAdvance(false); if (tmr.phase!=='done') tmr.end=Date.now()+tmrDur(tmr.phase,tmr.cfg); } return;
     case 't-stop': {
       /* ending early still counts what you did: rounds started, minutes elapsed */
-      const done=tmr.phase==='prep'?0:tmr.round;
-      if (done<1){ clearInterval(tmrIv); tmrWake(false); tmr.phase='idle'; return; }
-      tmr.cfg={...tmr.cfg,rounds:done}; tmrFinish(true); return 'norender';
+      const c=tmr.cfg, cur=tmr.paused?tmr.remain:Math.max(0,tmr.end-Date.now());
+      const done=tmr.phase==='prep'?0:tmr.phase==='work'?tmr.round-1:tmr.round;           // full rounds only; the one in progress doesn't count
+      const partial=tmr.phase==='work'?Math.round(c.work-cur/1000):0;
+      if (done<1 && partial<30){ clearInterval(tmrIv); tmrWake(false); tmr.phase='idle'; return; }
+      tmr.workSec=done*c.work+partial;
+      tmr.cfg={...c,rounds:Math.max(done,1)}; tmrFinish(true); return 'norender';
     }
     case 't-logfight': {
       const c=tmr.cfg, mins=Math.max(1,Math.round((((tmr.doneAt||Date.now())-tmr.t0)/1000-TMR_PREP)/60));
@@ -3632,7 +3640,8 @@ function tAct(a,v,v2){
     }
     case 't-logex': {
       const id=tmr.from&&tmr.from.id, vd=VD(), cw=S.cust[vd];
-      if (cw && id){ (cw.sets[id]=cw.sets[id]||[]).push({t:tmr.cfg.rounds*tmr.cfg.work}); if (!cw.t0) cw.t0=Date.now(); commit(); toast(`Logged ${fmtDur(tmr.cfg.rounds*tmr.cfg.work)} of ${exInfo(id).n}`); }
+      const work=tmr.workSec!=null?tmr.workSec:tmr.cfg.rounds*tmr.cfg.work;
+      if (cw && id){ (cw.sets[id]=cw.sets[id]||[]).push({t:work}); if (!cw.t0) cw.t0=Date.now(); commit(); toast(`Logged ${fmtDur(work)} of ${exInfo(id).n}`); }
       clearInterval(tmrIv); tmrOpen=false; tmr.phase='idle'; return;
     }
   }
@@ -3822,7 +3831,7 @@ function daysBetween(a,b){ const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=
 function addDays(k,n){ const [y,m,d]=k.split('-').map(Number), dt=new Date(y,m-1,d+n);
   return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`; }
 function chDay(){ const c=S.ch90; if (!c||!c.start) return null; return daysBetween(c.start,T)+1; }
-function chWeekOf(date){ return Math.floor(daysBetween(S.ch90.start,date)/7); }
+function chWeekOf(date){ return Math.max(0,Math.floor(daysBetween(S.ch90.start,date)/7)); }
 function chBriefStat(){ const d=chDay(); if (d==null) return null;
   const t=d<1?`90-day block starts in ${1-d}d`:d>CH_LEN?'90-day block complete':`Day ${d} of 90`;
   return `<button class="brchip" data-act="ch-open">${svg('target',10,'var(--amber)')} ${t}</button>`; }
@@ -3836,6 +3845,13 @@ function chDueText(){
 }
 
 /* ---------- screen ---------- */
+function PastBlocks(){
+  const past=S.ch90.past||[]; if (!past.length) return '';
+  return `${sect('book','PAST BLOCKS')}<div class="panel">${past.map((b,i)=>{ const ks=[...b.checkins].sort((x,y)=>x.week-y.week);
+    return `<div class="fsess"><div class="fstop"><b>${esc(b.goal||'90-day block')}</b><span>${esc(shortDate(b.start))} · ${ks.length} check-in${ks.length===1?'':'s'}</span>
+      <button class="x" data-act="ch-delpast" data-v="${i}" aria-label="Delete this block and its photos">${svg('trash',12,'var(--rust)')}</button></div>
+      <div class="chthumbs">${ks.flatMap(k=>CH_POSES.map(([p])=>k.photos&&k.photos[p]?`<img data-ph="${k.photos[p]}" alt="week ${k.week} ${p}">`:'')).join('')}</div></div>`; }).join('')}</div>`;
+}
 function ViewChallenge(){
   const c=S.ch90, imp=isImp(), wu=wUnit(), lu=imp?'in':'cm';
   if (!c.start){
@@ -3846,7 +3862,8 @@ function ViewChallenge(){
         <label class="f" style="margin-top:12px"><span>What are the 90 days for?</span><input type="text" id="ch_goal" maxlength="80" placeholder="e.g. Lose 12 lb of fat, keep every lift" value="${esc(c.goal||'')}"></label>
         <label class="f" style="margin-top:10px"><span>Start date</span><input type="date" id="ch_start" value="${T}"></label>
         <button class="btn" data-act="ch-start" style="margin-top:14px">START THE 90 DAYS</button>
-      </div><div class="note">Photos stay on this phone. They're not in the JSON backup, so use SAVE PHOTOS now and then to copy them to your camera roll.</div></div>`;
+      </div><div class="note">Photos stay on this phone. They're not in the JSON backup, so use SAVE PHOTOS now and then to copy them to your camera roll.</div></div>${PastBlocks()}
+      ${(S.ch90.past||[]).length?`<button class="btn ghost" data-act="ch-save" style="margin-bottom:14px">SAVE PHOTOS FROM PAST BLOCKS</button>`:''}`;
   }
   const d=chDay(), day=Math.min(Math.max(d,1),CH_LEN), endK=addDays(c.start,CH_LEN-1);
   let hit=0, best=0, run=0;
@@ -3878,6 +3895,7 @@ function ViewChallenge(){
         <button class="x" data-act="ch-del" data-v="${k.week}" aria-label="Delete week ${k.week} check-in">${svg('x',12)}</button></div>
         <div class="chthumbs">${CH_POSES.map(([p])=>k.photos&&k.photos[p]?`<img data-ph="${k.photos[p]}" alt="${p}">`:'').join('')}</div>
         ${k.note?`<div class="fsl">${esc(k.note)}</div>`:''}</div>`).join('')}</div>`:''}
+    ${PastBlocks()}
     <div style="display:flex;gap:8px;margin-bottom:14px">
       <button class="btn ghost" data-act="ch-save" style="flex:1">SAVE PHOTOS</button>
       <button class="btn ghost" data-act="ch-end" style="flex:1;color:var(--rust)">${chArm?'TAP AGAIN TO END':'END / RESTART'}</button></div>`;
@@ -3886,7 +3904,7 @@ function ChForm(){
   const imp=isImp(), dr=chDraft;
   return `<div class="panel"><div style="padding:13px"><div class="eyebrow" style="margin-bottom:10px">WEEK ${dr.week} CHECK-IN</div>
     <div class="chposes">${CH_POSES.map(([p,l])=>`<label class="chpose">${dr.photos[p]?`<img data-ph="${dr.photos[p]}" alt="${l}">`:`<span>${svg('plus',16,'var(--faint)')}</span>`}
-        <i>${l.toUpperCase()}</i><input type="file" accept="image/*" capture="environment" data-ph-pose="${p}" hidden></label>`).join('')}</div>
+        <i>${l.toUpperCase()}</i><input type="file" accept="image/*" data-ph-pose="${p}" hidden></label>`).join('')}</div>
     <div class="note" style="padding:8px 0 0;border:none">Same spot, same light, same time of day. Relaxed, then flexed if you want.</div>
     <div class="grid3" style="padding:12px 0 0">
       <label class="f"><span>Weight (${imp?'lb':'kg'})</span><input type="text" inputmode="decimal" data-chd="weight" value="${esc(dr.weight)}"></label>
@@ -3911,12 +3929,16 @@ function chAct(a,v){
     case 'ch-start': {
       const st=(document.getElementById('ch_start')||{}).value||T;
       c.start=st; c.goal=((document.getElementById('ch_goal')||{}).value||'').trim(); c.checkins=[]; chArm=false;
-      commit(); toast('Day 1. Take your before photos.'); chAct('ch-checkin'); return;
+      commit();
+      if (st>T){ toast(`Starts ${shortDate(st)}. Your first check-in opens that day.`); return; }
+      toast('Day 1. Take your before photos.'); chAct('ch-checkin'); return;
     }
     case 'ch-checkin': {
       const w=chWeekOf(T), ex=chCheckin(w), L=latestField('weight'), Wa=latestField('waist');
       const src=ex||{};
-      const wv=src.weight??(L&&L.weight), wa=src.waist??(Wa&&Wa.waist);
+      /* a weeks-old number must not be saved back as "today's" measurement, so only fresh ones pre-fill */
+      const fresh=(f,k)=>f&&daysBetween(f.date,T)<=3?f[k]:null;
+      const wv=src.weight??fresh(L,'weight'), wa=src.waist??fresh(Wa,'waist');
       chDraft={week:w,photos:{...(src.photos||{})},
         weight:wv!=null?String(Math.round((imp?wv*2.20462:wv)*10)/10):'', waist:wa!=null?String(Math.round((imp?wa/2.54:wa)*10)/10):'',
         bf:src.bf!=null?String(src.bf):'', note:src.note||''};
@@ -3946,13 +3968,23 @@ function chAct(a,v){
     }
     case 'ch-end': {
       if (chArm!==true){ chArm=true; return; }
-      c.start=null; c.goal=''; chArm=false; chDraft=null; commit(); toast('Challenge ended. Photos stay until you delete the check-ins.'); return;
+      /* archive the block instead of dropping it: its check-ins hold the only reference to the photos in IndexedDB */
+      if ((c.checkins||[]).length) (c.past=c.past||[]).push({start:c.start,goal:c.goal,checkins:c.checkins});
+      c.start=null; c.goal=''; c.checkins=[]; chArm=false; chDraft=null; commit();
+      toast('Block ended and filed under Past blocks.'); return;
+    }
+    case 'ch-delpast': {
+      const b=(c.past||[])[+v]; if (!b) return;
+      if (chArm!=='p'+v){ chArm='p'+v; toast('Tap again to delete that block and its photos'); return 'norender'; }
+      b.checkins.forEach(k=>Object.values(k.photos||{}).forEach(photoDel)); c.past.splice(+v,1); chArm=false; commit(); return;
     }
     case 'ch-save': chSavePhotos(); return 'norender';
   }
 }
 async function chSavePhotos(){
-  const ids=[]; (S.ch90.checkins||[]).forEach(k=>CH_POSES.forEach(([p])=>{ if (k.photos&&k.photos[p]) ids.push([`forge-wk${k.week}-${p}.jpg`,k.photos[p]]); }));
+  const ids=[];
+  (S.ch90.past||[]).forEach((b,bi)=>b.checkins.forEach(k=>CH_POSES.forEach(([p])=>{ if (k.photos&&k.photos[p]) ids.push([`forge-block${bi+1}-wk${k.week}-${p}.jpg`,k.photos[p]]); })));
+  (S.ch90.checkins||[]).forEach(k=>CH_POSES.forEach(([p])=>{ if (k.photos&&k.photos[p]) ids.push([`forge-wk${k.week}-${p}.jpg`,k.photos[p]]); }));
   if (!ids.length){ toast('No photos yet'); return; }
   const files=[]; for (const [name,id] of ids){ const b=await photoGet(id).catch(()=>null); if (b) files.push(new File([b],name,{type:'image/jpeg'})); }
   try{
@@ -4004,8 +4036,8 @@ async function snapDaily(){
     if (!keys.includes(T)) await snapPut(T,JSON.stringify(S));
     const all=await snapKeys(), days=all.filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)), undos=all.filter(k=>k.startsWith('undo-'));
     for (const k of days.slice(SNAP_KEEP)) await snapDelete(k);
-    for (const k of undos.slice(1)) await snapDelete(k);          // only the most recent undo point is kept
-    snapList=undos.slice(0,1).concat(days.slice(0,SNAP_KEEP));
+    for (const k of undos.slice(3)) await snapDelete(k);          // the three most recent undo points are kept
+    snapList=undos.slice(0,3).concat(days.slice(0,SNAP_KEEP));
   }catch(e){ snapList=[]; }
 }
 function backupAge(){ const b=S.meta.lastBackup; return b?daysBetween(b,T):null; }
@@ -4043,15 +4075,16 @@ function SnapshotPanel(){
   const a=backupAge();
   return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Photos from the 90-day challenge aren't in the file; use SAVE PHOTOS there.</div>
     ${list.length?`<div class="eyebrow" style="padding:4px 13px 6px">AUTOMATIC SNAPSHOTS ON THIS PHONE</div>
-    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')?`<b>Undo last restore</b> <span style="color:var(--faint)">(state before it, ${esc(shortDate(k.slice(5)))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
+    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')?`<b>Undo a restore</b> <span style="color:var(--faint)">(your state at ${esc(new Date(+k.slice(5)).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
       <button class="chip" data-act="s-restore" data-v="${k}">${snapArm===k?'TAP TO CONFIRM':'RESTORE'}</button></div>`).join('')}
     <div class="note">One snapshot a day, the last ${SNAP_KEEP} kept, taken when you first open the app. Restoring replaces everything with that day's state (today's state is snapshotted first, so you can undo).</div>`:''}`;
 }
 async function snapRestore(k){
   try{
     const json=await snapGet(k); if (!json){ toast('Snapshot not found'); return; }
-    if (!k.startsWith('undo-')) await snapPut('undo-'+T,JSON.stringify(S)).catch(()=>{});
-    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(json)); normalizeCustom();
+    if (!k.startsWith('undo-')) await snapPut('undo-'+Date.now(),JSON.stringify(S)).catch(()=>{});   // a new key each time: restoring twice must not erase the first undo point
+    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(json));
+    S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true; normalizeCustom();
     WEEK=WEEKS[S.profile.program]||WEEK_STD; snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
   }catch(e){ toast('Could not restore that snapshot'); }
 }
@@ -4086,7 +4119,7 @@ function buildICS(full){
       if (!full && e.id!=='train') continue;
       let title=e.l, desc=e.sub||'';
       if (e.id==='train'){
-        if (cw && cw.mode==='replace'){ title=cw.name||'My workout'; desc=cw.items.map(id=>exInfo(id).n).join(', ')||'Your own session'; }
+        if (cw && cw.mode==='replace' && cw.items.length){ title=cw.name||'My workout'; desc=cw.items.map(id=>exInfo(id).n).join(', ')||'Your own session'; }
         else { title=`${plan.def.title}${cw&&cw.items.length?' + '+(cw.name||'extra workout'):''}`; desc=plan.def.blocks.map(b=>b.l).join('\n'); }
         title='FORGE · '+title;
       }
@@ -4208,14 +4241,16 @@ function CampPanel(){
     const toGo=L.weight-c.target, wiDays=Math.max(0,daysBetween(T,c.weighIn)), weeks=Math.max(wiDays/7,1/7);
     const perWk=toGo>0?toGo/weeks:0, pct=perWk/L.weight*100;
     const ahead=path?L.weight-path.today:null;
-    const status=toGo<=0?['ON WEIGHT','var(--moss)','You\'re at or under target. Hold it with normal eating; no need to cut further.']
+    const status=T>c.weighIn?['WEIGH-IN DONE','var(--steel)','Weigh-in is behind you. Rehydrate, eat, and let the weight come back; nothing left to cut.']
+      : wiDays===0?(toGo<=0?['MADE WEIGHT','var(--moss)','At or under target on weigh-in day. Done.']:['WEIGH-IN DAY','var(--amber)',`${wc(toGo)} ${wu} over target. What happens now is a decision for you, your coach and the commission, not this tracker.`])
+      : toGo<=0?['ON WEIGHT','var(--moss)','You\'re at or under target. Hold it with normal eating; no need to cut further.']
       : pct>1.5?['UNSAFE PACE','var(--rust)',`That's ${pct.toFixed(1)}% of bodyweight a week. Losing it this fast means a big water cut, which hurts performance and can be dangerous. Talk to your coach about a longer runway or the next class up.`]
       : pct>1?['AGGRESSIVE','var(--amber)',`${pct.toFixed(1)}% of bodyweight a week is doable short-term but costs training quality. Tighten food now so fight week stays boring.`]
       : ['ON TRACK','var(--moss)',`About ${wc(perWk)} ${wu} a week (${pct.toFixed(1)}% of bodyweight). Sustainable. Keep protein high and weigh in daily, same time.`];
     cut=`<div class="cutbox"><div class="cuthead"><span style="color:${status[1]}">${status[0]}</span><span>${toGo>0?`${wc(toGo)} ${wu} to go`:`${wc(-toGo)} ${wu} under`} · weigh-in ${esc(shortDate(c.weighIn))} (${wiDays}d)</span></div>
       ${campCutSVG()}
-      <div class="det" style="margin-top:8px">${esc(status[2])}${ahead!=null&&toGo>0&&Math.abs(ahead)>=0.25?` You're ${Math.abs(wc(ahead))} ${wu} ${ahead>0?'above':'below'} the steady path today.`:''}</div>
-      <div class="bredadd" style="margin-top:10px"><input type="text" inputmode="decimal" id="cp_wt" placeholder="Today's weigh-in (${wu})"><button class="chip on" data-act="camp-weigh">LOG</button></div>
+      <div class="det" style="margin-top:8px">${esc(status[2])}${ahead!=null&&toGo>0&&T<c.weighIn&&Math.abs(ahead)>=0.25?` You're ${Math.abs(wc(ahead))} ${wu} ${ahead>0?'above':'below'} the steady path today.`:''}</div>
+      ${T<=c.weighIn?`<div class="bredadd" style="margin-top:10px"><input type="text" inputmode="decimal" id="cp_wt" placeholder="Today's weigh-in (${wu})"><button class="chip on" data-act="camp-weigh">LOG</button></div>`:''}
       <div class="note" style="padding:8px 0 0;border:none">Fight-week water cutting is a coach-and-commission decision. This tracker only plans the slow part.</div></div>`;
   } else if (c.target) cut=`<div class="note">Log a weigh-in and the cut tracker appears.</div>`;
   return `<div class="panel acc"><div class="acc-bar" style="background:var(--rust)"></div>
@@ -4468,7 +4503,7 @@ function ViewToday(){
   const vd=VD();
   const plan=buildDay(vd), d=day(vd), meta=DTYPE[plan.def.type];
   /* a custom workout set to "replace" stands in for the planned session: same timeline slot, its own progress */
-  const cw=S.cust[vd], rep=!!cw && cw.mode==='replace';
+  const cw=S.cust[vd], rep=!!cw && cw.mode==='replace' && cw.items.length>0;   // an empty replacement hides nothing
   const trainTotal = rep ? cw.items.length : plan.def.blocks.length;
   const trainDone = rep ? cwStats(cw).ex : plan.def.blocks.filter(b=>d.blocks[b.id]).length;
   const trainAll = rep ? cwDone(cw) : (trainDone===trainTotal && trainDone>0);
@@ -5693,6 +5728,7 @@ document.addEventListener('click', e => {
         && Array.isArray(parsed.log);
       if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
       S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
+      S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;   // restoring a backup is never a first run
       normalizeCustom();
       importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
     }
