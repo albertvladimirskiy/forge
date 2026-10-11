@@ -648,6 +648,8 @@ body.lock{overflow:hidden}
 .rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:8px}
 .rpe button{padding:10px 0;background:var(--panel2);border:1px solid var(--rule);font-size:var(--fs-body);color:var(--faint)}
 .rpe button.on{border-color:var(--rust);color:var(--text);background:var(--note-pain-bg)}
+.rpe.c8{grid-template-columns:repeat(8,1fr)}
+.rpe.c8 button{padding:9px 0;font-size:var(--fs-caption)}
 .wlhead{display:flex;align-items:center;gap:10px;width:100%;padding:13px}
 .wlt{font-size:var(--fs-title);font-weight:600;line-height:1.3}
 .wls{font-size:var(--fs-detail);color:var(--faint);margin-top:3px;line-height:1.45}
@@ -2386,7 +2388,13 @@ function exRxLine(ex,label){
     repeat:[`REPEAT ${w} — get all ${rx.sets*rx.reps}`,'var(--steel)'],
     reset:[`RESET: ${w} · back off, climb again`,'var(--rust)'] };
   const [txt,c]=map[rx.mode];
-  return `<div class="rx" style="color:${c}">${svg('target',10,c)} ${pre}${txt}</div>`;
+  /* an optional nudge, never a change to the prescription: the last session's hardest logged set */
+  let note='';
+  if (rx.mode==='progress'){
+    const ss=gymSessions(ex), hard=ss.length?Math.max(0,...S.gym[ss[ss.length-1]][ex].map(x=>x.rpe||0)):0;
+    if (hard>=9.5) note=` <span style="color:var(--faint)">· last session hit RPE ${hard}, repeat it if that was a grind</span>`;
+  }
+  return `<div class="rx" style="color:${c}">${svg('target',10,c)} ${pre}${txt}${note}</div>`;
 }
 /* block-level wrapper: a block may log 0, 1, or 2 exercises (supersets) */
 function rxLine(b){
@@ -2404,7 +2412,7 @@ function exGymHTML(ex,label){
     <div class="eyebrow" style="margin-bottom:8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
     ${sets.map((s,i)=>{ const isPR = pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r;
       return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
-      <button class="setedit" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${dispExact(s.w)} × ${s.r}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</button>
+      <button class="setedit" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${dispExact(s.w)} × ${s.r}${rpeTag(s)}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</button>
       ${s.r>=EXS[ex].reps?svg('check',12,'var(--moss)',3):`<span style="font-size:var(--fs-caption);color:var(--rust)">-${EXS[ex].reps-s.r}</span>`}
       <button class="x" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`;}).join('')}
@@ -2415,6 +2423,7 @@ function exGymHTML(ex,label){
       <input type="number" id="sr_${ex}" inputmode="numeric" placeholder="${EXS[ex].reps}" value="${gs?gs.r:''}">
       <button class="chip on" data-act="addset" data-v="${ex}">${ge?'SAVE':'LOG SET'}</button>${ge?`<button class="chip" data-act="geditcancel">CANCEL</button>`:''}
     </div>
+    ${rpeRow('g:'+ex,(cdraft[VD()+'|g:'+ex]||{}).rpe)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
       <span style="font-size:var(--fs-caption);color:var(--faint)">Blank weight = prescribed. Blank reps = target.</span>
       ${!flagged?`<button class="flagbtn" data-act="painflag" data-v="${ex}">${svg('shield',10)} pain?</button>`:''}
@@ -2519,9 +2528,16 @@ function fmtDur(sec){ sec=Math.max(0,Math.round(sec||0)); const h=Math.floor(sec
 function fmtVol(kg){ return Math.round(isImp()?kg*2.20462:kg).toLocaleString()+' '+wUnit(); }
 function shortDate(k){ const [y,m,d]=k.split('-').map(Number);
   return new Date(y,m-1,d).toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+/* RPE (how hard a set felt, 6-10) is optional; sets without one are exactly as before */
+const RPE_CHOICES=[6,7,7.5,8,8.5,9,9.5,10];
+const rpeTag = s => s&&s.rpe>0 ? ` @${s.rpe}` : '';
+function rpeRow(key,cur){
+  return `<div style="margin-top:10px"><div class="sfl">RPE <span>optional · how hard was it</span></div>
+    <div class="rpe c8">${RPE_CHOICES.map(v=>`<button class="${+cur===v?'on':''}" data-act="w-rpe" data-v="${key}|${v}" aria-pressed="${+cur===v}" aria-label="RPE ${v}">${v}</button>`).join('')}</div></div>`;
+}
 function fmtSet(k,s){
-  if (k==='wr') return `${fmtW(s.w)} × ${s.r}`;
-  if (k==='bw') return s.w>0 ? `+${fmtW(s.w)} × ${s.r}` : `${s.r} reps`;
+  if (k==='wr') return `${fmtW(s.w)} × ${s.r}${rpeTag(s)}`;
+  if (k==='bw') return s.w>0 ? `+${fmtW(s.w)} × ${s.r}${rpeTag(s)}` : `${s.r} reps${rpeTag(s)}`;
   if (k==='time') return fmtDur(s.t);
   if (k==='carry') return `${fmtW(s.w)} × ${dIn(s.d,k)} m`;
   const bits=[];
@@ -2541,7 +2557,8 @@ function fmtSets(k,sets){
       const g=groups[groups.length-1];
       if (g && g.key===key) g.reps.push(s.r); else groups.push({key,reps:[s.r]});
     }
-    return groups.map(g=> g.key ? `${k==='bw'?'+':''}${g.key} × ${g.reps.join(', ')}` : `${g.reps.join(' · ')} reps`).join('  ·  ');
+    const hard=Math.max(0,...sets.map(x=>x.rpe||0));
+    return groups.map(g=> g.key ? `${k==='bw'?'+':''}${g.key} × ${g.reps.join(', ')}` : `${g.reps.join(' · ')} reps`).join('  ·  ')+(hard>0?`  ·  top RPE ${hard}`:'');
   }
   return sets.map(s=>fmtSet(k,s)).join('  ·  ');
 }
@@ -2588,7 +2605,7 @@ function exHist(id){
   if (keys) for (const k of Object.keys(S.gym||{})) for (const pk of keys){
     const s=S.gym[k] && S.gym[k][pk]; if (!s || !s.length) continue;
     const e=out.find(o=>o.date===k);
-    if (e) e.sets=e.sets.concat(s.map(x=>({w:x.w,r:x.r}))); else out.push({date:k,sets:s.map(x=>({w:x.w,r:x.r}))});
+    if (e) e.sets=e.sets.concat(s.map(x=>({w:x.w,r:x.r,rpe:x.rpe}))); else out.push({date:k,sets:s.map(x=>({w:x.w,r:x.r,rpe:x.rpe}))});
   }
   out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
   return out;
@@ -2938,7 +2955,7 @@ function setEntryHTML(id,vd,E){
   const ed=editSet&&editSet.id===id&&editSet.vd===vd?editSet:null;
   return `${ed?`<div class="note" style="border:1px solid var(--amber);color:var(--amber);margin-top:12px">EDITING SET ${ed.i+1} · change the numbers, then save</div>`:''}
     <div class="setadd2 ${E.k==='cardio'?'three':''}">${fields}</div>${plates}
-    ${(E.k==='wr'||E.k==='bw')?`<div style="margin-top:9px"><button class="chip ${dr.wu?'on':''}" data-act="w-wu" data-v="${id}" aria-pressed="${!!dr.wu}">WARM-UP SET</button></div>`:''}
+    ${(E.k==='wr'||E.k==='bw')?`<div style="margin-top:9px"><button class="chip ${dr.wu?'on':''}" data-act="w-wu" data-v="${id}" aria-pressed="${!!dr.wu}">WARM-UP SET</button></div>${rpeRow(id,dr.rpe)}`:''}
     <div style="display:flex;gap:8px;margin-top:9px"><button class="btn" data-act="w-log" data-v="${id}" style="flex:2">${ed?`SAVE SET ${ed.i+1}`:'LOG SET'}</button>
       ${ed?`<button class="btn ghost" data-act="w-editcancel" style="flex:1">CANCEL</button>`:''}</div>`;
 }
@@ -3321,11 +3338,11 @@ function wAct(a,v,v2,el){
         const w=wOut(g('w')), r=Math.round(num(g('r'))||0);
         if (w==null){ toast('Enter a weight'); return 'norender'; }
         if (r<1){ toast('Enter your reps'); return 'norender'; }
-        s={w,r}; if (dr.wu) s.wu=1;
+        s={w,r}; if (dr.wu) s.wu=1; if (num(dr.rpe)>0) s.rpe=num(dr.rpe);
       } else if (E.k==='bw'){
         const w=wOut(g('w'))||0, r=Math.round(num(g('r'))||0);
         if (r<1){ toast('Enter your reps'); return 'norender'; }
-        s={w,r}; if (dr.wu) s.wu=1;
+        s={w,r}; if (dr.wu) s.wu=1; if (num(dr.rpe)>0) s.rpe=num(dr.rpe);
       } else if (E.k==='carry'){
         const w=wOut(g('w')), d=dOut(g('d'),E.k);
         if (w==null||!(d>0)){ toast('Enter weight and distance'); return 'norender'; }
@@ -3357,12 +3374,13 @@ function wAct(a,v,v2,el){
       const E=exInfo(v), st=cw&&(cw.sets[v]||[])[+v2]; if (!st) return;
       editSet={id:v,i:+v2,vd}; cwOpen=v;
       const dr=cdraft[vd+'|'+v]={};     // every field set explicitly, so a blank one stays blank instead of being prefilled
-      if (E.k==='wr'){ dr.w=wIn(st.w); dr.r=String(st.r); dr.wu=st.wu?'1':''; }
-      else if (E.k==='bw'){ dr.w=st.w>0?wIn(st.w):''; dr.r=String(st.r); dr.wu=st.wu?'1':''; }
+      if (E.k==='wr'){ dr.w=wIn(st.w); dr.r=String(st.r); dr.wu=st.wu?'1':''; dr.rpe=st.rpe?String(st.rpe):''; }
+      else if (E.k==='bw'){ dr.w=st.w>0?wIn(st.w):''; dr.r=String(st.r); dr.wu=st.wu?'1':''; dr.rpe=st.rpe?String(st.rpe):''; }
       else if (E.k==='carry'){ dr.w=wIn(st.w); dr.d=dIn(st.d,E.k); }
       else { const t=st.t||0; dr.tm=Math.floor(t/60)?String(Math.floor(t/60)):''; dr.ts=t%60?String(t%60):''; if (E.k==='cardio') dr.d=st.d>0?dIn(st.d,E.k):''; }
       return;
     }
+    case 'w-rpe': { const [key,val]=v.split('|'), dk=vd+'|'+key; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].rpe=String(cdraft[dk].rpe)===val?'':val; return; }
     case 'w-wu': { const dk=vd+'|'+v; cdraft[dk]=cdraft[dk]||{}; cdraft[dk].wu=cdraft[dk].wu?'':'1'; return; }
     case 'w-ramp': {
       const E=exInfo(v); if (!cw||E.k!=='wr') return 'norender';
@@ -5748,9 +5766,9 @@ function Nav(){
 let lastRenderedView=null;
 /* Every action re-renders by replacing the whole #app tree, so anything the DOM was holding that isn't in S
    is lost unless render() carries it across: the exercise sheet's scroll position, the muscle/equipment chip
-   rows' horizontal scroll, and half-typed fields in the custom-food and body-log forms. */
+   rows' horizontal scroll, and half-typed fields in the custom-food, body-log and program-lift set forms. */
 let scrollReset=false;                               // set by actions that change what the sheet lists (muscle/equipment filter)
-const KEEP_FIELD=/^(cf_|f_)/;
+const KEEP_FIELD=/^(cf_|f_|sw_|sr_)/;
 function render(){
   const y=window.scrollY;
   const scrollers=[...document.querySelectorAll('.sheetbody,.exchips')].map(el=>[el.scrollTop,el.scrollLeft,el.className]);
@@ -6104,12 +6122,15 @@ document.addEventListener('click', e => {
       if (ge){      // editing: needs real numbers, not the prescription a blank box would fall back to
         const rw=inLoad((document.getElementById('sw_'+ex)||{}).value), rr=num((document.getElementById('sr_'+ex)||{}).value);
         if ((rw==null&&!E.added) || rr==null){ toast('Enter weight and reps to save the change'); return; }
-        S.gym[VD()][ex][ge.i]={w:Math.round((rw??0)*100)/100, r:Math.round(rr)};
-        gymEdit=null; rebuildPR(ex); commit(); render(); toast(`Set ${ge.i+1} updated`); return;
+        const rp=num((cdraft[VD()+'|g:'+ex]||{}).rpe);
+        S.gym[VD()][ex][ge.i]={w:Math.round((rw??0)*100)/100, r:Math.round(rr), ...(rp>0?{rpe:rp}:{})};
+        delete cdraft[VD()+'|g:'+ex]; gymEdit=null; rebuildPR(ex); commit(); render(); toast(`Set ${ge.i+1} updated`); return;
       }
       if (!S.gym[VD()]) S.gym[VD()]={};
       if (!S.gym[VD()][ex]) S.gym[VD()][ex]=[];
-      S.gym[VD()][ex].push({w:Math.round(w*100)/100, r:Math.round(r)});
+      const rp=num((cdraft[VD()+'|g:'+ex]||{}).rpe);
+      S.gym[VD()][ex].push({w:Math.round(w*100)/100, r:Math.round(r), ...(rp>0?{rpe:rp}:{})});
+      delete cdraft[VD()+'|g:'+ex];
       const isPR = checkPR(ex, Math.round(w*100)/100, Math.round(r), VD());
       ['sw_','sr_'].forEach(p=>{ const el=document.getElementById(p+ex); if (el) el.value=''; });
       commit(); render();
@@ -6127,8 +6148,8 @@ document.addEventListener('click', e => {
       }
       commit(); break;
     }
-    case 'gedit': gymEdit={ex:v,i:+v2,vd:VD()}; break;
-    case 'geditcancel': gymEdit=null; break;
+    case 'gedit': { gymEdit={ex:v,i:+v2,vd:VD()}; const st=((S.gym[VD()]||{})[v]||[])[+v2]; cdraft[VD()+'|g:'+v]={rpe:st&&st.rpe?String(st.rpe):''}; break; }
+    case 'geditcancel': if (gymEdit) delete cdraft[gymEdit.vd+'|g:'+gymEdit.ex]; gymEdit=null; break;
     case 'painflag':
       if (S.flags[v]) delete S.flags[v]; else S.flags[v]=T;
       commit(); break;
