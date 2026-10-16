@@ -76,7 +76,10 @@ as history for the matching library exercise (`EXLINK`). Rest timer, plate math 
 history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) are included. Custom data lives in `S.cust`,
 `S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
 
-Set logging details: tap a set to **edit** it in place (custom workouts and the program's own lifts). **WARM-UP SET** tags a set
+Set logging details: the program's own lifts and custom exercises have the same tools — steppers, warm-up set and ramp, plate
+math and bar choice, history, RPE, notes, edit in place, and the rest timer (default length and bell are one setting; each lift can
+override its rest, shared between its program and custom versions; timed holds and cardio only rest if you give them their own rest).
+Tap a set to **edit** it in place. **WARM-UP SET** tags a set
 so it never counts toward PRs, benchmarks, volume or the rest timer, and **WARM-UP RAMP** fills in the bar and ~50/70/85% steps up
 to the weight in the box. Optional **RPE** (6-10) goes on any lifting set; a program lift whose last session hit RPE 9.5+ gets a
 plain-text "repeat it if that was a grind" nudge (the prescription itself is unchanged). The rest timer rings a bell when it ends
@@ -89,6 +92,13 @@ moves to the partner and the rest timer waits for the last exercise of the group
 shown when it's open, and as a one-liner when collapsed). Under LAST TIME a **NEXT TIME** line suggests a weight from your last
 working sets and RPE; it never changes anything by itself. **SHARE WORKOUT SUMMARY** (and SHARE on past workouts) sends a plain
 text recap through the share sheet or the clipboard.
+
+**Progression and a bad day.** Every program set remembers what the plan asked for that day. If you train lighter (say 135 when it
+said 155) the app tells you to repeat that weight for the rest of the day, and once you hit every rep the next session goes *back* to
+155 instead of climbing from 135. Missing reps at the lighter weight is not excused, and two lighter days in a row are accepted as
+your new baseline (so you can't get stuck on a weight you can't lift). Deload-week sets are flagged and never become the baseline
+the next weeks climb from; the ramp-week discount only trims a starting weight guessed from the Log tab. The custom workout panel
+on Today minimizes to one line (tap its header); the choice is saved with that day's workout.
 
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 

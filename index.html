@@ -65,7 +65,7 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 /* faint machined-steel grain — a fixed, ultra-low-opacity noise layer over the
    whole app. Material presence, not decoration: invisible until you look for it. */
 body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
-  opacity:.035;mix-blend-mode:overlay;
+  opacity:.035;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
 button,input,select,textarea{font-family:inherit;color:inherit}
 button{background:none;border:none;padding:0;cursor:pointer}
@@ -372,7 +372,7 @@ input[type=date],input[type=time]{min-height:40px}
 
 /* ---------- week strip ---------- */
 .stripwrap{margin:calc(6px + 0px) -14px 0;position:relative}
-.strip{display:flex;gap:5px;overflow-x:auto;scroll-behavior:smooth;padding:12px 14px 13px;
+.strip{display:flex;gap:5px;overflow-x:auto;padding:12px 14px 13px;
   scrollbar-width:none;-ms-overflow-style:none}
 .strip::-webkit-scrollbar{display:none}
 .dcell{flex:0 0 auto;width:42px;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -1797,8 +1797,21 @@ const DEFAULTS = {
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null, toastUndo = false, undoSnap = null;
 
-let saveWarnAt=0;
+/* Derived values that every screen recomputes from the whole history (a lift's history, days logged) are computed once and
+   reused until the data can have changed: the end of the current task, the next save, or the next render. */
+let _memo=null;
+function memo(key,fn){
+  if (!_memo){ _memo=new Map(); queueMicrotask(()=>{ _memo=null; }); }
+  if (!_memo.has(key)) _memo.set(key,fn());
+  return _memo.get(key);
+}
+let saveWarnAt=0, saveTimer=null;
+/* typing saves on every keystroke would stringify and store the whole history each time; wait for a pause, and always flush
+   before the page is hidden or closed so nothing is lost */
+function commitSoon(){ _memo=null; clearTimeout(saveTimer); saveTimer=setTimeout(commit,400); }
+function flushSave(){ if (saveTimer){ clearTimeout(saveTimer); commit(); } }
 function commit(){
+  _memo=null; clearTimeout(saveTimer); saveTimer=null;
   Store.save(S).then(ok=>{
     if (ok!==false || Date.now()-saveWarnAt<60000) return;
     saveWarnAt=Date.now();
@@ -1934,8 +1947,8 @@ function buildDay(key){
 }
 
 /* ============================================================== derived == */
-function daysLogged(){ return Object.keys(S.days).filter(k=>{ const d=S.days[k];
-  return d && ((d.blocks&&Object.values(d.blocks).some(Boolean))||d.mind||d.news||extraTrain(k)>0); }).length; }
+function daysLogged(){ return memo('daysLogged',()=>Object.keys(S.days).filter(k=>{ const d=S.days[k];
+  return d && ((d.blocks&&Object.values(d.blocks).some(Boolean))||d.mind||d.news||extraTrain(k)>0); }).length); }
 
 function dayScore(k){
   const d=S.days[k]; if(!d) return 0;
@@ -2047,10 +2060,10 @@ function foodTotals(k){
 /* ========================================================== progression == */
 function e1rm(w,r){ return r<=1 ? w : w*(1+r/30); }
 function gymSessions(ex){
-  return Object.keys(S.gym||{}).filter(k=>S.gym[k][ex]&&S.gym[k][ex].length).sort();
+  return Object.keys(S.gym||{}).filter(k=>S.gym[k][ex]&&workSets(S.gym[k][ex]).length).sort();
 }
 function sessionWork(ex,k){
-  const E=EXS[ex], sets=S.gym[k][ex];
+  const E=EXS[ex], sets=workSets(S.gym[k][ex]);
   /* Sets count toward the same working weight if they're within WTOL kg of each
      other. Typed lb values and auto-filled blanks can land a cent or two apart
      after the kg conversion (e.g. 72.57 vs 72.58), and an exact match would split
@@ -2062,12 +2075,16 @@ function sessionWork(ex,k){
     const cnt=sets.filter(s=>Math.abs(s.w-c.w)<=WTOL && s.r>=E.reps).length;
     if (cnt>=E.sets && (qualW==null||c.w>qualW)) qualW=c.w;
   });
-  return { top: qualW!=null?qualW:overallTop, ok: qualW!=null };
+  /* p = what the plan asked for going into that day (stored on each set when it was logged). Training lighter than
+     that is a "drop" (tired, sore, a bad day), which must not drag the plan down with it. */
+  const p=(sets.find(s=>s.p>0)||{}).p;
+  const top=qualW!=null?qualW:overallTop;
+  return { top, ok: qualW!=null, p, drop: p>0 && top<p-WTOL };
 }
 function gymBest(ex){
   let best=null;
   for (const k of gymSessions(ex))
-    for (const s of S.gym[k][ex]){
+    for (const s of workSets(S.gym[k][ex])){
       const v = EXS[ex]&&EXS[ex].added ? s.w : e1rm(s.w,s.r);
       if (best==null||v>best) best=v;
     }
@@ -2093,14 +2110,16 @@ function rampFactor(){
   return null;
 }
 
-function prescribe(ex){
+/* `before` = a date: work out the plan as it stood going into that day, ignoring that day's own sets */
+function prescribe(ex,before){
   const E=EXS[ex]; if(!E) return null;
   let rx;
   if (deloadActive()){
     const base=bestLift(ex);
     rx = base==null ? {mode:'start'} : {mode:'deload', w:base*0.6, sets:3, reps:5};
   } else {
-    const ss=gymSessions(ex);
+    /* deload sessions (flagged dl when logged) are easy by design, so they never set the baseline the next weeks climb from */
+    const ss=gymSessions(ex).filter(k=>(!before||k<before) && !S.gym[k][ex].some(x=>x.dl));
     if (!ss.length){
       const Lf=latestField(ex), man=Lf?Lf[ex]:null;
       rx = man ? {mode:'first', w:(E.added?man:man*0.8), sets:E.sets, reps:E.reps} : {mode:'start'};
@@ -2108,20 +2127,29 @@ function prescribe(ex){
       const last=ss[ss.length-1];
       const lastWork=sessionWork(ex,last);
       const topW=lastWork.top, ok=lastWork.ok;
-      let fails=0;
+      let fails=0, drops=0;
+      for (let i=ss.length-1;i>=0;i--){
+        const w=sessionWork(ex,ss[i]);
+        if (w.drop) drops++; else break;
+      }
       for (let i=ss.length-1;i>=0;i--){
         const w=sessionWork(ex,ss[i]);
         if (Math.abs(w.top-topW)>0.5) break;
         if (w.ok) break;
         fails++;
       }
-      if (fails>=3)     rx={mode:'reset', w:topW*0.9, sets:E.sets, reps:E.reps};
+      /* Lighter than prescribed and still got every rep: go back to what the plan asked for, don't climb from the lighter
+         weight. Failing even the lighter weight, or dropping two sessions running (it isn't a bad day any more), keeps
+         the usual rules, which work from what was actually lifted. */
+      if (lastWork.drop && ok && drops<2) rx={mode:'repeat', w:lastWork.p, sets:E.sets, reps:E.reps, miss:0, back:true};
+      else if (fails>=3) rx={mode:'reset', w:topW*0.9, sets:E.sets, reps:E.reps};
       else if (ok)      rx={mode:'progress', w:topW+E.inc, sets:E.sets, reps:E.reps};
       else              rx={mode:'repeat', w:topW, sets:E.sets, reps:E.reps, miss:fails};
     }
   }
+  /* the ramp only trims a starting weight guessed from the Log tab; once real sessions exist they already ARE the light weights */
   const ramp=rampFactor();
-  if (ramp && rx.w!=null && rx.mode!=='deload'){ rx.w=rx.w*ramp.f; rx.ramp=ramp.label; }
+  if (ramp && rx.mode==='first'){ rx.w=rx.w*ramp.f; rx.ramp=ramp.label; }
   return rx;
 }
 
@@ -2135,7 +2163,7 @@ function checkPR(ex,w,r,date){
 /* the stored record is "best set ever logged", so after a set is edited or deleted it has to be worked out again */
 function rebuildPR(ex){
   let best=null;
-  for (const k of gymSessions(ex)) for (const st of S.gym[k][ex]){
+  for (const k of gymSessions(ex)) for (const st of workSets(S.gym[k][ex])){
     const v=e1rmVal(ex,st.w,st.r);
     if (!best || v>best.e1rm+0.01) best={w:st.w,r:st.r,e1rm:v,date:k};
   }
@@ -2416,7 +2444,7 @@ function exRxLine(ex,label){
   const map={ deload:[`DELOAD: ${w} · 3×5 easy`,'var(--moss)'],
     first:[`START: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
     progress:[`NEW WEIGHT: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
-    repeat:[`REPEAT ${w} — get all ${rx.sets*rx.reps}`,'var(--steel)'],
+    repeat:[rx.back?`BACK TO ${w} — you dropped last time, get all ${rx.sets*rx.reps}`:`REPEAT ${w} — get all ${rx.sets*rx.reps}`,'var(--steel)'],
     reset:[`RESET: ${w} · back off, climb again`,'var(--rust)'] };
   const [txt,c]=map[rx.mode];
   /* an optional nudge, never a change to the prescription: the last session's hardest logged set */
@@ -2432,39 +2460,58 @@ function rxLine(b){
   const exs=BLOCKEX[b.id]; if(!exs) return '';
   return exs.map(ex=>exRxLine(ex,exs.length>1)).join('');
 }
+/* A program lift's set log. It deliberately offers the same tools as a custom-workout exercise card: steppers, warm-up
+   set + ramp, plate math and bar choice, history, and the rest timer (default, per-lift override and bell). The only
+   difference is that the weight box falls back to the prescription when left blank. `lib` is the matching library
+   exercise: rest, bar and history are shared with it, so setting them in one place sets them in the other. */
+const libOf = ex => EXLINK_ID[ex]||ex;
+function gRxW(ex){ const rx=prescribe(ex); return rx&&rx.w>0 ? num(wIn(snapLoadKg(rx.w,ex))) : null; }
+let gHist=null;
+const isBarbellLift = ex => !EXS[ex].added && exInfo(libOf(ex)).eq==='barbell';
 function exGymHTML(ex,label){
-  const sets=(S.gym[VD()]&&S.gym[VD()][ex])||[];
+  const sets=(S.gym[VD()]&&S.gym[VD()][ex])||[], E=EXS[ex], lib=libOf(ex);
   const ge=gymEdit&&gymEdit.ex===ex&&gymEdit.vd===VD()&&sets[gymEdit.i]?gymEdit:null, gs=ge?sets[ge.i]:null;
   const rx=prescribe(ex);
   const flagged=S.flags[ex];
   const pr=S.prs[ex];
+  const dr=cdraft[VD()+'|g:'+ex]||{};
+  let n=0;
+  const fld=(f,lab,unit,ph,val)=>`<div class="sf"><div class="sfl">${lab}${unit?` <span>${unit}</span>`:''}</div>
+    <div class="sfi"><button class="stp" data-act="g-step" data-v="${ex}|${f}" data-v2="-1" aria-label="Decrease ${lab}">−</button>
+      <input type="number" step="0.5" id="${f==='w'?'sw_':'sr_'}${ex}" inputmode="decimal" placeholder="${ph}" value="${val}" aria-label="${lab}">
+      <button class="stp" data-act="g-step" data-v="${ex}|${f}" data-v2="1" aria-label="Increase ${lab}">+</button></div></div>`;
+  const rw=gRxW(ex);
   return `<div class="setlog">
     ${flagged?`<div class="painnote">${svg('shield',11,'var(--rust)')} <div>${esc(PAINSWAP[ex])}<button class="unflag" data-act="painflag" data-v="${ex}">clear flag</button></div></div>`:''}
     ${exNoteHTML(ex)}
-    <div class="eyebrow" style="margin:12px 0 8px">TODAY'S SETS — ${esc(EXS[ex].n).toUpperCase()}${EXS[ex].added?' (ADDED WEIGHT)':''}</div>
-    ${sets.map((s,i)=>{ const isPR = pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r;
-      return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${i+1}</span>`}
-      <button class="setedit" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${dispExact(s.w)} × ${s.r}${rpeTag(s)}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</button>
-      ${s.r>=EXS[ex].reps?svg('check',12,'var(--moss)',3):`<span style="font-size:var(--fs-caption);color:var(--rust)">-${EXS[ex].reps-s.r}</span>`}
+    <div class="eyebrow" style="margin:12px 0 8px">TODAY'S SETS — ${esc(E.n).toUpperCase()}${E.added?' (ADDED WEIGHT)':''}</div>
+    ${sets.map((s,i)=>{ const isPR = !s.wu&&pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r; if (!s.wu) n++;
+      return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':n}</span>`}
+      <button class="setedit" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${dispExact(s.w)} × ${s.r}${rpeTag(s)}${s.wu?' <span class="e1" style="color:var(--steel)">WARM-UP</span>':''}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</button>
+      ${s.wu?'':s.r>=E.reps?svg('check',12,'var(--moss)',3):`<span style="font-size:var(--fs-caption);color:var(--rust)">-${E.reps-s.r}</span>`}
       <button class="x" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`;}).join('')}
     ${ge?`<div class="note" style="border:1px solid var(--amber);color:var(--amber);margin-bottom:8px">EDITING SET ${ge.i+1} · change the numbers, then save</div>`:''}
-    <div class="setadd">
-      <input type="number" step="0.5" id="sw_${ex}" inputmode="decimal" placeholder="${rx&&rx.w?dispLoad(rx.w,ex).replace(' ','&nbsp;'):'weight'}" value="${gs?wIn(gs.w):''}">
-      <span class="setx">×</span>
-      <input type="number" id="sr_${ex}" inputmode="numeric" placeholder="${EXS[ex].reps}" value="${gs?gs.r:''}">
-      <button class="chip on" data-act="addset" data-v="${ex}">${ge?'SAVE':'LOG SET'}</button>${ge?`<button class="chip" data-act="geditcancel">CANCEL</button>`:''}
-    </div>
-    ${rpeRow('g:'+ex,(cdraft[VD()+'|g:'+ex]||{}).rpe)}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-      <span style="font-size:var(--fs-caption);color:var(--faint)">Blank weight = prescribed. Blank reps = target.</span>
+    <div class="setadd2">${fld('w',E.added?'ADDED WEIGHT':'WEIGHT',wUnit()+(E.added?' · optional':''),rx&&rx.w?dispLoad(rx.w,ex).replace(/ (lb|kg)$/,''):'weight',gs?wIn(gs.w):'')}${fld('r','REPS','',E.reps,gs?gs.r:'')}</div>
+    ${isBarbellLift(ex)?`<div class="platehint" id="gplate_${ex}">${platesText(rw,lib)}</div>`:''}
+    <div style="margin-top:9px"><button class="chip ${dr.wu?'on':''}" data-act="w-wu" data-v="g:${ex}" aria-pressed="${!!dr.wu}">WARM-UP SET</button></div>
+    ${rpeRow('g:'+ex,dr.rpe)}
+    <div style="display:flex;gap:8px;margin-top:9px"><button class="btn" data-act="addset" data-v="${ex}" style="flex:2">${ge?`SAVE SET ${ge.i+1}`:'LOG SET'}</button>
+      ${ge?`<button class="btn ghost" data-act="geditcancel" style="flex:1">CANCEL</button>`:''}</div>
+    <div class="xtools">
+      <button data-act="g-ramp" data-v="${ex}">${svg('trend',11)} WARM-UP RAMP</button>
+      ${isBarbellLift(ex)?`<button data-act="w-exbar" data-v="${lib}">${svg('dumb',11)} BAR: ${trimNum(barFor(lib))} ${wUnit()}${(S.cpref.barEx[lib]||{})[unitKey()]>0?' (THIS LIFT)':''}</button>`:''}
+      <button data-act="g-hist" data-v="${ex}">${svg('trend',11)} HISTORY</button>
+      <button data-act="w-exrest" data-v="${lib}" aria-label="Rest after this exercise: ${restLabel((S.cpref.restEx||{})[lib])}. Tap to change.">${svg('clock',11)} REST: ${restLabel((S.cpref.restEx||{})[lib])}</button>
       ${!flagged?`<button class="flagbtn" data-act="painflag" data-v="${ex}">${svg('shield',10)} pain?</button>`:''}
     </div>
+    <div style="margin-top:8px;font-size:var(--fs-caption);color:var(--faint)">Blank weight = prescribed. Blank reps = target.</div>
+    ${gHist===ex?histHTML(lib,VD(),exInfo(lib)):''}
   </div>`;
 }
 function gymHTML(b){
   const exs=BLOCKEX[b.id]; if(!exs) return '';
-  return exs.map(ex=>exGymHTML(ex,exs.length>1)).join('');
+  return exs.map(ex=>exGymHTML(ex,exs.length>1)).join('')+`<div class="setlog" style="padding:0 0 4px 42px">${restPrefsHTML()}</div>`;
 }
 
 /* ================================================= exercise library + custom workouts == */
@@ -2558,8 +2605,9 @@ function dOut(str,k){ const n=num(str); if (n==null) return null; return k==='ca
 function fmtDur(sec){ sec=Math.max(0,Math.round(sec||0)); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
   return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`; }
 function fmtVol(kg){ return Math.round(isImp()?kg*2.20462:kg).toLocaleString()+' '+wUnit(); }
-function shortDate(k){ const [y,m,d]=k.split('-').map(Number);
-  return new Date(y,m-1,d).toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+const _sd={};      // toLocaleDateString is slow and the same few dates are formatted on every render
+function shortDate(k){ if (_sd[k]) return _sd[k]; const [y,m,d]=k.split('-').map(Number);
+  return (_sd[k]=new Date(y,m-1,d).toLocaleDateString(undefined,{month:'short',day:'numeric'})); }
 /* RPE (how hard a set felt, 6-10) is optional; sets without one are exactly as before */
 const RPE_CHOICES=[6,7,7.5,8,8.5,9,9.5,10];
 const rpeTag = s => s&&s.rpe>0 ? ` @${s.rpe}` : '';
@@ -2627,20 +2675,31 @@ function bestLabel(k,s){
 }
 
 /* ---------- history: every set ever logged for an exercise, from any workout ---------- */
+/* one pass over every custom workout builds the per-exercise lists (oldest first), so a screen with many exercise cards
+   doesn't rescan the whole history for each. The lists are shared: read them, never change them. */
+function histIndex(){
+  return memo('histIndex',()=>{
+    const ix={};
+    for (const k of Object.keys(S.cust||{})){
+      const sets=S.cust[k] && S.cust[k].sets; if (!sets) continue;
+      for (const id in sets) if (sets[id] && sets[id].length) (ix[id]=ix[id]||[]).push({date:k,sets:sets[id]});
+    }
+    for (const id in ix) ix[id].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+    return ix;
+  });
+}
 function exHist(id){
-  const out=[];
-  for (const k of Object.keys(S.cust||{})){
-    const s=S.cust[k] && S.cust[k].sets && S.cust[k].sets[id];
-    if (s && s.length) out.push({date:k,sets:s});
-  }
-  const keys=EXLINK_REV[id];
-  if (keys) for (const k of Object.keys(S.gym||{})) for (const pk of keys){
-    const s=S.gym[k] && S.gym[k][pk]; if (!s || !s.length) continue;
-    const e=out.find(o=>o.date===k);
-    if (e) e.sets=e.sets.concat(s.map(x=>({w:x.w,r:x.r,rpe:x.rpe}))); else out.push({date:k,sets:s.map(x=>({w:x.w,r:x.r,rpe:x.rpe}))});
-  }
-  out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
-  return out;
+  return memo('hist:'+id,()=>{
+    const base=histIndex()[id]||[], keys=EXLINK_REV[id];
+    if (!keys) return base;
+    const by=new Map(base.map(o=>[o.date,o]));         // sets logged on a planned day count as history for the matching library exercise
+    for (const k of Object.keys(S.gym||{})) for (const pk of keys){
+      const s=S.gym[k] && S.gym[k][pk]; if (!s || !s.length) continue;
+      const m=s.map(x=>({w:x.w,r:x.r,rpe:x.rpe,wu:x.wu})), e=by.get(k);
+      by.set(k,{date:k,sets:e?e.sets.concat(m):m});
+    }
+    return [...by.values()].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  });
 }
 function lastBefore(id,date){ const h=exHist(id).filter(x=>x.date<date); return h.length?h[h.length-1]:null; }
 function bestSet(id,before){
@@ -2728,7 +2787,7 @@ function exSearch(q,mu,eq){
 let exPickOpen=false, exQ='', exMu='', exEq='', exCreate=false, exFocus=false,
     cwOpen=null, cwHist=null, armDiscard=false, armRm=null,
     fightOpen=false, fightEdit=null, fdraft=null,
-    armFight=null, wlSub='workouts', wlOpenEx=null, wlOpenDay=null, cdraft={}, rest=null, restIv=null, editSet=null, gymEdit=null;
+    armFight=null, wlLim=60, wlSub='workouts', wlOpenEx=null, wlOpenDay=null, cdraft={}, rest=null, restIv=null, editSet=null, gymEdit=null;
 
 /* backups from before this feature, or a hand-edited one, can lack these keys or have the wrong shapes */
 function normalizeCustom(){
@@ -2900,6 +2959,13 @@ function foodListHTML(){
             <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="0.5">½</button>
             <button class="fresq" data-act="addfood" data-v="${idx}" data-v2="2">2×</button></div>`;}).join('')||(S.myfoods.length&&myFoodMatches(foodQ).length?'':'<div class="empty">No match - use custom below.</div>');
 }
+/* default rest + end-of-rest bell: one setting, shown on both the program lifts and a custom workout */
+function restPrefsHTML(){
+  return `<div class="xmode"><span>Default rest</span>
+      <div class="seg2">${[[0,'OFF'],[60,'1:00'],[90,'1:30'],[120,'2:00'],[180,'3:00']].map(([s,l])=>`<button class="${(S.cpref.rest||0)===s?'on':''}" data-act="w-rest" data-v="${s}">${l}</button>`).join('')}</div></div>
+    <div class="xmode"><span>Rest-over bell</span>
+      <div class="seg2"><button class="${S.cpref.restSound!==false?'on':''}" data-act="w-restsound" data-v="on">BELL</button><button class="${S.cpref.restSound===false?'on':''}" data-act="w-restsound" data-v="off">SILENT</button></div></div>`;
+}
 function restBar(){
   if (!rest) return '';
   const left=Math.max(0,Math.ceil((rest.end-Date.now())/1000));
@@ -2920,6 +2986,8 @@ function exNoteHTML(id){
 /* how long to rest after a set of this exercise: its own setting if it has one (0 = no timer), else the workout-wide default */
 const REST_CHOICES=[null,0,45,60,90,120,180,240];
 function restFor(id){ const v=(S.cpref.restEx||{})[id]; return v!=null ? v : (S.cpref.rest||0); }
+/* timed holds and cardio only rest if you gave that exercise its own rest: a run has no rest, a plank between sets does */
+const restSecs=(id,k)=>(k==='time'||k==='cardio')?((S.cpref.restEx||{})[id]||0):restFor(id);
 const restLabel=v=>v==null?'DEFAULT':v===0?'OFF':fmtDur(v);
 /* Vibration doesn't exist on iOS Safari / home-screen apps, so the end of a rest has to be audible too.
    Reuses the round timer's bell; the audio context is created inside the LOG SET tap (restStart), which iOS requires. */
@@ -3191,18 +3259,17 @@ function WorkoutSection(vd,plan){
     <button class="logbtn tmrbtn" data-act="t-open">${svg('clock',13,'var(--rust)')} ROUND TIMER · BOXING, MUAY THAI, MMA, BJJ, TABATA</button>`;
   if (cw){
     const st=cwStats(cw);
-    h+=`${sect('dumb','YOUR WORKOUT')}
-    <div class="panel acc xw"><div class="acc-bar" style="background:var(--amber)"></div>
+    h+=`<button class="sect fold" data-act="w-min" aria-expanded="${!cw.min}">${svg('dumb',13,'var(--amber)')}<h2>YOUR WORKOUT</h2>
+      <span class="foldsum">${st.ex}/${cw.items.length} ${cw.items.length===1?'lift':'lifts'} · ${st.sets} ${st.sets===1?'set':'sets'}</span><div class="line"></div>
+      <span class="chev ${cw.min?'':'open'}" style="padding:0">${svg('chev',12)}</span></button>
+    ${cw.min?'':`<div class="panel acc xw"><div class="acc-bar" style="background:var(--amber)"></div>
       <div class="xwhead">
         <input class="xwname" type="text" data-cwin="name" placeholder="Name this workout (optional)" value="${esc(cw.name||'')}" maxlength="40" aria-label="Workout name">
         <div class="xwstats"><span><b>${st.ex}</b>/${cw.items.length} ${cw.items.length===1?'lift':'lifts'}</span><span><b>${st.sets}</b> ${st.sets===1?'set':'sets'}</span>${st.vol>0?`<span><b>${esc(fmtVol(st.vol))}</b> moved</span>`:''}</div>
       </div>
       <div class="xmode"><span>Planned ${esc(plan.def.title)}</span>
         <div class="seg2"><button class="${rep?'on':''}" data-act="w-mode" data-v="replace">SET ASIDE</button><button class="${!rep?'on':''}" data-act="w-mode" data-v="with">KEEP BOTH</button></div></div>
-      <div class="xmode"><span>Default rest</span>
-        <div class="seg2">${[[0,'OFF'],[60,'1:00'],[90,'1:30'],[120,'2:00'],[180,'3:00']].map(([s,l])=>`<button class="${(S.cpref.rest||0)===s?'on':''}" data-act="w-rest" data-v="${s}">${l}</button>`).join('')}</div></div>
-      <div class="xmode"><span>Rest-over bell</span>
-        <div class="seg2"><button class="${S.cpref.restSound!==false?'on':''}" data-act="w-restsound" data-v="on">BELL</button><button class="${S.cpref.restSound===false?'on':''}" data-act="w-restsound" data-v="off">SILENT</button></div></div>
+      ${restPrefsHTML()}
       ${cw.items.length===0 ? startChooserHTML(vd,plan) : `<div class="xlist">${cw.items.map((id,i)=>exCardHTML(cw,id,i,vd)).join('')}</div>`}
       <button class="btn ghost" data-act="w-pick" style="border:none;border-top:1px solid var(--rule)">${svg('plus',13)} ADD EXERCISE</button>
       ${cw.fin?`<div class="banner moss" style="margin:12px 13px 0">${svg('check',14,'var(--moss)',3)}<div><b>Finished.</b> ${st.sets} ${st.sets===1?'set':'sets'} across ${st.ex} ${st.ex===1?'lift':'lifts'}${st.vol>0?`, ${esc(fmtVol(st.vol))} moved`:''}${cw.t0&&cw.t1?` in ${Math.max(1,Math.round((cw.t1-cw.t0)/60000))} min`:''}. Every number above is now the benchmark next time.</div></div>`:''}
@@ -3212,7 +3279,7 @@ function WorkoutSection(vd,plan){
         <button class="btn" data-act="w-fin" style="flex:2">${cw.fin?'REOPEN WORKOUT':'FINISH WORKOUT'}</button>
         <button class="btn ghost" data-act="w-routine" style="flex:2">SAVE AS ROUTINE</button>
         <button class="btn ghost" data-act="w-discard" style="flex:1;color:var(--rust)">${armDiscard?'SURE?':'DROP'}</button></div>
-    </div>`;
+    </div>`}`;
   }
   h+=FightSection(vd);
   h+=`<div class="logrow"><button class="logbtn" data-act="view" data-v="wlog">${svg('trend',12,'var(--faint)')} WORKOUTS, PRs, ROUTINES</button>
@@ -3318,7 +3385,7 @@ function wlWorkouts(){
     <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${wkVol?esc(fmtVol(wkVol)):'—'}</div><div class="l">MOVED</div></div></div>`;
   if (!all.length) return h+`<div class="panel"><div class="empty">Nothing yet. On Today, tap EDIT WORKOUT or ADD WORKOUT, pick your exercises and log some sets.</div></div>`;
   h+=sect('dumb','LOGGED WORKOUTS');
-  h+=all.slice(0,60).map(k=>{
+  h+=all.slice(0,wlLim).map(k=>{
     const cw=S.cust[k], st=cwStats(cw), open=wlOpenDay===k;
     return `<div class="panel"><button class="wlhead" data-act="wl-day" data-v="${k}" aria-expanded="${open}">
         <div style="flex:1;text-align:left"><div class="wlt">${esc(cw.name||'Workout')}</div>
@@ -3331,6 +3398,7 @@ function wlWorkouts(){
           <button class="btn ghost" data-act="wl-share" data-v="${k}" style="flex:1">SHARE</button>
           <button class="btn ghost" data-act="wl-repeat" data-v="${k}" style="flex:2">REPEAT ON ${VD()===T?'TODAY':'THIS DAY'}</button>
           <button class="btn ghost" data-act="wl-delday" data-v="${k}" style="flex:1;color:var(--rust)">DELETE</button></div></div>`:''}</div>`; }).join('');
+  if (all.length>wlLim) h+=`<button class="btn ghost" data-act="wl-more" style="width:100%;margin-bottom:13px">SHOW ${Math.min(60,all.length-wlLim)} MORE · ${all.length-wlLim} OLDER</button>`;
   return h;
 }
 function wlLifts(){
@@ -3404,6 +3472,7 @@ function wAct(a,v,v2,el){
       commit();
       toast(ids.length?`${ids.length} exercises loaded`:'Nothing to load'); return;
     }
+    case 'w-min': if (cw){ cw.min=!cw.min; commit(); } return;
     case 'w-mode': if (cw){ cw.mode=v==='replace'?'replace':'with'; commit(); } return;
     case 'w-rest': S.cpref.rest=+v||0; commit(); return;
     case 'w-exbar': {
@@ -3439,7 +3508,7 @@ function wAct(a,v,v2,el){
     case 'w-addex': {
       if (!cw) return;
       if (cw.items.includes(v)){ toast('Already in this workout'); cwOpen=v; return; }
-      cw.items.push(v); cwOpen=v; exFocus=true;
+      cw.items.push(v); cw.min=false; cwOpen=v; exFocus=true;
       const rc=S.cpref.recent||[]; S.cpref.recent=[v,...rc.filter(x=>x!==v)].slice(0,16);
       touch(); commit(); toast(`${exInfo(v).n} added`); return;
     }
@@ -3513,7 +3582,7 @@ function wAct(a,v,v2,el){
       if (cw.fin){ cw.fin=false; cw.t1=null; }
       commit();
       const grp=s.wu?null:ssOf(cw,id), gi=grp?grp.indexOf(id):-1, lastInGrp=!grp||gi===grp.length-1;
-      if (!s.wu && E.k!=='time' && E.k!=='cardio' && lastInGrp && restFor(id)>0) restStart(restFor(id));      // no timer after a warm-up, or between the exercises of a superset
+      if (!s.wu && lastInGrp && restSecs(id,E.k)>0) restStart(restSecs(id,E.k));      // no timer after a warm-up, or between the exercises of a superset
       if (grp){ cwOpen=grp[(gi+1)%grp.length]; }                                        // alternate: A -> B -> rest -> A
       if (isPR){ toast(`New PR — ${fmtSet(E.k,s)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
       else toast(s.wu?`Warm-up: ${fmtSet(E.k,s)}`:`Set ${workSets(before).length+1}: ${fmtSet(E.k,s)}${grp&&!lastInGrp?` · next: ${exInfo(grp[gi+1]).n}`:''}`);
@@ -3621,6 +3690,7 @@ function wAct(a,v,v2,el){
 
     /* ---- history screen ---- */
     case 'wl-sub': wlSub=v; wlOpenEx=null; wlOpenDay=null; armDiscard=false; window.scrollTo(0,0); return;
+    case 'wl-more': wlLim+=60; return;
     case 'wl-day': wlOpenDay=wlOpenDay===v?null:v; armDiscard=false; return;
     case 'wl-ex': wlOpenEx=wlOpenEx===v?null:v; armDiscard=false; return;
     case 'wl-repeat': {
@@ -3630,7 +3700,7 @@ function wAct(a,v,v2,el){
       const fresh=!t.items.length;
       src.items.forEach(id=>{ if (!t.items.includes(id)) t.items.push(id); });
       if (fresh) ssCopy(t,src.sup,src.items);
-      view='today'; cwOpen=t.items[0]||null; commit(); window.scrollTo(0,0); toast('Workout loaded — benchmarks are filled in'); return;
+      t.min=false; view='today'; cwOpen=t.items[0]||null; commit(); window.scrollTo(0,0); toast('Workout loaded — benchmarks are filled in'); return;
     }
     case 'wl-delday': {
       if (wlOpenDay===v && armDiscard){ delete S.cust[v]; wlOpenDay=null; armDiscard=false; commit(); toast('Workout deleted'); return; }
@@ -3643,7 +3713,7 @@ function wAct(a,v,v2,el){
       const fresh=!t.items.length;
       r.items.forEach(id=>{ if (!t.items.includes(id)) t.items.push(id); });
       if (fresh) ssCopy(t,r.sup,r.items);
-      view='today'; cwOpen=t.items[0]||null; commit(); window.scrollTo(0,0); toast(`${r.name} loaded`); return;
+      t.min=false; view='today'; cwOpen=t.items[0]||null; commit(); window.scrollTo(0,0); toast(`${r.name} loaded`); return;
     }
     case 'wl-rtdel': S.routines=S.routines.filter(r=>r.id!==v); commit(); toast('Routine deleted'); return;
   }
@@ -4256,7 +4326,7 @@ function mmTally(fromOff,toOff){
     const add=(id,n)=>{ const E=exInfo(id); if (!n || !mmCountable(E)) return;
       for (const [m,w] of Object.entries(exMuscles(E))){ tot[m]=(tot[m]||0)+n*w; (by[m]=by[m]||{})[E.n]=(by[m][E.n]||0)+n*w; } };
     const cw=S.cust[k]; if (cw) for (const id of cw.items) add(id,workSets(cw.sets[id]||[]).length);
-    const g=S.gym[k]; if (g) for (const key of Object.keys(g)){ const id=EXLINK_ID[key]; if (id) add(id,(g[key]||[]).length); }
+    const g=S.gym[k]; if (g) for (const key of Object.keys(g)){ const id=EXLINK_ID[key]; if (id) add(id,workSets(g[key]||[]).length); }
   }
   return {tot,by};
 }
@@ -5981,6 +6051,7 @@ let lastRenderedView=null;
 let scrollReset=false, lastRenderedDay=null;                               // set by actions that change what the sheet lists (muscle/equipment filter)
 const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_)/;            // f_date is left out on purpose: after saving, the date goes back to today
 function render(){
+  _memo=null;
   const y=window.scrollY;
   const scrollers=[...document.querySelectorAll('.sheetbody,.exchips')].map(el=>[el.scrollTop,el.scrollLeft,el.className]);
   const typed={};
@@ -6152,12 +6223,12 @@ function handleClick(e){
       if (S.extra[v]){ S.extra[v].splice(+v2,1); if(!S.extra[v].length) delete S.extra[v]; }
       commit(); break;
     }
-    case 'view': view=v; editSet=null; gymEdit=null; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; briefEdit=false; briefBrowse=false; editSet=null; gymEdit=null; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
     case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
     case 'daygo':
-      viewOff=+v; shiftId=null; foodOpen=false; openBlock2=null; break;
+      viewOff=+v; shiftId=null; foodOpen=false; openBlock2=null; briefEdit=false; briefBrowse=false; render(); window.scrollTo(0,0); return;     // the quote editor/browser is tall: don't carry it to the next day; land on the top of the new day, not wherever the old one was scrolled
     case 'daygo2':
       viewOff=+v; view='today'; shiftId=null; foodOpen=false; openBlock2=null; render(); window.scrollTo(0,0); return;
 
@@ -6177,19 +6248,20 @@ function handleClick(e){
     case 'setprog': S.profile.program=v; WEEK=WEEKS[v]||WEEK_STD; commit(); toast(PROGRAMS[v].n+' active from today'); break;
     case 'logmeal': {
       const m=MEALS.find(x=>x.id===v); if(!m){ toast('Meal not found'); return; }
+      const dt=day(T);       // the Fuel tab shows today's totals, so meals logged from it go to today even if another day is open on Today
       let n=0;
       m.slots.forEach(s=>s.items.forEach(([nm,qq])=>{
         const it=FOODIDX[nm]; if(!it) return;
-        d.food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq}); n++;
+        dt.food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq}); n++;
       }));
-      commit(); render(); toast(`${n} items logged — ${Math.round(foodTotals(VD()).kcal)} kcal today`); return;
+      commit(); render(); toast(`${n} items logged — ${Math.round(foodTotals(T).kcal)} kcal today`); return;
     }
     case 'logslot': {
       const m=MEALS.find(x=>x.id===v); if(!m) return;
       const slot=m.slots[+v2]; if(!slot) return;
       slot.items.forEach(([nm,qq])=>{
         const it=FOODIDX[nm]; if(!it) return;
-        d.food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq});
+        day(T).food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq});
       });
       commit(); render(); toast(`${slot.w} logged`); return;
     }
@@ -6347,7 +6419,7 @@ function handleClick(e){
 
     /* ---- progression ---- */
     case 'addset': {
-      const ex=v, E=EXS[ex], rx=prescribe(ex);
+      const ex=v, E=EXS[ex], rx=prescribe(ex), dk=VD()+'|g:'+ex, dr=cdraft[dk]||{};
       let w=inLoad((document.getElementById('sw_'+ex)||{}).value);
       let r=num((document.getElementById('sr_'+ex)||{}).value);
       if (w==null) w = rx&&rx.w!=null ? snapLoadKg(rx.w,ex) : null;   // log what the placeholder shows
@@ -6356,24 +6428,33 @@ function handleClick(e){
       if (w==null) w=0;
       if (w<0 || r<1){ toast('Weight and reps must be positive'); return; }
       const ge=gymEdit&&gymEdit.ex===ex&&gymEdit.vd===VD()&&S.gym[VD()]&&S.gym[VD()][ex]&&S.gym[VD()][ex][gymEdit.i]?gymEdit:null;
+      const rp=num(dr.rpe), flags=ns=>{ if (rp>0) ns.rpe=rp; else delete ns.rpe; if (dr.wu) ns.wu=1; else delete ns.wu; return ns; };
       if (ge){      // editing: needs real numbers, not the prescription a blank box would fall back to
         const rw=inLoad((document.getElementById('sw_'+ex)||{}).value), rr=num((document.getElementById('sr_'+ex)||{}).value);
         if ((rw==null&&!E.added) || rr==null){ toast('Enter weight and reps to save the change'); return; }
-        const rp=num((cdraft[VD()+'|g:'+ex]||{}).rpe);
-        S.gym[VD()][ex][ge.i]={w:Math.round((rw??0)*100)/100, r:Math.round(rr), ...(rp>0?{rpe:rp}:{})};
-        delete cdraft[VD()+'|g:'+ex]; gymEdit=null; rebuildPR(ex); commit(); render(); toast(`Set ${ge.i+1} updated`); return;
+        const old=S.gym[VD()][ex][ge.i];
+        S.gym[VD()][ex][ge.i]=flags({...old, w:Math.round((rw??0)*100)/100, r:Math.round(rr)});     // keeps p / dl from when it was logged
+        delete cdraft[dk]; gymEdit=null; rebuildPR(ex); commit(); render(); toast(`Set ${ge.i+1} updated`); return;
       }
       if (!S.gym[VD()]) S.gym[VD()]={};
       if (!S.gym[VD()][ex]) S.gym[VD()][ex]=[];
-      const rp=num((cdraft[VD()+'|g:'+ex]||{}).rpe);
-      S.gym[VD()][ex].push({w:Math.round(w*100)/100, r:Math.round(r), ...(rp>0?{rpe:rp}:{})});
-      delete cdraft[VD()+'|g:'+ex];
-      const isPR = checkPR(ex, Math.round(w*100)/100, Math.round(r), VD());
+      const set=flags({w:Math.round(w*100)/100, r:Math.round(r)});
+      /* remember what the plan asked for going into today (ignoring today's own sets), so a lighter day can be told from a new baseline */
+      const plan=prescribe(ex,VD());
+      if (!set.wu && plan && plan.w>0 && ['progress','repeat','reset'].includes(plan.mode)) set.p=Math.round(snapLoadKg(plan.w,ex)*100)/100;
+      if (deloadActive()) set.dl=1;
+      S.gym[VD()][ex].push(set);
+      delete cdraft[dk];
+      const isPR = set.wu ? false : checkPR(ex, set.w, set.r, VD());
       ['sw_','sr_'].forEach(p=>{ const el=document.getElementById(p+ex); if (el) el.value=''; });
-      commit(); render();
-      const n=S.gym[VD()][ex].length;
+      commit();
+      /* the same rest timer a custom workout uses: not after a warm-up, and in a superset only after its last exercise */
+      const grp=Object.values(BLOCKEX).find(g=>g.length>1&&g.includes(ex));
+      if (!set.wu && (!grp || grp[grp.length-1]===ex) && restFor(libOf(ex))>0) restStart(restFor(libOf(ex)));
+      render();
+      const n=workSets(S.gym[VD()][ex]).length;
       if (isPR){ toast(`New PR — ${dispExact(w)} × ${Math.round(r)}!`); try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(e){} }
-      else toast(`Set ${n}: ${dispExact(w)} × ${Math.round(r)}`);
+      else toast(set.wu?`Warm-up: ${dispExact(w)} × ${Math.round(r)}`:`Set ${n}: ${dispExact(w)} × ${Math.round(r)}`);
       return;
     }
     case 'delset': {
@@ -6385,8 +6466,27 @@ function handleClick(e){
       }
       commit(); break;
     }
-    case 'gedit': { gymEdit={ex:v,i:+v2,vd:VD()}; const st=((S.gym[VD()]||{})[v]||[])[+v2]; cdraft[VD()+'|g:'+v]={rpe:st&&st.rpe?String(st.rpe):''}; break; }
+    case 'gedit': { gymEdit={ex:v,i:+v2,vd:VD()}; const st=((S.gym[VD()]||{})[v]||[])[+v2]; cdraft[VD()+'|g:'+v]={rpe:st&&st.rpe?String(st.rpe):'',wu:st&&st.wu?'1':''}; break; }
     case 'geditcancel': if (gymEdit) delete cdraft[gymEdit.vd+'|g:'+gymEdit.ex]; gymEdit=null; break;
+    case 'g-step': {                                  // the − / + beside a program lift's weight and reps boxes
+      const [ex,f]=v.split('|'), inp=document.getElementById((f==='w'?'sw_':'sr_')+ex); if (!inp) return;
+      const cur=num(inp.value)!=null?num(inp.value):(f==='w'?(gRxW(ex)||0):EXS[ex].reps);
+      inp.value=trimNum(Math.max(0,cur+fieldStep(f)*(+v2)));
+      const p=document.getElementById('gplate_'+ex); if (p) p.textContent=platesText(num((document.getElementById('sw_'+ex)||{}).value)??gRxW(ex),libOf(ex));
+      return;
+    }
+    case 'g-ramp': {
+      const ex=v, E=exInfo(libOf(ex)), inp=document.getElementById('sw_'+ex);
+      const target=num(inp&&inp.value)??gRxW(ex);
+      if (!(target>0)){ toast('Enter your working weight first'); return; }
+      const steps=warmupRamp(target,E,libOf(ex));
+      if (!steps.length){ toast('Light enough to just start your first set'); return; }
+      if (!S.gym[VD()]) S.gym[VD()]={};
+      const list=S.gym[VD()][ex]=S.gym[VD()][ex]||[];
+      steps.forEach(([w,r])=>list.push({w:wOut(String(w)),r,wu:1}));
+      commit(); render(); toast(`${steps.length} warm-up sets added: ${steps.map(([w,r])=>w+'×'+r).join(', ')}`); return;
+    }
+    case 'g-hist': gHist=gHist===v?null:v; break;
     case 'painflag':
       if (S.flags[v]) delete S.flags[v]; else S.flags[v]=T;
       commit(); break;
@@ -6464,27 +6564,28 @@ document.addEventListener('input', e => {
     if (f==='w'){ const p=document.getElementById('plate_'+id); if (p) p.textContent=platesText(num(t.value),id); }
     return;
   }
+  if (/^sw_/.test(t.id||'')){ const ex=t.id.slice(3), p=document.getElementById('gplate_'+ex); if (p) p.textContent=platesText(num(t.value)??gRxW(ex),libOf(ex)); return; }
   if (t.dataset && t.dataset.ob){ if (obD) obD[t.dataset.ob]=t.value; return; }
-  if (t.dataset && t.dataset.camp){ S.camp[t.dataset.camp]=t.value; commit(); return; }
+  if (t.dataset && t.dataset.camp){ S.camp[t.dataset.camp]=t.value; commitSoon(); return; }
   if (t.dataset && t.dataset.chd){ if (chDraft) chDraft[t.dataset.chd]=t.value; return; }
-  if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commit(); return; }
+  if (t.dataset && t.dataset.bm){ S.motiv[t.dataset.bm]=t.value; commitSoon(); return; }
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
-  if (t.dataset && t.dataset.exnote){ const k=t.dataset.exnote, v=t.value.slice(0,200); if (v.trim()) S.cpref.notes[k]=v; else delete S.cpref.notes[k]; commit(); return; }
-  if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commit(); } return; }
+  if (t.dataset && t.dataset.exnote){ const k=t.dataset.exnote, v=t.value.slice(0,200); if (v.trim()) S.cpref.notes[k]=v; else delete S.cpref.notes[k]; commitSoon(); return; }
+  if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commitSoon(); } return; }
   if (t.id==='foodq'){ foodQ=t.value; const r=document.getElementById('foodres'); if (r) r.innerHTML=foodResultsHTML(); return; }   // filter live, swap only the list
   if (t.id==='foodg'){ foodG=t.value; return; }                              // amount box: remember, no re-render
   const el=t.closest('[data-in]'); if(!el) return;
   const path=el.dataset.in, val=el.value;
-  if (path.startsWith('rv.')){ day(VD()).rv[path.slice(3)]=val; commit(); return; }
+  if (path.startsWith('rv.')){ day(VD()).rv[path.slice(3)]=val; commitSoon(); return; }
   if (path==='profile.heightD'){
     const n=num(val); if(n==null) return;
     S.profile.height=S.profile.unit==='imperial'?Math.round(n*2.54*10)/10:n;
-    commit(); return;                                   // no render - this was the blank-screen bug
+    commitSoon(); return;                               // no render - this was the blank-screen bug
   }
   const key=path.split('.')[1];
   if (el.tagName==='SELECT') return;                    // selects handled on change
   S.profile[key]=(key==='age'||key==='commute')?(num(val)??S.profile[key]):val;
-  commit();                                             // still no render
+  commitSoon();                                             // still no render
 });
 
 /* selects + time pickers - safe to re-render after commit */
@@ -6594,8 +6695,10 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
   };
   setTimeout(midnight,Math.max(ms,60000));
   document.addEventListener('visibilitychange', ()=>{
+    if (document.visibilityState==='hidden') flushSave();
     if (document.visibilityState==='visible' && dkey()!==T) location.reload();
   });
+  addEventListener('pagehide', flushSave);
 })();
 
 </script>
