@@ -25,7 +25,7 @@ async function openApp(browser, { state, width = 390, height = 900, ...opts } = 
   page.on('pageerror', e => page.errors.push(e.message));
   await page.goto(INDEX);
   await page.waitForFunction(() => typeof render === 'function' && document.getElementById('app') && document.getElementById('app').innerHTML.length > 0);
-  await page.evaluate(() => { S.meta.onboarded = true; render(); });
+  await page.evaluate(() => { S.meta.onboarded = true; S.ui.seen = tourAllSeen(); render(); });   // the tour has its own tests (tour.test.js)
   page.ctx = ctx;
   return page;
 }

@@ -53,6 +53,11 @@
   --banner-moss-bg:#121A0F;  --banner-moss-border:#243318;
   --banner-steel-bg:#0F161C; --banner-steel-border:#1C2A36;
 }
+.tour{background:var(--banner-steel-bg);border:1px solid var(--banner-steel-border);border-left:3px solid var(--steel);padding:13px;margin:0 0 14px}
+.tourh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tour ul{margin:10px 0 12px;padding-left:16px;font-size:var(--fs-body);color:var(--dim);line-height:1.6}
+.tour li{margin-bottom:6px}
+.tour b{color:var(--text)}
 html[data-text=large]{--fs-nano:9.5px;--fs-label:10.5px;--fs-caption:11px;--fs-detail:12.5px;--fs-body:13px;--fs-title:14.5px;--fs-form:15px;--fs-headline:16px}
 html[data-text=xl]{--fs-nano:11px;--fs-label:12px;--fs-caption:12.5px;--fs-detail:14px;--fs-body:15px;--fs-title:16px;--fs-form:16.5px;--fs-headline:17.5px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -988,7 +993,7 @@ const WEEK_STD = [
    {id:'d7b',l:'Long mobility - 30 min',d:'2 min per position',steps:['Deep squat 2 min','Pigeon 2 min/side','Couch stretch 2 min/side','Wall thoracic rotation x10/side','Hang from a bar 3 x 45s']},
    {id:'d7c',l:'Sauna or contrast',d:'Optional',steps:['15-20 min sauna if available, or hot shower 3 min / cold 1 min x3, finish cold.','Skip it entirely if it costs sleep time. Sleep outranks it.']},
    {id:'d7d',l:'Log the week',d:'Numbers, not impressions',steps:['Body tab: weight, waist, sleep average, and any top sets from the week.','Ledger: one honest look at the capital ladder. Move anything that actually moved.']},
-   {id:'d7e',l:'Plan the week',d:'Sessions become appointments',steps:['Open Plan. Check the fixed commitments match next week\'s reality.','Anything unusual - exam, trip, deadline - add it now and the schedule reroutes around it.','Read Saturday\'s "tomorrow\'s one thing". Set Monday\'s.']}]},
+   {id:'d7e',l:'Plan the week',d:'Sessions become appointments',steps:['Open Settings (gear). Check the fixed commitments match next week\'s reality.','Anything unusual - exam, trip, deadline - add it now and the schedule reroutes around it.','Read Saturday\'s "tomorrow\'s one thing". Set Monday\'s.']}]},
 ];
 
 const MINDTASK = [
@@ -1794,7 +1799,7 @@ const DEFAULTS = {
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
   camp:{}, campHist:[],                    // fight camp: { name, date, weighIn, target(kg), disc, start, startW }
-  ui:{ fold:{} },                          // which Today sections you've folded/unfolded
+  ui:{ fold:{}, seen:{} },                 // which Today sections you've folded/unfolded; which tour cards you've dismissed
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null, toastUndo = false, undoSnap = null;
@@ -2824,6 +2829,7 @@ function normalizeCustom(){
   if (!Array.isArray(S.campHist)) S.campHist=[];
   S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
   if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
+  if (!S.ui.seen||typeof S.ui.seen!=='object'||Array.isArray(S.ui.seen)) S.ui.seen={};
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},sup:{},note:'',t0:null,t1:null,fin:false}; }
@@ -3372,6 +3378,7 @@ function ViewWorkoutLog(){
   else if (wlSub==='fights') body=wlFights();
   else body=wlRoutines();
   return `<div class="view wrap">
+    ${Tour('wlog')}
     <div class="segwrap"><div class="seg">${tabs.map(([k,l])=>`<button class="segbtn ${wlSub===k?'on':''}" data-act="wl-sub" data-v="${k}">${l}</button>`).join('')}</div></div>
     ${body}</div>`;
 }
@@ -4732,7 +4739,9 @@ async function snapRestore(k){
   try{
     const json=await snapGet(k); if (!json){ toast('Snapshot not found'); return; }
     if (!k.startsWith('undo-')) await snapPut('undo-'+Date.now(),JSON.stringify(S)).catch(()=>{});   // a new key each time: restoring twice must not erase the first undo point
-    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(json));
+    const snap=JSON.parse(json);
+    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),snap);
+    if (!(snap.ui&&snap.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});
     S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true; normalizeCustom();
     WEEK=WEEKS[S.profile.program]||WEEK_STD; snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
   }catch(e){ toast('Could not restore that snapshot'); }
@@ -5121,6 +5130,41 @@ function foldHead(k,ico,title,summary){
 }
 
 /* ================================================================ header == */
+/* ---------------------------------------------------------- first-run tour -- */
+/* One short card the first time you open each screen (and Settings -> REPLAY TOUR brings them all back). Plain text, no
+   spotlight overlay: nothing to position, so it can't break when a layout changes. Anyone whose saved data predates the
+   tour, or who restores a backup, is treated as having seen it. */
+const TOUR={
+  today:['TODAY',[
+    '<b>NEXT</b> is what to do now. Tap a workout block to open it and log sets: a blank weight means the plan\'s weight, and the rest timer starts after each set.',
+    'Tap the <b>day strip</b> to look at or log another day. The <b>SWAP ⇄</b> badge changes today\'s workout.',
+    '<b>ADD WORKOUT</b> builds your own session, <b>ADD FIGHTING</b> logs mat, ring or bag time, and <b>FOOD</b> tracks calories and water.',
+    'The five bars at the top are your overall scores: tap one to see what builds it. The quote line opens your daily briefing.']],
+  wlog:['TRAIN',[
+    '<b>WORKOUTS</b> is everything you have logged: REPEAT loads one onto today. <b>MUSCLES</b> shows weekly sets per muscle.',
+    '<b>LIFTS</b> holds your records, for the program lifts and your own. <b>FIGHTS</b> has sessions and fight camp. <b>ROUTINES</b> are saved workouts.']],
+  build:['BODY',[
+    '<b>LOG</b> is where weigh-ins and measurements go. A weight unlocks the rest.',
+    '<b>FUEL</b> turns it into calorie and macro targets, with meal plans you can log in one tap. <b>TARGET</b> shows where your build is headed and sets your goal. <b>90 DAY</b> is the photo challenge.']],
+  mind:['MIND',[
+    'Tick <b>Daily intelligence</b> each day: twenty minutes on markets and economics. The streak matters more than the depth.',
+    'In the <b>Library</b>, tap a title to cycle queued, reading, finished.']],
+  ledger:['LEDGER',[
+    'The <b>weekly review</b> is at the top: read it on Sundays and adjust one thing.',
+    'Below it: records, <b>Capability</b> (rate yourself honestly), the <b>Capital ladder</b>, net worth and outreach. The long-term arc is folded at the bottom.']],
+  plan:['SETTINGS',[
+    'Pick your <b>program</b>, and add classes, work or practice under <b>MY WEEK</b>: FORGE schedules everything else around them.',
+    'Set your <b>bar and plates</b>, <b>text size</b>, and <b>back up your data</b> here. Your data lives only on this phone, so back up now and then.']],
+};
+const tourAllSeen=()=>Object.fromEntries(Object.keys(TOUR).map(k=>[k,1]));
+function Tour(key){
+  if (!S.meta.onboarded || (S.ui.seen||{})[key] || !TOUR[key]) return '';
+  const [name,items]=TOUR[key];
+  return `<div class="tour" role="note"><div class="tourh"><span class="eyebrow" style="color:var(--steel)">QUICK TOUR · ${name}</span>
+    <button class="linkbtn" data-act="tour-skip" style="margin:0">SKIP TOUR</button></div>
+    <ul>${items.map(t=>`<li>${t}</li>`).join('')}</ul>
+    <button class="btn" data-act="tour-ok" data-v="${key}">GOT IT</button></div>`;
+}
 /* what each of the five bars at the top is made of (mirrors pillars()) */
 const VITAL_HELP={
   BODY:'BODY: your lifts against bodyweight targets (60%) and your Engine tier (40%). Log sets on Today; set Engine in Ledger → Capability.',
@@ -5276,6 +5320,7 @@ function ViewToday(){
       </div>
       <button class="badge" data-act="swapopen" aria-label="Swap this day's workout" style="border-color:var(--amber);color:var(--amber)">${DTYPE[plan.def.type].label} · SWAP ⇄</button>
     </div>
+    ${vd===T?Tour('today'):''}
     ${vd===T?Briefing():''}
     ${vd===T?BackupBanner():''}
     ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
@@ -5419,6 +5464,7 @@ function ViewPlan(){
     <div class="dayhead" style="margin-top:14px"><div><div class="eyebrow">SETTINGS</div>
       <div class="disp" style="font-size:21px;margin-top:4px">Program, week and data</div></div>
       <button class="badge" data-act="view" data-v="today">DONE</button></div>
+    ${Tour('plan')}
     ${sect('dumb','TRAINING PROGRAM')}
     <div class="panel">
       ${Object.entries(PROGRAMS).map(([k,pr])=>`
@@ -5551,6 +5597,9 @@ function ViewPlan(){
       <label class="f"><span>Goal</span><select data-in="profile.goal">
         ${[['recomp','Recomposition'],['gain','Add muscle'],['lean','Lean out']].map(([v,l])=>`<option value="${v}" ${p.goal===v?'selected':''}>${l}</option>`).join('')}</select></label>
     </div></div>
+    ${sect('book','TUTORIAL')}
+    <div class="panel"><div style="padding:13px"><div class="det" style="margin-bottom:10px">A short card on each screen explaining what it is for. They show once; this brings them all back.</div>
+      <button class="btn ghost" data-act="tour-replay">REPLAY THE TOUR</button></div></div>
     ${sect('eye','TEXT SIZE')}
     <div class="panel"><div class="chips" style="padding:13px">${[['','NORMAL'],['large','LARGE'],['xl','EXTRA LARGE']].map(([v,l])=>`<button class="chip ${(S.ui.text||'')===v?'on':''}" data-act="textsize" data-v="${v}" aria-pressed="${(S.ui.text||'')===v}">${l}</button>`).join('')}</div>
       <div class="note" style="border-top:none;padding-top:0">Makes the small print bigger everywhere. Saved on this phone.</div></div>
@@ -5854,6 +5903,7 @@ function ViewBuild(){
   const tabs=[['target','TARGET'],['fuel','FUEL'],['log','LOG'],['ch90','90 DAY']];
   const body = buildSub==='target'?ViewTarget() : buildSub==='fuel'?ViewFuel() : buildSub==='ch90'?ViewChallenge() : ViewLog();
   return `<div class="view wrap">
+    ${Tour('build')}
     <div class="segwrap"><div class="seg">${tabs.map(([k,l])=>`
       <button class="segbtn ${buildSub===k?'on':''}" data-act="buildsub" data-v="${k}">${l}</button>`).join('')}</div></div>
     ${body}
@@ -5865,6 +5915,7 @@ function ViewMind(){
   const done=Object.values(S.books).filter(v=>v===2).length;
   const d=day(T);
   return `<div class="view wrap">
+    ${Tour('mind')}
     ${sect('globe','DAILY INTELLIGENCE')}
     <div class="hint">Twenty minutes, same time daily. The goal is a running model of how money and power are moving - and noticing when it changes.</div>
     <div class="panel">
@@ -5912,6 +5963,7 @@ function ViewLedger(){
   const week=Array.from({length:7},(_,i)=>S.reach[dkey(-i)]||0).reduce((a,b)=>a+b,0);
   const nwVals=S.nw.map(x=>x.v);
   return `<div class="view wrap">
+    ${Tour('ledger')}
     ${WeekReview()}
     ${sect('award','RECORDS')}
     <div class="stats">
@@ -6274,6 +6326,9 @@ function handleClick(e){
       S.cpref.plates[u]=next.sort((a,b)=>b-a); commit(); break;
     }
     case 'gearreset': delete S.cpref.bar[unitKey()]; delete S.cpref.plates[unitKey()]; commit(); toast('Bar and plates reset'); return;
+    case 'tour-ok': S.ui.seen[v]=1; commit(); break;
+    case 'tour-skip': S.ui.seen=tourAllSeen(); commit(); toast('Tour skipped. REPLAY THE TOUR is in Settings.'); return;
+    case 'tour-replay': S.ui.seen={}; commit(); view='today'; viewOff=0; render(); window.scrollTo(0,0); toast('Tour restarted. Each screen explains itself once.'); return;
     case 'textsize': S.ui.text=v||''; commit(); break;
     case 'vital': { const P=VITAL_HELP[v]; if (P) toast(P,false,6000); return; }
     case 'setprog': S.profile.program=v; WEEK=WEEKS[v]||WEEK_STD; commit(); toast(PROGRAMS[v].n+' active from today'); break;
@@ -6571,6 +6626,7 @@ function handleClick(e){
       if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
       snapPut('undo-'+Date.now(),JSON.stringify(S)).then(snapDaily).catch(()=>{});   // today's state stays recoverable under "Undo a restore"
       S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
+      if (!(parsed.ui&&parsed.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});         // restoring a backup is never a first run
       S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;   // restoring a backup is never a first run
       normalizeCustom();
       importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
@@ -6668,6 +6724,7 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
   const saved=await Store.load();
   if (saved){
     S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),saved);
+    if (!(saved.ui&&saved.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});     // saved before the tour existed: not a first run
     S.profile=Object.assign({},DEFAULTS.profile,saved.profile||{});
     S.fixed=Object.assign({},DEFAULTS.fixed,saved.fixed||{});
     S.meta=Object.assign({},DEFAULTS.meta,saved.meta||{});
