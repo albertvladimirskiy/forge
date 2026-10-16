@@ -30,7 +30,7 @@ Fuel and Target use the **7-day average** of your weigh-ins (not a single readin
 math; the weight chart draws it as a dashed line. Today's food panel also tracks **water** against 40 ml per kg of bodyweight, and
 has COPY YESTERDAY'S FOOD, RECENT foods and saved MY FOODS.
 
-Insurance: **Codex → Export backup** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
+Insurance: **Settings (gear) → Data + backup → Back up now** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
 **Import** to restore. Do it monthly.
 
 One wrinkle after updates: the service worker caches hard. If new code doesn't appear,
@@ -73,10 +73,13 @@ program's progression untouched; KEEP BOTH shows the plan too) and ADD FIGHTING 
 worked / got you caught). Nothing is prescribed in a custom workout: each exercise shows what you did the last time you logged it
 anywhere (30 push-ups last week means 30 is the benchmark and the prefill), flags PRs, and sets from the program's own lifts count
 as history for the matching library exercise (`EXLINK`). Rest timer, plate math for barbell lifts, favorites, routines and a
-history / lift-PR screen (ALL WORKOUTS link under the workout area, or Codex) are included. Custom data lives in `S.cust`,
+history / lift-PR screen (the TRAIN tab, or the link under the workout area) are included. Custom data lives in `S.cust`,
 `S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
 
-Set logging details: tap a set to **edit** it in place (custom workouts and the program's own lifts). **WARM-UP SET** tags a set
+Set logging details: the program's own lifts and custom exercises have the same tools — steppers, warm-up set and ramp, plate
+math and bar choice, history, RPE, notes, edit in place, and the rest timer (default length and bell are one setting; each lift can
+override its rest, shared between its program and custom versions; timed holds and cardio only rest if you give them their own rest).
+Tap a set to **edit** it in place. **WARM-UP SET** tags a set
 so it never counts toward PRs, benchmarks, volume or the rest timer, and **WARM-UP RAMP** fills in the bar and ~50/70/85% steps up
 to the weight in the box. Optional **RPE** (6-10) goes on any lifting set; a program lift whose last session hit RPE 9.5+ gets a
 plain-text "repeat it if that was a grind" nudge (the prescription itself is unchanged). The rest timer rings a bell when it ends
@@ -90,24 +93,31 @@ shown when it's open, and as a one-liner when collapsed). Under LAST TIME a **NE
 working sets and RPE; it never changes anything by itself. **SHARE WORKOUT SUMMARY** (and SHARE on past workouts) sends a plain
 text recap through the share sheet or the clipboard.
 
+**Progression and a bad day.** Every program set remembers what the plan asked for that day. If you train lighter (say 135 when it
+said 155) the app tells you to repeat that weight for the rest of the day, and once you hit every rep the next session goes *back* to
+155 instead of climbing from 135. Missing reps at the lighter weight is not excused, and two lighter days in a row are accepted as
+your new baseline (so you can't get stuck on a weight you can't lift). Deload-week sets are flagged and never become the baseline
+the next weeks climb from; the ramp-week discount only trims a starting weight guessed from the Log tab. The custom workout panel
+on Today minimizes to one line (tap its header); the choice is saved with that day's workout.
+
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 
-- **Daily briefing** (top of Today): one line picked by what's happening (first week, PR, comeback after missed days,
+- **Daily briefing** (top of Today, one collapsed line until you tap it): one line picked by what's happening (first week, PR, comeback after missed days,
   streak at risk in the evening, fight camp, lift / fight / build day), your written *why*, your own lines mixed into the
   rotation, and play buttons for your own speeches or playlists. Lines live in `BRIEF_LINES`; add your own in the app.
 - **Round timer**: boxing / pro / Muay Thai / MMA / BJJ / wrestling / bag / Tabata presets or custom, synthesized bell and
   clapper, wake lock, drift-free timing. Ends by logging a fight session (or a set, when opened from an exercise card).
-- **Muscle map** (Workouts → BODY, or MUSCLE MAP on Today): weekly sets per muscle from custom workouts and program lifts,
+- **Muscle map** (Train → MUSCLES, or MUSCLE MAP on Today): weekly sets per muscle from custom workouts and program lifts,
   with half-set credit to helper muscles on compound lifts. Targets in `MM_REG`, helper rules in `MM_SEC`.
-- **90-day challenge** (Build → 90 DAY): day counter + grid, weekly check-ins with front/side/back photos and
+- **90-day challenge** (Body → 90 DAY): day counter + grid, weekly check-ins with front/side/back photos and
   measurements, side-by-side compare. Photos stay in IndexedDB on the device (not in the JSON backup): use SAVE PHOTOS.
-- **Fight camp** (Workouts → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
+- **Fight camp** (Train → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
   weight-cut tracker that flags unsafe paces. Sessions can record sparring partners.
 - **Safety**: daily automatic snapshots (last 14, with undo) in IndexedDB, a weekly backup nudge that saves through the share
   sheet, restore from a backup file (an import takes an undo snapshot first), and a calendar (.ics) export of the week so your
   phone's calendar does the reminding. Deleting a set, food, exercise, workout, routine or entry offers **UNDO** for a few seconds
-  (not 90-day photos, which are erased for good). A web app can't write to iCloud on its own, so backups stay manual; **Codex →
-  This file** also exports workouts, body log, food log and fight sessions as CSV for a spreadsheet.
+  (not 90-day photos, which are erased for good). A web app can't write to iCloud on its own, so backups stay manual; **Settings →
+  Data + backup** also exports workouts, body log, food log and fight sessions as CSV for a spreadsheet.
 - **First run**: a five-step setup on a fresh install; existing data skips it. Lower Today sections fold and remember it.
 
 ### Quotes from real athletes (`quotes-db.js`)
@@ -148,3 +158,7 @@ uncaught error inside the app fails the test. If Playwright or Chromium live som
 `tests/fixtures/old-state.json` is a saved app produced by the original build (before the set-logging, food, plate and water
 features); `migration.test.js` loads it with its dates moved to "now", visits every screen, and checks nothing was lost or changed.
 To refresh it after a future data-shape change, regenerate it from the build you want to protect.
+
+**Settings** (the gear, or SETTINGS + WEEK on Today) holds the program, your week, reminders, calendar export, barbell + plates, body profile, **text size** (normal / large / extra large), and backup, restore, CSV export and snapshots. Tap any of the five bars at the top to see what it is made of.
+
+**Tabs:** TODAY (the day), TRAIN (workout log, muscles, lift records, fights and camp, routines), BODY (target, fuel, log, 90-day), MIND, LEDGER (weekly review, records, capability, capital, net worth, network, and a folded THE ARC / standing orders / file status).

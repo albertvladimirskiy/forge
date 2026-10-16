@@ -1,7 +1,7 @@
 const { oldState, openApp, app } = require('./lib');
 
 const SCREENS = [['today', '', 0], ['today', '', -3], ['plan', '', 0], ['build', 'target', 0], ['build', 'fuel', 0], ['build', 'log', 0], ['build', 'ch90', 0],
-  ['mind', '', 0], ['ledger', '', 0], ['codex', '', 0], ['wlog', 'workouts', 0], ['wlog', 'body', 0], ['wlog', 'lifts', 0], ['wlog', 'fights', 0]];
+  ['mind', '', 0], ['ledger', '', 0], ['plan', 'arc', 0], ['wlog', 'workouts', 0], ['wlog', 'body', 0], ['wlog', 'lifts', 0], ['wlog', 'fights', 0]];
 
 /* anything poking past the right edge that isn't inside a container that scrolls on purpose */
 const overflow = page => page.evaluate(() => {
