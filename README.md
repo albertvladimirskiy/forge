@@ -116,8 +116,8 @@ on Today minimizes to one line (tap its header); the choice is saved with that d
 - **Safety**: daily automatic snapshots (last 14, with undo) in IndexedDB, a weekly backup nudge that saves through the share
   sheet, restore from a backup file (an import takes an undo snapshot first), and a calendar (.ics) export of the week so your
   phone's calendar does the reminding. Deleting a set, food, exercise, workout, routine or entry offers **UNDO** for a few seconds
-  (not 90-day photos, which are erased for good). A web app can't write to iCloud on its own, so backups stay manual; **Codex →
-  This file** also exports workouts, body log, food log and fight sessions as CSV for a spreadsheet.
+  (not 90-day photos, which are erased for good). A web app can't write to iCloud on its own, so backups stay manual; **Settings →
+  Data + backup** also exports workouts, body log, food log and fight sessions as CSV for a spreadsheet.
 - **First run**: a five-step setup on a fresh install; existing data skips it. Lower Today sections fold and remember it.
 
 ### Quotes from real athletes (`quotes-db.js`)
