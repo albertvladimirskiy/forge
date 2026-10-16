@@ -86,7 +86,7 @@ module.exports = { name: 'Data saved by the original build', tests: {
   async 'restoring the old backup through the paste box works and can be undone'(page, a){
     const raw = oldState();
     await page.evaluate(() => { S.log.push({ date: T, weight: 99 }); commit(); });
-    await page.evaluate(json => { view = 'codex'; importOpen = true; render(); importtxt.value = json; document.querySelector('[data-act=importgo]').click(); }, JSON.stringify(raw));
+    await page.evaluate(json => { view = 'plan'; importOpen = true; render(); importtxt.value = json; document.querySelector('[data-act=importgo]').click(); }, JSON.stringify(raw));
     await page.waitForTimeout(300);
     a.equal(await page.evaluate(() => S.log.length), 20);
     a.doesNotMatch(await app(page), /NaN|undefined|\[object/);

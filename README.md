@@ -30,7 +30,7 @@ Fuel and Target use the **7-day average** of your weigh-ins (not a single readin
 math; the weight chart draws it as a dashed line. Today's food panel also tracks **water** against 40 ml per kg of bodyweight, and
 has COPY YESTERDAY'S FOOD, RECENT foods and saved MY FOODS.
 
-Insurance: **Codex → Export backup** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
+Insurance: **Settings (gear) → Data + backup → Back up now** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
 **Import** to restore. Do it monthly.
 
 One wrinkle after updates: the service worker caches hard. If new code doesn't appear,
@@ -102,7 +102,7 @@ on Today minimizes to one line (tap its header); the choice is saved with that d
 
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 
-- **Daily briefing** (top of Today): one line picked by what's happening (first week, PR, comeback after missed days,
+- **Daily briefing** (top of Today, one collapsed line until you tap it): one line picked by what's happening (first week, PR, comeback after missed days,
   streak at risk in the evening, fight camp, lift / fight / build day), your written *why*, your own lines mixed into the
   rotation, and play buttons for your own speeches or playlists. Lines live in `BRIEF_LINES`; add your own in the app.
 - **Round timer**: boxing / pro / Muay Thai / MMA / BJJ / wrestling / bag / Tabata presets or custom, synthesized bell and
@@ -158,3 +158,5 @@ uncaught error inside the app fails the test. If Playwright or Chromium live som
 `tests/fixtures/old-state.json` is a saved app produced by the original build (before the set-logging, food, plate and water
 features); `migration.test.js` loads it with its dates moved to "now", visits every screen, and checks nothing was lost or changed.
 To refresh it after a future data-shape change, regenerate it from the build you want to protect.
+
+**Settings** (the gear, or SETTINGS + WEEK on Today) holds the program, your week, reminders, calendar export, barbell + plates, body profile, **text size** (normal / large / extra large), and backup, restore, CSV export and snapshots. Tap any of the five bars at the top to see what it is made of.

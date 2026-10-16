@@ -53,6 +53,8 @@
   --banner-moss-bg:#121A0F;  --banner-moss-border:#243318;
   --banner-steel-bg:#0F161C; --banner-steel-border:#1C2A36;
 }
+html[data-text=large]{--fs-nano:9.5px;--fs-label:10.5px;--fs-caption:11px;--fs-detail:12.5px;--fs-body:13px;--fs-title:14.5px;--fs-form:15px;--fs-headline:16px}
+html[data-text=xl]{--fs-nano:11px;--fs-label:12px;--fs-caption:12.5px;--fs-detail:14px;--fs-body:15px;--fs-title:16px;--fs-form:16.5px;--fs-headline:17.5px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* Kills the double-tap-to-zoom gesture (and the ~300ms tap delay with it)
    while explicitly leaving pinch-zoom alone — "manipulation" means exactly
@@ -1819,13 +1821,13 @@ function commit(){
   });
 }
 const toastInner = () => esc(toastMsg||'') + (toastUndo&&undoSnap ? '<button class="toastundo" data-act="undo">UNDO</button>' : '');
-function toast(m,undo){
+function toast(m,undo,ms){
   toastMsg = m; toastUndo = !!undo;
   const t = document.querySelector('.toast');
   if (t){ t.innerHTML = toastInner(); t.classList.add('show'); }
   else render();
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>{ toastMsg=null; toastUndo=false; undoSnap=null; const t2=document.querySelector('.toast'); if(t2) t2.classList.remove('show'); }, undo?7000:1800);
+  toastTimer = setTimeout(()=>{ toastMsg=null; toastUndo=false; undoSnap=null; const t2=document.querySelector('.toast'); if(t2) t2.classList.remove('show'); }, ms||(undo?7000:1800));
 }
 
 /* =============================================================== utils == */
@@ -3980,7 +3982,7 @@ function Briefing(){
   const extra=[];
   if (typeof campBriefStat==='function'){ const c=campBriefStat(); if (c) extra.push(c); }
   if (typeof chBriefStat==='function'){ const c=chBriefStat(); if (c) extra.push(c); }
-  if (d.bCol){
+  if (d.bCol!==false){          // one line until you open it, so today's workout is on the first screen
     return `<button class="brief col" data-act="b-col" aria-expanded="false">
       <span class="brtag">${esc(BRIEF_TAG_LABEL[tag])}</span><span class="brmini">${esc(line.t)}</span>${svg('chevD',13,'var(--faint)')}</button>`;
   }
@@ -4042,7 +4044,7 @@ function BriefEditor(){
 function bAct(a,v){
   const d=day(T);
   switch(a){
-    case 'b-col': d.bCol=!d.bCol; commit(); return;
+    case 'b-col': d.bCol=d.bCol===false; commit(); return;
     case 'b-next': d.bShift=(d.bShift||0)+1; delete d.bPin; commit(); return;
     case 'b-qmode': S.motiv.qmode=v; delete d.bPin; commit(); return;
     case 'b-browse': briefBrowse=!briefBrowse; return;
@@ -4682,9 +4684,9 @@ function backupDue(){
 function BackupBanner(){
   if (!backupDue()) return '';
   const a=backupAge();
-  return `<div class="banner" style="align-items:center">${svg('shield',14,'var(--amber)')}
-    <div style="flex:1"><b>${a==null?'No backup yet.':`Last backup ${a} days ago.`}</b> Everything lives on this phone only. Save a copy to Files or iCloud in one tap.</div>
-    <div style="display:flex;flex-direction:column;gap:6px"><button class="chip on" data-act="s-backup">BACK UP</button><button class="chip" data-act="s-snooze">LATER</button></div></div>`;
+  return `<div class="banner" style="align-items:center;gap:8px;padding:9px 11px">${svg('shield',13,'var(--amber)')}
+    <div style="flex:1;min-width:0"><b>${a==null?'No backup yet.':`Backup ${a}d old.`}</b> Data lives only on this phone.</div>
+    <button class="chip on" data-act="s-backup" style="padding:5px 9px">BACK UP</button><button class="chip" data-act="s-snooze" style="padding:5px 9px">LATER</button></div>`;
 }
 async function doBackup(){
   const txt=JSON.stringify(S), name=`forge-backup-${T}.json`;
@@ -5103,6 +5105,13 @@ function foldHead(k,ico,title,summary){
 }
 
 /* ================================================================ header == */
+/* what each of the five bars at the top is made of (mirrors pillars()) */
+const VITAL_HELP={
+  BODY:'BODY: your lifts against bodyweight targets (60%) and your Engine tier (40%). Log sets on Today; set Engine in Ledger → Capability.',
+  COMBAT:'COMBAT: the average of your Striking and Grappling tiers. Set them in Ledger → Capability.',
+  MIND:'MIND: half from books finished (goal 48), half from your Capital markets, Economics and Language tiers.',
+  WILL:'WILL: pure consistency. Your current streak plus the total days you have logged.',
+  CAPITAL:'CAPITAL: the share of the Capital Ladder you have cleared in Ledger.'};
 function Header(){
   const P=pillars(),st=streak(),ph=PHASES[phaseIdx()];
   return `<header>
@@ -5112,13 +5121,13 @@ function Header(){
       <div style="display:flex;align-items:center;gap:14px">
         <div class="streak">${svg('flame',15,st>0?'var(--amber)':'var(--faint)',2.4)}
           <span style="color:${st>0?'var(--text)':'var(--faint)'}">${st}</span></div>
-        <button class="gear" data-act="view" data-v="plan" aria-label="Plan and settings">${svg('gear',17)}</button>
+        <button class="gear" data-act="view" data-v="plan" aria-label="Settings">${svg('gear',17)}</button>
       </div>
     </div>
     <div class="vitals">${P.map(p=>`
-      <div class="vital"><div class="vval" style="color:${p.c}">${Math.round(p.v)}</div>
+      <button class="vital" data-act="vital" data-v="${p.k}" aria-label="What is ${p.k}? Score ${Math.round(p.v)} of 100"><div class="vval" style="color:${p.c}">${Math.round(p.v)}</div>
       <div class="vtrack"><div class="vfill" style="height:${clamp(p.v,4,100)}%;background:${p.c}"></div></div>
-      <div class="vlab">${p.k}</div></div>`).join('')}</div>
+      <div class="vlab">${p.k}</div></button>`).join('')}</div>
   </header>`;
 }
 
@@ -5249,7 +5258,7 @@ function ViewToday(){
         <div class="disp" style="font-size:21px;margin-top:4px">${esc(trainName)}</div>
         ${rep?`<div class="eyebrow" style="margin-top:5px;letter-spacing:.12em">INSTEAD OF ${esc(plan.def.title.toUpperCase())}</div>`:''}
       </div>
-      <button class="badge" data-act="swapopen">${DTYPE[plan.def.type].label} ⇄</button>
+      <button class="badge" data-act="swapopen" aria-label="Swap this day's workout" style="border-color:var(--amber);color:var(--amber)">${DTYPE[plan.def.type].label} · SWAP ⇄</button>
     </div>
     ${vd===T?Briefing():''}
     ${vd===T?BackupBanner():''}
@@ -5293,7 +5302,7 @@ function ViewToday(){
     </div>
     ${WorkoutSection(vd,plan)}
     <div style="display:flex;gap:8px;margin-bottom:4px;margin-top:6px">
-      <button class="btn ghost" data-act="view" data-v="plan">${svg('cal',13)} MY WEEK</button>
+      <button class="btn ghost" data-act="view" data-v="plan">${svg('gear',13)} SETTINGS + WEEK</button>
       <button class="btn ghost" data-act="reflow">${svg('rot',13)} RESET TIMES</button>
     </div>
 
@@ -5391,6 +5400,9 @@ function ViewPlan(){
       <div class="wnum">${cs.length||''}</div></button>`;}).join('')}</div>`;
 
   return `<div class="view wrap">
+    <div class="dayhead" style="margin-top:14px"><div><div class="eyebrow">SETTINGS</div>
+      <div class="disp" style="font-size:21px;margin-top:4px">Program, week and data</div></div>
+      <button class="badge" data-act="view" data-v="today">DONE</button></div>
     ${sect('dumb','TRAINING PROGRAM')}
     <div class="panel">
       ${Object.entries(PROGRAMS).map(([k,pr])=>`
@@ -5523,6 +5535,10 @@ function ViewPlan(){
       <label class="f"><span>Goal</span><select data-in="profile.goal">
         ${[['recomp','Recomposition'],['gain','Add muscle'],['lean','Lean out']].map(([v,l])=>`<option value="${v}" ${p.goal===v?'selected':''}>${l}</option>`).join('')}</select></label>
     </div></div>
+    ${sect('eye','TEXT SIZE')}
+    <div class="panel"><div class="chips" style="padding:13px">${[['','NORMAL'],['large','LARGE'],['xl','EXTRA LARGE']].map(([v,l])=>`<button class="chip ${(S.ui.text||'')===v?'on':''}" data-act="textsize" data-v="${v}" aria-pressed="${(S.ui.text||'')===v}">${l}</button>`).join('')}</div>
+      <div class="note" style="border-top:none;padding-top:0">Makes the small print bigger everywhere. Saved on this phone.</div></div>
+    ${DataPanel()}
     <button class="btn ghost" data-act="view" data-v="today" style="margin-bottom:18px">DONE - BACK TO TODAY</button>
   </div>`;
 }
@@ -5889,10 +5905,12 @@ function ViewLedger(){
     <button class="logbtn" data-act="view" data-v="wlog" style="margin-top:0">${svg('dumb',12,'var(--faint)')} WORKOUT LOG, LIFT PRs + ROUTINES ${svg('chev',12,'var(--faint)')}</button>
     ${(()=>{ const entries=Object.entries(EXS);
       const main=entries.filter(([,E])=>E.m!=null), acc=entries.filter(([,E])=>E.m==null);
-      const rows=list=>list.map(([ex,E])=>{ const pr=S.prs[ex];
+      const rows=list=>{ const todo=list.filter(([ex])=>!S.prs[ex]);
+        return list.filter(([ex])=>S.prs[ex]).map(([ex,E])=>{ const pr=S.prs[ex];
         return `<div class="stand"><div class="standtop"><span style="font-weight:600">${E.n}</span>
           <span>${pr?`${dispExact(pr.w)} × ${pr.r}${E.added?'':' · est '+dispExact(pr.e1rm)+' 1RM'}`:'—'}</span></div>
-          <div style="font-size:var(--fs-caption);color:var(--faint)">${pr?longDate(pr.date):'Not logged yet — log a set on Today'}</div></div>`;}).join('');
+          <div style="font-size:var(--fs-caption);color:var(--faint)">${longDate(pr.date)}</div></div>`;}).join('')
+        +(todo.length?`<div class="note" style="${list.some(([ex])=>S.prs[ex])?'':'border-top:none'}">Not logged yet: ${todo.map(([,E])=>esc(E.n)).join(', ')}. Log a set on Today and it appears here.</div>`:''); };
       return `<div class="panel">
         <div class="eyebrow" style="padding:11px 13px 6px">MAIN LIFTS</div>
         ${rows(main)}
@@ -5947,6 +5965,35 @@ function ViewLedger(){
 }
 
 /* ================================================================= codex == */
+/* backup, restore, CSV export and the automatic snapshots (lives in Settings) */
+function DataPanel(){
+  return `
+    ${sect('gear','THIS FILE')}
+    <div class="panel"><div style="padding:14px 13px 4px">
+      <p class="t"><b>Your data survives code updates.</b> Progress lives in the browser's storage for this web address, completely separate from the code. Push a new version to GitHub, reload - everything is still there. What kills it: clearing the browser's site data, or moving to a different URL.</p>
+      <p class="t">Nothing is uploaded anywhere. Phone and laptop keep separate files.</p>
+      <p class="t">Back up weekly (FORGE reminds you) and before changing phones. BACK UP NOW opens the share sheet: pick Save to Files or iCloud Drive.</p>
+    </div>
+    ${importOpen?`<div style="padding:0 13px 13px">
+      <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what EXPORT BACKUP gave you, then RESTORE."></textarea></label>
+      ${importErr?`<div class="note" style="color:var(--rust);border-top:none;padding:8px 0 0">${esc(importErr)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button class="btn" data-act="importgo">RESTORE — REPLACES EVERYTHING STORED</button>
+        <button class="btn ghost" data-act="importcancel" style="max-width:90px">CANCEL</button>
+      </div>
+    </div>`:`<div style="padding:0 13px 13px;display:flex;gap:8px">
+      <button class="btn ghost" data-act="s-backup">BACK UP NOW</button>
+      <button class="btn ghost" data-act="s-importfile">RESTORE FILE</button>
+      <button class="btn ghost" data-act="import">PASTE</button></div>`}
+    <div style="padding:0 13px 13px"><div class="eyebrow" style="margin-bottom:8px">EXPORT TO A SPREADSHEET (CSV)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn ghost" data-act="s-csv" data-v="workouts">WORKOUTS</button><button class="btn ghost" data-act="s-csv" data-v="body">BODY LOG</button>
+        <button class="btn ghost" data-act="s-csv" data-v="food">FOOD LOG</button><button class="btn ghost" data-act="s-csv" data-v="fights">FIGHT SESSIONS</button></div></div>
+    <input type="file" id="importfile" accept="application/json,.json,text/plain" hidden>
+    ${SnapshotPanel()}</div>
+
+`;
+}
 function ViewCodex(){
   const dl=daysLogged(),st=streak(),pi=phaseIdx();
   return `<div class="view wrap">
@@ -5998,30 +6045,6 @@ function ViewCodex(){
       const k=dkey(-(90-i)); return `<div class="cell" style="background:${heatColor(dayScore(k))}"></div>`;}).join('')}</div>
       <div class="note">Ninety days. Gaps are information, not shame - look for what the empty weeks had in common.</div></div>
 
-    ${sect('gear','THIS FILE')}
-    <div class="panel"><div style="padding:14px 13px 4px">
-      <p class="t"><b>Your data survives code updates.</b> Progress lives in the browser's storage for this web address, completely separate from the code. Push a new version to GitHub, reload - everything is still there. What kills it: clearing the browser's site data, or moving to a different URL.</p>
-      <p class="t">Nothing is uploaded anywhere. Phone and laptop keep separate files.</p>
-      <p class="t">Back up weekly (FORGE reminds you) and before changing phones. BACK UP NOW opens the share sheet: pick Save to Files or iCloud Drive.</p>
-    </div>
-    ${importOpen?`<div style="padding:0 13px 13px">
-      <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what EXPORT BACKUP gave you, then RESTORE."></textarea></label>
-      ${importErr?`<div class="note" style="color:var(--rust);border-top:none;padding:8px 0 0">${esc(importErr)}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:9px">
-        <button class="btn" data-act="importgo">RESTORE — REPLACES EVERYTHING STORED</button>
-        <button class="btn ghost" data-act="importcancel" style="max-width:90px">CANCEL</button>
-      </div>
-    </div>`:`<div style="padding:0 13px 13px;display:flex;gap:8px">
-      <button class="btn ghost" data-act="s-backup">BACK UP NOW</button>
-      <button class="btn ghost" data-act="s-importfile">RESTORE FILE</button>
-      <button class="btn ghost" data-act="import">PASTE</button></div>`}
-    <div style="padding:0 13px 13px"><div class="eyebrow" style="margin-bottom:8px">EXPORT TO A SPREADSHEET (CSV)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn ghost" data-act="s-csv" data-v="workouts">WORKOUTS</button><button class="btn ghost" data-act="s-csv" data-v="body">BODY LOG</button>
-        <button class="btn ghost" data-act="s-csv" data-v="food">FOOD LOG</button><button class="btn ghost" data-act="s-csv" data-v="fights">FIGHT SESSIONS</button></div></div>
-    <input type="file" id="importfile" accept="application/json,.json,text/plain" hidden>
-    ${SnapshotPanel()}</div>
-
     <div class="closing">
       The character you're modelling this on is fiction, and the fiction skips the only part that matters: a decade of
       unremarkable mornings. That part is real, and it's available to you starting this week.
@@ -6052,6 +6075,7 @@ let scrollReset=false, lastRenderedDay=null;                               // se
 const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_)/;            // f_date is left out on purpose: after saving, the date goes back to today
 function render(){
   _memo=null;
+  document.documentElement.dataset.text=(S.ui&&S.ui.text)||'';
   const y=window.scrollY;
   const scrollers=[...document.querySelectorAll('.sheetbody,.exchips')].map(el=>[el.scrollTop,el.scrollLeft,el.className]);
   const typed={};
@@ -6245,6 +6269,8 @@ function handleClick(e){
       S.cpref.plates[u]=next.sort((a,b)=>b-a); commit(); break;
     }
     case 'gearreset': delete S.cpref.bar[unitKey()]; delete S.cpref.plates[unitKey()]; commit(); toast('Bar and plates reset'); return;
+    case 'textsize': S.ui.text=v||''; commit(); break;
+    case 'vital': { const P=VITAL_HELP[v]; if (P) toast(P,false,6000); return; }
     case 'setprog': S.profile.program=v; WEEK=WEEKS[v]||WEEK_STD; commit(); toast(PROGRAMS[v].n+' active from today'); break;
     case 'logmeal': {
       const m=MEALS.find(x=>x.id===v); if(!m){ toast('Meal not found'); return; }
