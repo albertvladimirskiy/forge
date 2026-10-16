@@ -167,7 +167,7 @@ p.t b{color:var(--text);font-weight:700}
 .dur{font-size:var(--fs-caption);color:var(--faint);letter-spacing:.06em}
 .chev{padding:12px;display:flex;align-items:center;justify-content:center;color:var(--faint);transition:transform .25s}
 .chev.open{transform:rotate(90deg)}
-.subblocks{background:var(--sunk);border-bottom:1px solid var(--rule);overflow:hidden}
+.subblocks{background:var(--sunk);border-bottom:1px solid var(--rule);overflow:hidden;position:relative;z-index:1}   /* z-index: paints over the timeline line instead of letting it run through the open blocks */
 .subblocks .row{padding-left:57px;border-bottom:1px solid #191D22}
 .warn{margin:0;padding:11px 13px;background:var(--note-warn-bg);border-top:1px solid var(--rule);
   font-size:var(--fs-detail);color:var(--amber);line-height:1.5}

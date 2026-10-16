@@ -71,4 +71,13 @@ module.exports = { name: 'Built-in sessions: Train > Workouts + logging for carr
     a.ok(await page.$('.xlist .xbody'), 'the own-workout card should be listed');
     a.match(await body(page), /YOUR WORKOUT/);
   },
+
+  async 'the timeline line stops at an open block instead of running through its steps and logs'(page, a){
+    await day(page, 'd8f');
+    await page.click(`[data-act=w-blkadd][data-v="${await page.evaluate(() => exSlug("Farmer's Walk"))}"]`);
+    const hit = await page.evaluate(() => { const sb = document.querySelector('.subblocks'), tl = document.querySelector('.tl'), r = sb.getBoundingClientRect();
+      sb.scrollIntoView({ block: 'center' }); const r2 = sb.getBoundingClientRect(), x = tl.getBoundingClientRect().left + 57, y = Math.min(innerHeight / 2, r2.bottom - 5);
+      const el = document.elementFromPoint(x, y); return !!(el && el.closest('.subblocks')); });
+    a.ok(hit, 'the timeline rail is drawn over the open block');
+  },
 } };
