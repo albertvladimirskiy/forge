@@ -1571,6 +1571,13 @@ const BLOCKEX = {
   d8b:['inclinepress'], d8c:['rowvol'], d8d:['lateral','reardelt'], d8e:['inclinecurl','pushdown'],
   d9b:['dead'],
 };
+/* ...and the blocks above that have no progression of their own (power work, carries, core, holds, dips) still get a
+   proper log: library exercises, so weight × reps, bodyweight reps, a hold time or carry distance, with the same rest
+   timer and history as any custom exercise. They're stored in that day's custom workout but shown inside the block. */
+const BLOCKLIB = {d1a:['Box Jump'], d1e:["Farmer's Walk"], d1f:['Pallof Press'], d2e:['Plank','Hanging Knee Raise'],
+  d3f:['Dead Hang'], d3g:['Pallof Press','Plank','Suitcase Carry'], d5a:['Medicine Ball Rotational Throw'],
+  d5d:['Kettlebell Swing'], d8f:["Farmer's Walk",'Hanging Leg Raise'], d8g:['Dip'], d9d:['Dead Hang','Plate Pinch Carry']};
+const blkOf = cw => new Set((cw&&cw.blk)||[]);   // the exercises a day's workout holds on behalf of planned blocks (cw.blk)
 
 /* pain-flag exercise swaps: keep training, remove the aggravating pattern */
 const PAINSWAP = {
@@ -1878,10 +1885,12 @@ function place(free,dur,anchor,win){
   return best;
 }
 
+/* the planned session for a date: the weekday's, or the one swapped in */
+const dayDef = key => S.swap[key]!=null ? (ALLDAYS[S.swap[key]]||WEEK[dowIdx(key)]) : WEEK[dowIdx(key)];
 function buildDay(key){
   const p=S.profile;
   const di = dowIdx(key);
-  const def = S.swap[key]!=null ? (ALLDAYS[S.swap[key]]||WEEK[di]) : WEEK[di];
+  const def = dayDef(key);
   const wake=m2s(p.wake); let sleep=m2s(p.sleep); if(sleep<=wake) sleep+=1440;
 
   const fixed = [ ...(S.fixed[DOW[dowIdx(key)]]||[]), ...(S.extra[key]||[]) ]
@@ -2521,6 +2530,14 @@ function gymHTML(b){
   return exs.map(ex=>exGymHTML(ex,exs.length>1)).join('')+`<div class="setlog" style="padding:0 0 4px 42px">${restPrefsHTML()}</div>`;
 }
 
+function libBlockHTML(b){
+  const ids=(BLOCKLIB[b.id]||[]).map(exSlug); if (!ids.length) return '';
+  const vd=VD(), cw=S.cust[vd];
+  return `<div class="setlog" style="padding:0 0 4px 42px">${ids.map(id=>cw&&cw.items.includes(id)
+    ? `<div class="xlist">${exCardHTML(cw,id,cw.items.indexOf(id),vd)}</div>`
+    : `<button class="logbtn" data-act="w-blkadd" data-v="${id}">${svg('plus',12,'var(--faint)')} LOG ${esc(exInfo(id).n).toUpperCase()}</button>`).join('')}</div>`;
+}
+
 /* ================================================= exercise library + custom workouts == */
 /* The library (exercises-db.js) is a list of [muscle, equipment, kind, [names]] groups. Kinds decide
    which fields a set has: wr = weight x reps, bw = bodyweight reps (+ optional added weight),
@@ -2811,6 +2828,7 @@ function normalizeCustom(){
     if (!Array.isArray(c.items)) c.items=[];
     if (!c.sets||typeof c.sets!=='object'||Array.isArray(c.sets)) c.sets={};
     if (!c.sup||typeof c.sup!=='object'||Array.isArray(c.sup)) c.sup={};
+    if (!Array.isArray(c.blk)) delete c.blk;
     S.cust[k]=c;
   }
   for (const k in S.fights) if (!Array.isArray(S.fights[k])) delete S.fights[k];
@@ -3254,7 +3272,10 @@ async function shareText(title,text){
 
 /* ---------- the custom workout panel ---------- */
 function WorkoutSection(vd,plan){
-  const cw=S.cust[vd], rep=cw&&cw.mode==='replace';
+  const cw0=S.cust[vd], mine=blkOf(cw0);
+  /* exercises logged inside a planned block live in the day's workout but aren't "your workout" until you start one */
+  const cw=cw0&&(cw0.own||!cw0.items.length||cw0.mode==='replace'||cw0.name||cw0.note||cw0.fin||cw0.items.some(id=>!mine.has(id)))?cw0:null;
+  const rep=cw&&cw.mode==='replace', own=cw?(rep?cw.items:cw.items.filter(id=>!mine.has(id))):[];
   const lift=plan.def.type==='strength';
   let h='';
   const tile=(act,v,ico,t,sub)=>`<button class="xtile" data-act="${act}" data-v="${v}">${svg(ico,16,'var(--amber)')}
@@ -3266,19 +3287,19 @@ function WorkoutSection(vd,plan){
     ${tile('f-new','',  'swords',fights.length?'ADD ANOTHER FIGHT SESSION':'ADD FIGHTING','Log mat, ring or bag time')}</div>
     <button class="logbtn tmrbtn" data-act="t-open">${svg('clock',13,'var(--rust)')} ROUND TIMER · BOXING, MUAY THAI, MMA, BJJ, TABATA</button>`;
   if (cw){
-    const st=cwStats(cw);
+    const st=cwStats({items:own,sets:cw.sets});
     h+=`<button class="sect fold" data-act="w-min" aria-expanded="${!cw.min}">${svg('dumb',13,'var(--amber)')}<h2>YOUR WORKOUT</h2>
-      <span class="foldsum">${st.ex}/${cw.items.length} ${cw.items.length===1?'lift':'lifts'} · ${st.sets} ${st.sets===1?'set':'sets'}</span><div class="line"></div>
+      <span class="foldsum">${st.ex}/${own.length} ${own.length===1?'lift':'lifts'} · ${st.sets} ${st.sets===1?'set':'sets'}</span><div class="line"></div>
       <span class="chev ${cw.min?'':'open'}" style="padding:0">${svg('chev',12)}</span></button>
     ${cw.min?'':`<div class="panel acc xw"><div class="acc-bar" style="background:var(--amber)"></div>
       <div class="xwhead">
         <input class="xwname" type="text" data-cwin="name" placeholder="Name this workout (optional)" value="${esc(cw.name||'')}" maxlength="40" aria-label="Workout name">
-        <div class="xwstats"><span><b>${st.ex}</b>/${cw.items.length} ${cw.items.length===1?'lift':'lifts'}</span><span><b>${st.sets}</b> ${st.sets===1?'set':'sets'}</span>${st.vol>0?`<span><b>${esc(fmtVol(st.vol))}</b> moved</span>`:''}</div>
+        <div class="xwstats"><span><b>${st.ex}</b>/${own.length} ${own.length===1?'lift':'lifts'}</span><span><b>${st.sets}</b> ${st.sets===1?'set':'sets'}</span>${st.vol>0?`<span><b>${esc(fmtVol(st.vol))}</b> moved</span>`:''}</div>
       </div>
       <div class="xmode"><span>Planned ${esc(plan.def.title)}</span>
         <div class="seg2"><button class="${rep?'on':''}" data-act="w-mode" data-v="replace">SET ASIDE</button><button class="${!rep?'on':''}" data-act="w-mode" data-v="with">KEEP BOTH</button></div></div>
       ${restPrefsHTML()}
-      ${cw.items.length===0 ? startChooserHTML(vd,plan) : `<div class="xlist">${cw.items.map((id,i)=>exCardHTML(cw,id,i,vd)).join('')}</div>`}
+      ${own.length===0 ? startChooserHTML(vd,plan) : `<div class="xlist">${own.map(id=>exCardHTML(cw,id,cw.items.indexOf(id),vd)).join('')}</div>`}
       <button class="btn ghost" data-act="w-pick" style="border:none;border-top:1px solid var(--rule)">${svg('plus',13)} ADD EXERCISE</button>
       ${cw.fin?`<div class="banner moss" style="margin:12px 13px 0">${svg('check',14,'var(--moss)',3)}<div><b>Finished.</b> ${st.sets} ${st.sets===1?'set':'sets'} across ${st.ex} ${st.ex===1?'lift':'lifts'}${st.vol>0?`, ${esc(fmtVol(st.vol))} moved`:''}${cw.t0&&cw.t1?` in ${Math.max(1,Math.round((cw.t1-cw.t0)/60000))} min`:''}. Every number above is now the benchmark next time.</div></div>`:''}
       <div style="padding:12px 13px 0"><label class="f"><span>Notes</span><textarea data-cwin="note" placeholder="How it felt, what to change next time.">${esc(cw.note||'')}</textarea></label></div>
@@ -3382,30 +3403,54 @@ function ViewWorkoutLog(){
     <div class="segwrap"><div class="seg">${tabs.map(([k,l])=>`<button class="segbtn ${wlSub===k?'on':''}" data-act="wl-sub" data-v="${k}">${l}</button>`).join('')}</div></div>
     ${body}</div>`;
 }
+/* a built-in (planned) session on a date: lifts logged against the program and/or planned blocks ticked off */
+function progSession(k){
+  const g=S.gym[k]||{}, d=S.days[k], def=dayDef(k);
+  const lifts=Object.keys(g).filter(ex=>EXS[ex]&&workSets(g[ex]).length);
+  const blocks=d&&d.blocks?def.blocks.filter(b=>d.blocks[b.id]):[];
+  if (!lifts.length && !(blocks.length && ['strength','strike','ground','engine'].includes(def.type))) return null;
+  let sets=0, vol=0;
+  for (const ex of lifts){ const s=workSets(g[ex]); sets+=s.length; for (const x of s) vol+=(x.w||0)*(x.r||0); }
+  return {def,lifts,blocks,sets,vol};
+}
 function wlWorkouts(){
-  const ks=Object.keys(S.cust).filter(k=>S.cust[k].items.length).sort().reverse();
+  const ps={}, sess=k=>{ const c=S.cust[k], cs=c?cwStats(c):{ex:0,sets:0,vol:0}, p=k in ps?ps[k]:(ps[k]=progSession(k));
+    return {c,cs,p,sets:cs.sets+(p?p.sets:0),vol:cs.vol+(p?p.vol:0),ex:cs.ex+(p?p.lifts.length:0)}; };
+  const keys=[...new Set([...Object.keys(S.cust),...Object.keys(S.days),...Object.keys(S.gym)])].sort().reverse();
+  const all=keys.filter(k=>{ const s=sess(k); return s.cs.sets>0||s.p; });
   const wkStart=dkey(-dowIdx(T)); let wkN=0,wkSets=0,wkVol=0;
-  for (const k of ks) if (k>=wkStart && k<=T){ const st=cwStats(S.cust[k]); if (st.sets){ wkN++; wkSets+=st.sets; wkVol+=st.vol; } }
-  const all=ks.filter(k=>cwStats(S.cust[k]).sets>0);
+  for (const k of all) if (k>=wkStart && k<=T){ const s=sess(k); wkN++; wkSets+=s.sets; wkVol+=s.vol; }
   let h=`${sect('trend','THIS WEEK')}<div class="stats">
     <div class="stat"><div class="v">${wkN}</div><div class="l">WORKOUTS</div></div>
     <div class="stat"><div class="v">${wkSets}</div><div class="l">SETS</div></div>
     <div class="stat"><div class="v" style="font-size:var(--fs-numeral-md);padding:5px 0">${wkVol?esc(fmtVol(wkVol)):'—'}</div><div class="l">MOVED</div></div></div>`;
-  if (!all.length) return h+`<div class="panel"><div class="empty">Nothing yet. On Today, tap EDIT WORKOUT or ADD WORKOUT, pick your exercises and log some sets.</div></div>`;
+  if (!all.length) return h+`<div class="panel"><div class="empty">Nothing yet. Tick off a block of today's plan or log a set on Today, and the session appears here.</div></div>`;
   h+=sect('dumb','LOGGED WORKOUTS');
   h+=all.slice(0,wlLim).map(k=>{
-    const cw=S.cust[k], st=cwStats(cw), open=wlOpenDay===k;
+    const s=sess(k), cw=s.c, p=s.p, hasC=!!cw&&s.cs.sets>0, open=wlOpenDay===k, g=S.gym[k]||{};
+    const m=blkOf(cw), onlyBlk=hasC&&cw.items.every(id=>m.has(id)||!(cw.sets[id]||[]).length);
+    const title=p?p.def.title+(hasC&&cw.name?` + ${cw.name}`:''):(cw.name||(onlyBlk?dayDef(k).title:'Workout'));
+    const bits=[longDate(k)];
+    if (p&&p.blocks.length) bits.push(`${p.blocks.length}/${p.def.blocks.length} blocks`);
+    if (s.ex) bits.push(`${s.ex} ${s.ex===1?'lift':'lifts'}`);
+    if (s.sets) bits.push(`${s.sets} ${s.sets===1?'set':'sets'}`);
+    if (s.vol>0) bits.push(fmtVol(s.vol));
+    const rows=[];
+    if (p){
+      for (const ex of p.lifts) rows.push([EXS[ex].n,fmtSets(EXS[ex].added?'bw':'wr',g[ex])]);
+      for (const b of p.blocks) if (!(BLOCKEX[b.id]||[]).some(ex=>p.lifts.includes(ex))) rows.push([b.l,'done']);
+    }
+    if (hasC) for (const id of cw.items) if ((cw.sets[id]||[]).length){ const E=exInfo(id); rows.push([E.n,fmtSets(E.k,cw.sets[id])]); }
     return `<div class="panel"><button class="wlhead" data-act="wl-day" data-v="${k}" aria-expanded="${open}">
-        <div style="flex:1;text-align:left"><div class="wlt">${esc(cw.name||'Workout')}</div>
-          <div class="wls">${esc(longDate(k))} · ${st.ex} ${st.ex===1?'lift':'lifts'} · ${st.sets} ${st.sets===1?'set':'sets'}${st.vol>0?` · ${esc(fmtVol(st.vol))}`:''}</div></div>
+        <div style="flex:1;text-align:left"><div class="wlt">${esc(title)}</div>
+          <div class="wls">${esc(bits.join(' · '))}</div></div>
         <span class="chev ${open?'open':''}" style="padding:0">${svg('chev',14)}</span></button>
-      ${open?`<div class="wlbody">${cw.items.filter(id=>(cw.sets[id]||[]).length).map(id=>{ const E=exInfo(id);
-          return `<div class="histrow"><span>${esc(E.n)}</span><span>${esc(fmtSets(E.k,cw.sets[id]))}</span></div>`; }).join('')}
-        ${cw.note?`<div class="fsl" style="margin-top:8px"><i>NOTES</i>${esc(cw.note)}</div>`:''}
-        <div style="display:flex;gap:8px;margin-top:12px">
+      ${open?`<div class="wlbody">${rows.map(([n,v])=>`<div class="histrow"><span>${esc(n)}</span><span>${esc(v)}</span></div>`).join('')}
+        ${hasC&&cw.note?`<div class="fsl" style="margin-top:8px"><i>NOTES</i>${esc(cw.note)}</div>`:''}
+        ${hasC?`<div style="display:flex;gap:8px;margin-top:12px">
           <button class="btn ghost" data-act="wl-share" data-v="${k}" style="flex:1">SHARE</button>
           <button class="btn ghost" data-act="wl-repeat" data-v="${k}" style="flex:2">REPEAT ON ${VD()===T?'TODAY':'THIS DAY'}</button>
-          <button class="btn ghost" data-act="wl-delday" data-v="${k}" style="flex:1;color:var(--rust)">DELETE</button></div></div>`:''}</div>`; }).join('');
+          <button class="btn ghost" data-act="wl-delday" data-v="${k}" style="flex:1;color:var(--rust)">DELETE</button></div>`:''}</div>`:''}</div>`; }).join('');
   if (all.length>wlLim) h+=`<button class="btn ghost" data-act="wl-more" style="width:100%;margin-bottom:13px">SHOW ${Math.min(60,all.length-wlLim)} MORE · ${all.length-wlLim} OLDER</button>`;
   return h;
 }
@@ -3480,7 +3525,7 @@ function wAct(a,v,v2,el){
   const touch=()=>{ armDiscard=false; armRm=null; armFight=null; };
   switch(a){
     case 'w-new': {
-      if (!S.cust[vd]) S.cust[vd]=newCW(v==='replace'?'replace':'with');
+      const t=S.cust[vd]||(S.cust[vd]=newCW('with')); t.own=true; if (v==='replace') t.mode='replace';
       const opts=!!lastCustBefore(vd)||planItemIds(buildDay(vd).def).length>0||(S.routines||[]).length>0;
       exPickOpen=!opts; exFocus=!opts; exCreate=false; touch(); commit(); return;
     }
@@ -3490,7 +3535,8 @@ function wAct(a,v,v2,el){
       if (v==='last'){ const k=lastCustBefore(vd); if (k){ ids=S.cust[k].items.slice(); if (!cw.name) cw.name=S.cust[k].name||''; } }
       else if (v==='plan'){ ids=planItemIds(buildDay(vd).def); }
       else if (v.startsWith('rt:')){ const r=(S.routines||[]).find(x=>x.id===v.slice(3)); if (r){ ids=r.items.slice(); if (!cw.name) cw.name=r.name; } }
-      cw.items=ids; cwOpen=ids[0]||null;
+      const m=blkOf(cw);
+      cw.items=[...cw.items.filter(id=>m.has(id)&&!ids.includes(id)),...ids]; cw.blk=(cw.blk||[]).filter(id=>cw.items.includes(id)); cwOpen=ids[0]||null;
       if (v==='last'){ const k=lastCustBefore(vd); if (k) ssCopy(cw,S.cust[k].sup,S.cust[k].items); }
       else if (v.startsWith('rt:')){ const r=(S.routines||[]).find(x=>x.id===v.slice(3)); if (r) ssCopy(cw,r.sup,r.items); }
       else cw.sup={};
@@ -3536,6 +3582,11 @@ function wAct(a,v,v2,el){
       cw.items.push(v); cw.min=false; cwOpen=v; exFocus=true;
       const rc=S.cpref.recent||[]; S.cpref.recent=[v,...rc.filter(x=>x!==v)].slice(0,16);
       touch(); commit(); toast(`${exInfo(v).n} added`); return;
+    }
+    case 'w-blkadd': {
+      const t=S.cust[vd]||(S.cust[vd]=newCW('with'));
+      if (!t.items.includes(v)){ t.items.push(v); (t.blk=t.blk||[]).push(v); }
+      cwOpen=v; exFocus=true; touch(); commit(); return;
     }
     case 'w-fav': S.cpref.fav[v]=!S.cpref.fav[v]; if(!S.cpref.fav[v]) delete S.cpref.fav[v]; exFocus=exPickOpen; commit(); return;
     case 'w-open': cwOpen=cwOpen===v?null:v; cwHist=null; editSet=null; touch(); return;
@@ -3663,7 +3714,9 @@ function wAct(a,v,v2,el){
     case 'w-discard': {
       if (!cw) return;
       if (!armDiscard){ armDiscard=true; return; }
-      delete S.cust[vd]; armDiscard=false; cwOpen=null; exPickOpen=false; commit(); toast('Workout dropped'); return;
+      const m=blkOf(cw), keep=cw.items.filter(id=>m.has(id)&&(cw.sets[id]||[]).length);   // sets logged inside planned blocks stay
+      if (keep.length) S.cust[vd]=Object.assign(newCW('with'),{items:keep,blk:keep.slice(),sets:Object.fromEntries(keep.map(id=>[id,cw.sets[id]]))}); else delete S.cust[vd];
+      armDiscard=false; cwOpen=null; exPickOpen=false; commit(); toast('Workout dropped'); return;
     }
 
     /* ---- fighting ---- */
@@ -5296,7 +5349,7 @@ function ViewToday(){
           ${chk(!!d.blocks[b.id],meta.c)}
           <div style="flex:1"><div class="lab">${esc(b.l)}</div><div class="det">${esc(b.d)}</div>${rxLine(b)}</div></button>
         ${b.steps?`<button class="chev sm ${bo?'open':''}" data-act="drill" data-v="${b.id}" aria-label="${bo?'Collapse':'Expand'} details for ${esc(b.l)}" aria-expanded="${bo}">${svg('chev',14)}</button>`:''}
-      </div>${bo?(stepsHTML(b)+gymHTML(b)):''}`;}).join('')}</div>`:''}
+      </div>${bo?(stepsHTML(b)+gymHTML(b)+libBlockHTML(b)):''}`;}).join('')}</div>`:''}
     ${shiftId===e.id?`<div class="chips" style="padding:10px 13px 12px 57px;border-bottom:1px solid var(--rule)">
       ${[-60,-30,-15,15,30,60].map(n=>`<button class="chip" data-act="nudge" data-v="${e.id}" data-v2="${n}">${n>0?'+':''}${n}m</button>`).join('')}
       <button class="chip" data-act="nudge" data-v="${e.id}" data-v2="0">auto</button></div>`:''}`;

@@ -99,6 +99,11 @@ said 155) the app tells you to repeat that weight for the rest of the day, and o
 your new baseline (so you can't get stuck on a weight you can't lift). Deload-week sets are flagged and never become the baseline
 the next weeks climb from; the ramp-week discount only trims a starting weight guessed from the Log tab. The custom workout panel
 on Today minimizes to one line (tap its header); the choice is saved with that day's workout.
+**Train → WORKOUTS** lists every session: your custom ones and the built-in planned ones (any day you logged a program lift or
+ticked a block of Lower A, Upper A, striking, BJJ, engine...). Planned blocks without a progressing lift (box jumps, carries,
+pallof, planks, dead hangs, med-ball throws, swings, dips) have a LOG button inside the block that opens the normal exercise card:
+weight × reps, reps, hold time or carry distance, plus rest timer and history. Those sets are stored in that day's `S.cust`
+entry (`cw.blk` lists which exercises belong to a block), so they feed history and benchmarks like any other exercise.
 
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 
