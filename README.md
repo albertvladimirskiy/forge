@@ -162,3 +162,5 @@ To refresh it after a future data-shape change, regenerate it from the build you
 **Settings** (the gear, or SETTINGS + WEEK on Today) holds the program, your week, reminders, calendar export, barbell + plates, body profile, **text size** (normal / large / extra large), and backup, restore, CSV export and snapshots. Tap any of the five bars at the top to see what it is made of.
 
 **Tabs:** TODAY (the day), TRAIN (workout log, muscles, lift records, fights and camp, routines), BODY (target, fuel, log, 90-day), MIND, LEDGER (weekly review, records, capability, capital, net worth, network, and a folded THE ARC / standing orders / file status).
+
+**Tour.** The first time you open each tab (and Settings) a short card explains what it is for; GOT IT dismisses it, SKIP TOUR dismisses them all, and **Settings → Replay the tour** brings them back. The text lives in `TOUR` in `index.html`. Existing installs, imports and restored backups are treated as already toured.
