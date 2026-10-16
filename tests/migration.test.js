@@ -1,7 +1,7 @@
 const { oldState, openApp, text, app } = require('./lib');
 
 /* Every screen the app has, as [view, sub-state] pairs */
-const SCREENS = [['today', ''], ['plan', ''], ['build', 'target'], ['build', 'fuel'], ['build', 'log'], ['build', 'ch90'], ['mind', ''], ['ledger', ''], ['codex', ''],
+const SCREENS = [['today', ''], ['plan', ''], ['build', 'target'], ['build', 'fuel'], ['build', 'log'], ['build', 'ch90'], ['mind', ''], ['ledger', ''],
   ['wlog', 'workouts'], ['wlog', 'body'], ['wlog', 'lifts'], ['wlog', 'fights']];
 const open = (browser, opts) => openApp(browser, opts);
 

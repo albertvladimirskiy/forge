@@ -10,7 +10,7 @@ module.exports = { name: 'Performance with two years of data', tests: {
       for (let i = 0; i < 300; i++) S.log.push({ date: dkey(-i * 2 - 400), weight: 80 + Math.sin(i) });
       S.log.sort((x, y) => x.date < y.date ? -1 : 1);
       S.cust[dkey(0)] = newCW('with'); S.cust[dkey(0)].items = ids.slice(); cwOpen = ids[0]; view = 'today'; viewOff = 0; render(); });
-    const screens = [['today', ''], ['build', 'log'], ['build', 'fuel'], ['build', 'target'], ['wlog', 'workouts'], ['wlog', 'lifts'], ['wlog', 'body'], ['codex', '']];
+    const screens = [['today', ''], ['build', 'log'], ['build', 'fuel'], ['build', 'target'], ['wlog', 'workouts'], ['wlog', 'lifts'], ['wlog', 'body']];
     for (const [v, sub] of screens){
       const ms = await page.evaluate(([v, sub]) => { if (v === 'build') buildSub = sub; if (v === 'wlog') wlSub = sub; view = v; render();
         const t0 = performance.now(); for (let i = 0; i < 5; i++) render(); return (performance.now() - t0) / 5; }, [v, sub]);

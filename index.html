@@ -397,8 +397,8 @@ input[type=date],input[type=time]{min-height:40px}
 
 /* ---------- segmented control ---------- */
 .segwrap{margin:15px 0 4px}
-.seg{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule)}
-.segbtn{flex:1;padding:11px 0;background:var(--panel);font-size:var(--fs-caption);font-weight:700;
+.seg{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.segbtn{flex:1 0 auto;padding:11px 6px;background:var(--panel);font-size:var(--fs-caption);font-weight:700;
   letter-spacing:.13em;color:var(--faint);transition:all .18s}
 .segbtn.on{background:var(--panel2);color:var(--amber)}
 
@@ -987,7 +987,7 @@ const WEEK_STD = [
      'Same route weekly — distance at the same effort becomes your aerobic progress metric.']},
    {id:'d7b',l:'Long mobility - 30 min',d:'2 min per position',steps:['Deep squat 2 min','Pigeon 2 min/side','Couch stretch 2 min/side','Wall thoracic rotation x10/side','Hang from a bar 3 x 45s']},
    {id:'d7c',l:'Sauna or contrast',d:'Optional',steps:['15-20 min sauna if available, or hot shower 3 min / cold 1 min x3, finish cold.','Skip it entirely if it costs sleep time. Sleep outranks it.']},
-   {id:'d7d',l:'Log the week',d:'Numbers, not impressions',steps:['Build tab: weight, waist, sleep average, and any top sets from the week.','Ledger: one honest look at the capital ladder. Move anything that actually moved.']},
+   {id:'d7d',l:'Log the week',d:'Numbers, not impressions',steps:['Body tab: weight, waist, sleep average, and any top sets from the week.','Ledger: one honest look at the capital ladder. Move anything that actually moved.']},
    {id:'d7e',l:'Plan the week',d:'Sessions become appointments',steps:['Open Plan. Check the fixed commitments match next week\'s reality.','Anything unusual - exam, trip, deadline - add it now and the schedule reroutes around it.','Read Saturday\'s "tomorrow\'s one thing". Set Monday\'s.']}]},
 ];
 
@@ -3364,7 +3364,7 @@ function FightSection(vd){
 
 /* ---------- history / PRs / routines screen ---------- */
 function ViewWorkoutLog(){
-  const tabs=[['workouts','WORKOUTS'],['body','BODY'],['lifts','LIFTS'],['fights','FIGHTS'],['routines','ROUTINES']];
+  const tabs=[['workouts','WORKOUTS'],['body','MUSCLES'],['lifts','LIFTS'],['fights','FIGHTS'],['routines','ROUTINES']];
   let body='';
   if (wlSub==='workouts') body=wlWorkouts();
   else if (wlSub==='body') body=MuscleMap();
@@ -3372,8 +3372,7 @@ function ViewWorkoutLog(){
   else if (wlSub==='fights') body=wlFights();
   else body=wlRoutines();
   return `<div class="view wrap">
-    <button class="backbtn" data-act="view" data-v="today">${svg('chev',12).replace('<svg','<svg style="transform:rotate(180deg);flex:none"')} BACK TO TODAY</button>
-    <div class="segwrap" style="margin-top:6px"><div class="seg">${tabs.map(([k,l])=>`<button class="segbtn ${wlSub===k?'on':''}" data-act="wl-sub" data-v="${k}">${l}</button>`).join('')}</div></div>
+    <div class="segwrap"><div class="seg">${tabs.map(([k,l])=>`<button class="segbtn ${wlSub===k?'on':''}" data-act="wl-sub" data-v="${k}">${l}</button>`).join('')}</div></div>
     ${body}</div>`;
 }
 function wlWorkouts(){
@@ -3403,13 +3402,30 @@ function wlWorkouts(){
   if (all.length>wlLim) h+=`<button class="btn ghost" data-act="wl-more" style="width:100%;margin-bottom:13px">SHOW ${Math.min(60,all.length-wlLim)} MORE · ${all.length-wlLim} OLDER</button>`;
   return h;
 }
+/* records for the program's own lifts (squat, bench...), shown at the top of Train -> Lifts */
+function ProgramRecords(){
+  return `${(()=>{ const entries=Object.entries(EXS);
+      const main=entries.filter(([,E])=>E.m!=null), acc=entries.filter(([,E])=>E.m==null);
+      const rows=list=>{ const todo=list.filter(([ex])=>!S.prs[ex]);
+        return list.filter(([ex])=>S.prs[ex]).map(([ex,E])=>{ const pr=S.prs[ex];
+        return `<div class="stand"><div class="standtop"><span style="font-weight:600">${E.n}</span>
+          <span>${pr?`${dispExact(pr.w)} × ${pr.r}${E.added?'':' · est '+dispExact(pr.e1rm)+' 1RM'}`:'—'}</span></div>
+          <div style="font-size:var(--fs-caption);color:var(--faint)">${longDate(pr.date)}</div></div>`;}).join('')
+        +(todo.length?`<div class="note" style="${list.some(([ex])=>S.prs[ex])?'':'border-top:none'}">Not logged yet: ${todo.map(([,E])=>esc(E.n)).join(', ')}. Log a set on Today and it appears here.</div>`:''); };
+      return `<div class="panel">
+        <div class="eyebrow" style="padding:11px 13px 6px">MAIN LIFTS</div>
+        ${rows(main)}
+        <div class="eyebrow" style="padding:11px 13px 6px;border-top:1px solid var(--rule)">ACCESSORIES</div>
+        ${rows(acc)}
+        <div class="note">PRs update automatically the moment a logged set beats your best. Estimated 1RM uses the Epley formula from your top set.</div></div>`; })()}`;
+}
 function wlLifts(){
   const ids=new Set();
   for (const k of Object.keys(S.cust)) for (const id of Object.keys(S.cust[k].sets||{})) if (S.cust[k].sets[id].length) ids.add(id);
   const list=[...ids].map(id=>({id,E:exInfo(id),h:exHist(id)})).filter(x=>x.h.length)
     .sort((a,b)=>a.h[a.h.length-1].date<b.h[b.h.length-1].date?1:-1);
-  if (!list.length) return `<div class="panel" style="margin-top:14px"><div class="empty">Lifts you log in custom workouts show up here with your best set and a progress line.</div></div>`;
-  return sect('award','YOUR LIFTS')+`<div class="panel">${list.map(({id,E,h})=>{
+  if (!list.length) return sect('award','PROGRAM LIFTS')+ProgramRecords()+`<div class="panel" style="margin-top:14px"><div class="empty">Lifts you log in custom workouts show up here with your best set and a progress line.</div></div>`;
+  return sect('award','PROGRAM LIFTS')+ProgramRecords()+sect('award','YOUR OWN LIFTS')+`<div class="panel">${list.map(({id,E,h})=>{
     const best=bestSet(id), open=wlOpenEx===id;
     return `<div><button class="wlhead" data-act="wl-ex" data-v="${id}" aria-expanded="${open}">
       <div style="flex:1;text-align:left"><div class="wlt">${esc(E.n)}</div>
@@ -4907,7 +4923,7 @@ function CampPanel(){
         <label class="f"><span>Target weight (${wu})</span><input type="text" inputmode="decimal" id="cp_tw" value="${c.target?wc(c.target):''}" placeholder="optional"></label>
         <label class="f"><span>Discipline</span><select id="cp_disc">${FIGHT_DISC.map(([k,l])=>`<option value="${k}" ${c.disc===k?'selected':''}>${l}</option>`).join('')}</select></label>
       </div>
-      <div class="note" style="padding:8px 0 0;border:none">${L?`Starting from your latest weigh-in: ${wc(L.weight)} ${wu}.`:'Log a weigh-in on Build → Log so the cut tracker has a starting point.'} Weigh-in defaults to the day before the fight.</div>
+      <div class="note" style="padding:8px 0 0;border:none">${L?`Starting from your latest weigh-in: ${wc(L.weight)} ${wu}.`:'Log a weigh-in on Body → Log so the cut tracker has a starting point.'} Weigh-in defaults to the day before the fight.</div>
       <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-act="camp-save" style="flex:2">SAVE CAMP</button>
         <button class="btn ghost" data-act="camp-cancel" style="flex:1">CANCEL</button></div></div></div>`;
   }
@@ -5094,7 +5110,7 @@ function obFinish(){
 /* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
    is remembered. After-action opens by itself in the evening (or once you've written in it). */
 const FOLD_DEF = {
-  rail:()=>false, food:()=>true, habits:()=>true, last14:()=>false,
+  rail:()=>false, arc:()=>false, food:()=>true, habits:()=>true, last14:()=>false,
   review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
 };
 function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
@@ -5306,8 +5322,8 @@ function ViewToday(){
       <button class="btn ghost" data-act="reflow">${svg('rot',13)} RESET TIMES</button>
     </div>
 
-    ${dowIdx(T)===6?`<button class="panel banner steel" data-act="view" data-v="codex" style="width:100%;text-align:left">
-      ${svg('trend',14,'var(--steel)')}<div><b>Sunday.</b> Your weekly review is ready on Codex - two minutes, then plan the week.</div></button>`:''}
+    ${dowIdx(T)===6?`<button class="panel banner steel" data-act="view" data-v="ledger" style="width:100%;text-align:left">
+      ${svg('trend',14,'var(--steel)')}<div><b>Sunday.</b> Your weekly review is ready at the top of Ledger - two minutes, then plan the week.</div></button>`:''}
 
     ${foldHead('food','food','FOOD',`${Math.round(ft.kcal).toLocaleString()}${N?` / ${N.kcal.toLocaleString()}`:''} kcal · ${Math.round(ft.p)}g P`)}
     ${foldOpen('food')?`<div class="panel">
@@ -5318,7 +5334,7 @@ function ViewToday(){
       </div>
       ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}
       ${vd===T&&new Date().getHours()>=18&&N.protein>0&&ft.p<N.protein*0.5?`<div class="note" style="color:var(--amber);border-top:none;padding-top:0">${svg('target',10,'var(--amber)')} Only ${Math.round(ft.p)}g protein logged with evening here — most of that gap won't get made up after tonight. Front-load the next meal.</div>`:''}`
-      :`<button class="note" data-act="golog" style="border-top:none;width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on Build → Log and targets appear here. Tap to go there now.</span></button>`}
+      :`<button class="note" data-act="golog" style="border-top:none;width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on Body → Log and targets appear here. Tap to go there now.</span></button>`}
       ${WaterRow(d,N)}
       ${d.food.length?`<div class="foodlist">${d.food.map((f,i)=>`
         <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
@@ -5896,28 +5912,14 @@ function ViewLedger(){
   const week=Array.from({length:7},(_,i)=>S.reach[dkey(-i)]||0).reduce((a,b)=>a+b,0);
   const nwVals=S.nw.map(x=>x.v);
   return `<div class="view wrap">
+    ${WeekReview()}
     ${sect('award','RECORDS')}
     <div class="stats">
       <div class="stat"><div class="v" style="color:var(--amber)">${bestStreakEver()}</div><div class="l">BEST STREAK</div></div>
       <div class="stat"><div class="v">${totalSessions()}</div><div class="l">SESSIONS</div></div>
       <div class="stat"><div class="v" style="color:var(--moss)">${Object.keys(S.prs).length}</div><div class="l">LIFTS TRACKED</div></div>
     </div>
-    <button class="logbtn" data-act="view" data-v="wlog" style="margin-top:0">${svg('dumb',12,'var(--faint)')} WORKOUT LOG, LIFT PRs + ROUTINES ${svg('chev',12,'var(--faint)')}</button>
-    ${(()=>{ const entries=Object.entries(EXS);
-      const main=entries.filter(([,E])=>E.m!=null), acc=entries.filter(([,E])=>E.m==null);
-      const rows=list=>{ const todo=list.filter(([ex])=>!S.prs[ex]);
-        return list.filter(([ex])=>S.prs[ex]).map(([ex,E])=>{ const pr=S.prs[ex];
-        return `<div class="stand"><div class="standtop"><span style="font-weight:600">${E.n}</span>
-          <span>${pr?`${dispExact(pr.w)} × ${pr.r}${E.added?'':' · est '+dispExact(pr.e1rm)+' 1RM'}`:'—'}</span></div>
-          <div style="font-size:var(--fs-caption);color:var(--faint)">${longDate(pr.date)}</div></div>`;}).join('')
-        +(todo.length?`<div class="note" style="${list.some(([ex])=>S.prs[ex])?'':'border-top:none'}">Not logged yet: ${todo.map(([,E])=>esc(E.n)).join(', ')}. Log a set on Today and it appears here.</div>`:''); };
-      return `<div class="panel">
-        <div class="eyebrow" style="padding:11px 13px 6px">MAIN LIFTS</div>
-        ${rows(main)}
-        <div class="eyebrow" style="padding:11px 13px 6px;border-top:1px solid var(--rule)">ACCESSORIES</div>
-        ${rows(acc)}
-        <div class="note">PRs update automatically the moment a logged set beats your best. Estimated 1RM uses the Epley formula from your top set.</div></div>`; })()}
-
+    <button class="logbtn" data-act="view" data-v="wlog" style="margin-top:0">${svg('dumb',12,'var(--faint)')} LIFT RECORDS, WORKOUT LOG + ROUTINES (TRAIN) ${svg('chev',12,'var(--faint)')}</button>
     ${sect('target','CAPABILITY')}
     <div class="hint">Set your honest current level. Under-rate rather than over-rate - this only works if the numbers are true.</div>
     ${SKILLS.map(s=>{ const cur=S.tiers[s.id]??0; return `
@@ -5961,6 +5963,7 @@ function ViewLedger(){
         <button class="btn" data-act="reach" data-v="1">${svg('plus',13,'var(--ink)',2.6)} LOG A CONTACT</button>
         <button class="btn ghost" data-act="reach" data-v="-1" style="max-width:78px">UNDO</button></div>
     </div>
+    ${ArcSection()}
   </div>`;
 }
 
@@ -5994,9 +5997,9 @@ function DataPanel(){
 
 `;
 }
-function ViewCodex(){
-  const dl=daysLogged(),st=streak(),pi=phaseIdx();
-  return `<div class="view wrap">
+/* the weekly review, shown at the top of Ledger */
+function WeekReview(){
+  return `
     ${(()=>{ const W=weekStats(), sp=skipPattern();
       const m0=monthAvg(0), m1=monthAvg(1);
       const dir=(m1.n>=14&&m0.n>=14&&m1.avg>0.01)?Math.round((m0.avg-m1.avg)/m1.avg*100):null;
@@ -6017,7 +6020,13 @@ function ViewCodex(){
       ${sp?`<p class="t" style="color:var(--amber)"><b>Pattern: ${sp.dayFull}s keep slipping</b> - ${sp.pct}% completion over the last four weeks. Either move that session earlier, shrink it, or change what ${sp.dayFull} looks like. Wishing harder is not a plan.</p>`:''}
       ${dir!=null&&Math.abs(dir)>=8?`<p class="t">Overall execution is ${dir>0?`<b style="color:var(--moss)">up ${dir}%</b>`:`<b style="color:var(--rust)">down ${Math.abs(dir)}%`+'</b>'} versus the previous month.</p>`:''}
     </div><div class="note">Auto-generated from your logs, refreshed live. Sundays: read it, adjust one thing, plan the week.</div></div>`;})()}
-
+`;
+}
+/* the long-view material (phases, standing orders, file status), folded away by default at the bottom of Ledger */
+function ArcSection(){
+  const dl=daysLogged(),st=streak(),pi=phaseIdx();
+  return `${foldHead('arc','cal','THE ARC, STANDING ORDERS + FILE STATUS','')}
+    ${foldOpen('arc')?`
     ${sect('cal','THE ARC')}
     ${PHASES.map((p,i)=>{ const on=i===pi,open=openPhase===i; return `
       <div class="acc-group">
@@ -6044,7 +6053,6 @@ function ViewCodex(){
     <div class="panel"><div class="heat big">${Array.from({length:91},(_,i)=>{
       const k=dkey(-(90-i)); return `<div class="cell" style="background:${heatColor(dayScore(k))}"></div>`;}).join('')}</div>
       <div class="note">Ninety days. Gaps are information, not shame - look for what the empty weeks had in common.</div></div>
-
     <div class="closing">
       The character you're modelling this on is fiction, and the fiction skips the only part that matters: a decade of
       unremarkable mornings. That part is real, and it's available to you starting this week.
@@ -6054,13 +6062,10 @@ function ViewCodex(){
       apart. That combination is rare enough to change a life, and it takes years rather than months.
       <br><br>
       <span style="color:var(--amber)">Everything starts with the next item on the timeline.</span>
-    </div>
-  </div>`;
+    </div>`:''}`;
 }
-
-/* =================================================================== nav == */
 function Nav(){
-  const items=[['today','TODAY','swords'],['build','BUILD','dumb'],['mind','MIND','brain'],['ledger','LEDGER','coins'],['codex','CODEX','book']];
+  const items=[['today','TODAY','swords'],['wlog','TRAIN','dumb'],['build','BODY','act'],['mind','MIND','brain'],['ledger','LEDGER','coins']];
   return `<nav>${items.map(([k,l,i])=>`
     <button class="${view===k?'on':''}" data-act="view" data-v="${k}">
       <div class="mark"></div>${svg(i,18)}<span class="nl">${l}</span></button>`).join('')}</nav>`;
@@ -6087,7 +6092,7 @@ function render(){
   const oldFq=document.getElementById('foodq');
   const fqSel=(oldFq&&document.activeElement===oldFq)?[oldFq.selectionStart,oldFq.selectionEnd]:null;
   let body=view==='today'?ViewToday():view==='plan'?ViewPlan():(view==='build'||view==='body')?ViewBuild()
-    :view==='wlog'?ViewWorkoutLog():view==='mind'?ViewMind():view==='ledger'?ViewLedger():ViewCodex();
+    :view==='wlog'?ViewWorkoutLog():view==='mind'?ViewMind():ViewLedger();
   /* Every click/keystroke re-renders by replacing the whole #app tree — cheap and simple,
      but it means the .view wrapper is a brand-new DOM node every single time, and a CSS
      entrance animation on it would replay on every single interaction, not just when a tab
@@ -6711,7 +6716,7 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     commit();
   }
   render();
-  snapDaily().then(()=>{ if (view==='codex') render(); });
+  snapDaily().then(()=>{ if (view==='plan') render(); });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();

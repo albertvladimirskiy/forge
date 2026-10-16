@@ -76,7 +76,7 @@ module.exports = { name: 'Today: switching days, minimizing the workout, saving 
     await page.click('.gear');
     a.match(await page.evaluate(() => document.querySelector('.view .disp').textContent), /Program, week and data/);
     a.ok(await page.evaluate(() => !!document.querySelector('[data-act=s-backup]') && !!document.getElementById('importfile') && !!document.querySelector('[data-act=s-csv]')));
-    await page.evaluate(() => { view = 'codex'; render(); });
+    await page.evaluate(() => { view = 'ledger'; render(); });
     a.equal(await page.evaluate(() => !!document.querySelector('[data-act=s-backup]')), false);
   },
 
@@ -86,10 +86,28 @@ module.exports = { name: 'Today: switching days, minimizing the workout, saving 
     for (const k of ['BODY', 'COMBAT', 'MIND', 'WILL', 'CAPITAL']) a.ok(await page.evaluate(k => !!VITAL_HELP[k], k), k + ' has no explanation');
   },
 
-  async 'Ledger lists logged lifts and folds the rest into one line'(page, a){
-    await page.evaluate(() => { S.prs.squat = { w: 100, r: 5, e1rm: 116, date: T }; view = 'ledger'; render(); });
-    a.equal(await page.evaluate(() => document.querySelectorAll('.stand .standtop').length > 0 && /Not logged yet: .*Bench press/.test(document.getElementById('app').textContent)), true);
+  async 'program lift records live in Train > Lifts (logged ones listed, the rest folded into one line), not in Ledger'(page, a){
+    await page.evaluate(() => { S.prs.squat = { w: 100, r: 5, e1rm: 116, date: T }; view = 'wlog'; wlSub = 'lifts'; render(); });
+    a.equal(await page.evaluate(() => /PROGRAM LIFTS/.test(document.getElementById('app').textContent) && /Not logged yet: .*Bench press/.test(document.getElementById('app').textContent)), true);
     a.equal(await page.evaluate(() => /Not logged yet — log a set/.test(document.getElementById('app').textContent)), false);
+    await page.evaluate(() => { view = 'ledger'; render(); });
+    a.equal(await page.evaluate(() => /MAIN LIFTS/.test(document.getElementById('app').textContent)), false, 'Ledger still lists lifts');
+  },
+
+  async 'five tabs: Today, Train, Body, Mind, Ledger; Codex is gone and its pieces live in Ledger'(page, a){
+    a.deepEqual(await page.evaluate(() => [...document.querySelectorAll('nav .nl')].map(x => x.textContent)), ['TODAY', 'TRAIN', 'BODY', 'MIND', 'LEDGER']);
+    await page.click('nav button:nth-child(2)');
+    a.equal(await page.evaluate(() => view), 'wlog');
+    a.equal(await page.evaluate(() => document.querySelector('nav button.on .nl').textContent), 'TRAIN');
+    a.equal(await page.evaluate(() => !!document.querySelector('.backbtn')), false, 'Train is a tab now, no back link');
+    a.match(await page.evaluate(() => [...document.querySelectorAll('.segbtn')].map(x => x.textContent).join(',')), /WORKOUTS,MUSCLES,LIFTS,FIGHTS,ROUTINES/);
+    await page.click('nav button:nth-child(3)');
+    a.equal(await page.evaluate(() => view), 'build');
+    await page.click('nav button:nth-child(5)');
+    const t = await page.evaluate(() => document.getElementById('app').textContent);
+    a.match(t, /THIS WEEK/); a.match(t, /THE ARC, STANDING ORDERS/);
+    await page.click('[data-act=fold][data-v=arc]');
+    a.match(await page.evaluate(() => document.getElementById('app').textContent), /FILE STATUS/);
   },
 
   async 'the day-type badge says it swaps the day'(page, a){
@@ -105,7 +123,7 @@ module.exports = { name: 'Today: switching days, minimizing the workout, saving 
     a.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forge.v1')).ui.text), 'large');
     const pg = await openApp(page.ctx.browser(), { width: 320, state: await page.evaluate(() => ({ ...S, ui: { ...S.ui, text: 'xl' } })) });
     try {
-      for (const v of ['today', 'plan', 'build', 'ledger', 'codex']){
+      for (const v of ['today', 'plan', 'build', 'wlog', 'ledger']){
         await pg.evaluate(v => { view = v; render(); }, v);
         a.equal(await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, v + ' overflows at 320px in extra large');
       }
