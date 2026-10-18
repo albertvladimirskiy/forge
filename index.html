@@ -299,6 +299,11 @@ input[type=date],input[type=time]{min-height:40px}
 .mrow .mt b{font-weight:600;color:var(--text)}
 .mrow .mt em{font-style:normal;color:var(--faint);margin-left:6px}
 .mrow .bar{margin-top:3px}
+.msup{font-size:var(--fs-caption);color:var(--faint);margin-top:2px}
+.mwarn{font-size:var(--fs-caption);color:var(--rust);margin-top:4px;line-height:1.4}
+.suppchips{display:flex;flex-wrap:wrap;gap:7px;padding:6px 13px 4px}
+.suppchips .chip{display:inline-flex;align-items:center;gap:6px}
+.suppchips .chip i{font-style:normal;color:var(--faint);padding:0 2px}
 .fvtog{padding:11px 13px 2px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .fvtog span{font-size:var(--fs-caption);letter-spacing:.12em;color:var(--faint);font-weight:700}
 .foodpick{border-top:1px solid var(--rule);background:#101317}
@@ -1798,6 +1803,7 @@ const DEFAULTS = {
   fights:{},          // { date:[{ id, disc, min, rounds, rpe, worked, caught }] }
   routines:[],        // [{ id, name, items:[exerciseId] }]
   myfoods:[],         // custom foods you chose to keep: [{ n, kcal, p, c, f }]
+  mysupps:[],         // supplements you chose to keep for one-tap logging: [{ k: nutrient key, a: amount in that nutrient's unit }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
   cpref:{ rest:90, fav:{}, recent:[], restEx:{}, restSound:true, bar:{}, plates:{}, barEx:{}, notes:{} },
   motiv:{ why:'', quotes:[], links:[], qmode:'mix', qoff:[], qsolid:false },   // daily briefing: your why, your own lines, your play buttons
@@ -2087,7 +2093,24 @@ const MICRO_DEF=[   // label, unit, FDA daily value (null = none), group, true i
   ['Manganese','mg',2.3,'MINERALS'],['Selenium','µg',55,'MINERALS'],
   ['Fiber','g',28,'FIBER, SUGAR + FATS'],['Sugars','g',null,'FIBER, SUGAR + FATS'],['Saturated fat','g',20,'FIBER, SUGAR + FATS',true],
   ['Monounsaturated fat','g',null,'FIBER, SUGAR + FATS'],['Polyunsaturated fat','g',null,'FIBER, SUGAR + FATS'],['Cholesterol','mg',300,'FIBER, SUGAR + FATS',true]];
-let microState=0, foodRows=new Set();   // microState: 0 not asked for, 1 loading, 2 ready, 3 failed
+/* the order of MICRO_DEF, as stable keys: supplements are saved by key so reordering the list can never change what they mean */
+const MICRO_KEYS=['vita','vitc','vitd','vite','vitk','b1','b2','b3','b5','b6','folate','b12','choline','ca','fe','mg','p','k','na','zn','cu','mn','se','fiber','sugar','sat','mono','poly','chol'];
+const SUPP_LAST=MICRO_KEYS.indexOf('fiber');          // vitamins, minerals and fiber can be logged as supplements
+/* adult tolerable upper intake levels (US Institute of Medicine). supp = the limit applies to supplements/fortification only,
+   so it is compared with the supplement amount; otherwise it is compared with the day's total. */
+const MICRO_UL={'Vitamin A':[3000,1],'Vitamin C':[2000],'Vitamin D':[100],'Vitamin E':[1000,1],'Niacin (B3)':[35,1],'Vitamin B6':[100],'Folate':[1700,1],
+  'Choline':[3500],'Calcium':[2500],'Iron':[45],'Magnesium':[350,1],'Phosphorus':[4000],'Zinc':[40],'Copper':[10],'Manganese':[11],'Selenium':[400]};
+const IU_TO={vita:0.3,vitd:0.025,vite:0.67};         // µg RAE (retinol), µg, mg (natural d-alpha-tocopherol) per IU
+/* an amount typed in mg / µg / g / IU -> the nutrient's own unit, or null when that unit doesn't apply (IU for zinc) */
+function suppAmount(key,amount,unit){
+  const i=MICRO_KEYS.indexOf(key); if (i<0||!(amount>0)) return null;
+  const base=MICRO_DEF[i][1].startsWith('µg')?'µg':MICRO_DEF[i][1]==='g'?'g':'mg';
+  if (unit==='IU') return IU_TO[key]?amount*IU_TO[key]:null;
+  const mg=amount*({mg:1,'µg':0.001,g:1000}[unit]||NaN); if (!isFinite(mg)) return null;
+  return base==='mg'?mg:base==='µg'?mg*1000:mg/1000;
+}
+const suppOf=d=>Array.isArray(d&&d.supps)?d.supps.filter(s=>s&&MICRO_KEYS.indexOf(s.k)>=0&&s.a>0):[];
+let microState=0, foodRows=new Set(), suppOpen=false, suppSel=1;   // microState: 0 not asked for, 1 loading, 2 ready, 3 failed
 function loadMicros(){
   if (typeof MICROS!=='undefined'){ microState=2; return; }
   if (microState) return;
@@ -2119,15 +2142,16 @@ function entryMicros(e){
   rec.forEach((v,i)=>{ if (v!=null) out[i]=v*k; });
   return {v:out,ma:!!r.ma};
 }
-function dayMicros(list){
-  const tot=new Array(MICRO_DEF.length).fill(0), seen=new Array(MICRO_DEF.length).fill(false), missing=[];
+function dayMicros(list,supps){
+  const tot=new Array(MICRO_DEF.length).fill(0), seen=new Array(MICRO_DEF.length).fill(false), supp=new Array(MICRO_DEF.length).fill(0), missing=[];
   let n=0, approx=0;
   for (const e of list){
     const m=entryMicros(e); if (!m){ missing.push(e.n); continue; }
     n++; if (m.ma) approx++;
     m.v.forEach((v,i)=>{ tot[i]+=v; seen[i]=true; });
   }
-  return {tot,seen,n,approx,missing};
+  for (const s of supps||[]){ const i=MICRO_KEYS.indexOf(s.k); if (i<0) continue; tot[i]+=s.a; supp[i]+=s.a; seen[i]=true; }
+  return {tot,seen,n,approx,missing,supp};
 }
 const fmtMicro=v=>v>=100?String(Math.round(v)):v>=10?String(Math.round(v*10)/10):String(Math.round(v*100)/100);
 /* Daily Values are set for 2,000 kcal. The ones that track energy intake (fiber 14 g per 1,000 kcal, the B vitamins that
@@ -2136,21 +2160,25 @@ const fmtMicro=v=>v>=100?String(Math.round(v)):v>=10?String(Math.round(v*10)/10)
    cholesterol limits are set by age and sex, not by how much you eat. */
 const MICRO_SCALED=new Set(['Fiber','Thiamin (B1)','Riboflavin (B2)','Niacin (B3)','Saturated fat']);
 const microScale=N=>N&&N.kcal>0?clamp(N.kcal/2000,0.75,2.5):1;
-function microPanelHTML(list,N){
-  if (!list.length) return `<div class="note" style="border-top:none">Log some food and its vitamins and minerals add up here.</div>`;
+function microPanelHTML(list,N,supps){
+  supps=supps||[];
+  if (!list.length&&!supps.length) return `<div class="note" style="border-top:none">Log some food or a supplement and its vitamins and minerals add up here.</div>`;
   if (!microReady()){ loadMicros(); return `<div class="note" style="border-top:none">${microState===3?"Couldn't load the micronutrient data.":'Loading micronutrient data…'}</div>`; }
-  const m=dayMicros(list);
-  let h=`<div class="note" style="border-top:none;padding-bottom:2px">Counted from <b style="color:var(--text)">${m.n} of ${list.length}</b> food${list.length===1?'':'s'} (USDA data)${m.approx?`, ${m.approx} of them estimated from a similar USDA food`:''}.${m.missing.length?` No micronutrient data for: ${esc(m.missing.slice(0,5).join(', '))}${m.missing.length>5?` and ${m.missing.length-5} more`:''}. Custom foods and a few restaurant and packaged items have none, so those totals run a little low.`:''}</div>`;
+  const m=dayMicros(list,supps);
+  let h=`<div class="note" style="border-top:none;padding-bottom:2px">${supps.length?`Includes ${supps.length} supplement${supps.length===1?'':'s'}. `:''}Counted from <b style="color:var(--text)">${m.n} of ${list.length}</b> food${list.length===1?'':'s'} (USDA data)${m.approx?`, ${m.approx} of them estimated from a similar USDA food`:''}.${m.missing.length?` No micronutrient data for: ${esc(m.missing.slice(0,5).join(', '))}${m.missing.length>5?` and ${m.missing.length-5} more`:''}. Custom foods and a few restaurant and packaged items have none, so those totals run a little low.`:''}</div>`;
   const k=microScale(N);
   let grp='';
   MICRO_DEF.forEach(([l,u,dv,g,lim],i)=>{
     if (g!==grp){ grp=g; h+=`<div class="mhead">${g}</div>`; }
     if (!m.seen[i]){ h+=`<div class="mrow"><div class="mt"><span>${l}</span><span style="color:var(--faint)">—</span></div></div>`; return; }
     const sc=MICRO_SCALED.has(l)&&dv?dv*k:dv, v=m.tot[i], pct=sc?v/sc*100:null;
+    const ul=MICRO_UL[l], over=ul&&(ul[1]?m.supp[i]:v)>ul[0];
     h+=`<div class="mrow"><div class="mt"><span>${l}</span><span><b>${fmtMicro(v)} ${u}</b>${pct!=null?`<em>${Math.round(pct)}%${lim?' of limit':''}${sc!==dv?` of ${fmtMicro(sc)} ${u}`:''}</em>`:''}</span></div>
-      ${pct!=null?`<div class="bar"><div class="barfill" style="width:${clamp(pct,0,100)}%;background:${lim&&pct>100?'var(--rust)':pct>=100?'var(--moss)':'var(--steel)'}"></div></div>`:''}</div>`;
+      ${m.supp[i]>0?`<div class="msup">${fmtMicro(m.supp[i])} ${u} of that from supplements</div>`:''}
+      ${pct!=null?`<div class="bar"><div class="barfill" style="width:${clamp(pct,0,100)}%;background:${over||lim&&pct>100?'var(--rust)':pct>=100?'var(--moss)':'var(--steel)'}"></div></div>`:''}
+      ${over?`<div class="mwarn">${ul[1]?'Supplements alone are':'Today is'} above the adult upper limit of ${fmtMicro(ul[0])} ${u}. Check the label, or ask a pharmacist or doctor if this is on purpose.</div>`:''}</div>`;
   });
-  return h+`<div class="note">Percentages are of the FDA Daily Value for adults.${k!==1?` Fiber, thiamin, riboflavin, niacin and the saturated-fat limit are scaled to your ${N.kcal.toLocaleString()} kcal target (the rest don't change with calories).`:''} Your own needs differ with age, sex and training. Sodium, saturated fat and cholesterol are limits, not goals. Choline is measured less often than the rest, so it can run low.</div>`;
+  return h+`<div class="note">Percentages are of the FDA Daily Value for adults.${k!==1?` Fiber, thiamin, riboflavin, niacin and the saturated-fat limit are scaled to your ${N.kcal.toLocaleString()} kcal target (the rest don't change with calories).`:''} Your own needs differ with age, sex and training. Sodium, saturated fat and cholesterol are limits, not goals. Choline is measured less often than the rest, so it can run low.${supps.length?' Upper limits are the US adult levels; some apply only to supplements, so those compare against your supplement amount alone.':''}</div>`;
 }
 /* the compact list shown when a single food is opened in the day's list */
 function entryMicroHTML(e){
@@ -2910,8 +2938,9 @@ function normalizeCustom(){
   if (!S.cpref.fav || typeof S.cpref.fav!=='object') S.cpref.fav={};
   if (!Array.isArray(S.cpref.recent)) S.cpref.recent=[];
   ['cust','fights'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
-  ['routines','myex','myfoods'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
+  ['routines','myex','myfoods','mysupps'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
   S.myfoods=S.myfoods.filter(f=>f&&typeof f.n==='string'&&f.n.trim()&&isFinite(f.kcal));
+  S.mysupps=S.mysupps.filter(s=>s&&typeof s.k==='string'&&MICRO_KEYS.includes(s.k)&&s.a>0);
   for (const k in S.cust){
     const c=Object.assign(newCW('with'),S.cust[k]);
     if (!Array.isArray(c.items)) c.items=[];
@@ -5261,7 +5290,7 @@ function obFinish(){
 /* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
    is remembered. After-action opens by itself in the evening (or once you've written in it). */
 const FOLD_DEF = {
-  rail:()=>false, arc:()=>false, food:()=>true, foodlist:()=>true, habits:()=>true, last14:()=>false,
+  rail:()=>false, arc:()=>false, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
   review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
 };
 function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
@@ -5390,6 +5419,28 @@ function DayRail(plan){
     <div class="railhint">${svg('rot',11,'var(--faint)')} Drag a block to reschedule it. Locked blocks are fixed commitments.</div>`;
 }
 
+/* ---------- supplements ---------- */
+const suppLabel=s=>{ const i=MICRO_KEYS.indexOf(s.k); return `${MICRO_DEF[i][0]} ${fmtMicro(s.a)} ${MICRO_DEF[i][1]}`; };
+function SuppSection(d,vd){
+  const list=suppOf(d), open=foldOpen('supps'), prev=suppOf(S.days[addDays(vd,-1)]);   // S.days, not day(): looking must not create a record
+  const unitFor=k=>{ const u=MICRO_DEF[MICRO_KEYS.indexOf(k)][1]; return u.startsWith('µg')?'µg':u==='g'?'g':'mg'; };
+  const sel=MICRO_KEYS[suppSel]||'vitc';
+  return `<div class="flhead"><button class="flmain" data-act="fold" data-v="supps" aria-expanded="${open}"><span class="chev ${open?'open':''}">${svg('chev',11,'var(--faint)')}</span><span>SUPPLEMENTS${list.length?` · ${list.length}`:''}</span></button>
+      ${open?`<button class="fl-all" data-act="suppform">${suppOpen?'CLOSE':'+ ADD'}</button>`:''}</div>
+    ${open?`${list.length?`<div class="foodlist">${list.map((s,i)=>`<div class="cmt"><span style="flex:1">${esc(suppLabel(s))}</span>
+        <button class="x" data-act="delsupp" data-v="${i}" aria-label="Remove ${esc(suppLabel(s))}">${svg('x',13)}</button></div>`).join('')}</div>`
+      :`<div class="note" style="border-top:none;padding-bottom:4px">${suppOpen?'':'Log a vitamin, mineral or fiber supplement and it counts toward the day\'s micronutrients.'}</div>`}
+      ${S.mysupps.length?`<div class="suppchips">${S.mysupps.map((s,i)=>`<span class="chip on"><button data-act="addmysupp" data-v="${i}" aria-label="Log ${esc(suppLabel(s))}">${esc(suppLabel(s))}</button><button data-act="delmysupp" data-v="${i}" aria-label="Remove ${esc(suppLabel(s))} from my supplements"><i>×</i></button></span>`).join('')}</div>`:''}
+      ${!list.length&&prev.length?`<button class="btn ghost" data-act="copysupps" style="border:none;border-top:1px solid var(--rule)">${svg('rot',13)} COPY ${vd===T?"YESTERDAY'S":'THE DAY BEFORE'} SUPPLEMENTS · ${prev.length}</button>`:''}
+      ${suppOpen?`<div class="foodpick"><div class="grid3">
+        <label class="f"><span>Nutrient</span><select id="sp_k">${MICRO_DEF.slice(0,SUPP_LAST+1).map(([l],i)=>`<option value="${MICRO_KEYS[i]}" ${i===suppSel?'selected':''}>${l}</option>`).join('')}</select></label>
+        <label class="f"><span>Amount</span><input type="number" id="sp_a" inputmode="decimal" placeholder="500"></label>
+        <label class="f"><span>Unit</span><select id="sp_u">${['mg','µg','g','IU'].map(u=>`<option ${u===unitFor(sel)?'selected':''}>${u}</option>`).join('')}</select></label></div>
+        <label class="f" style="padding:0 13px 8px;flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="sp_save" checked style="width:auto"><span style="margin:0">Keep it so I can log it again in one tap</span></label>
+        <div class="note" style="padding-top:0">Use the amount on the label. IU converts for vitamin A (0.3 µg per IU, retinol), D (0.025 µg per IU) and E (0.67 mg per IU, natural form). A multivitamin is one entry per nutrient.</div>
+        <div style="padding:0 13px 13px;display:flex;gap:8px"><button class="btn" data-act="addsupp" style="flex:1">ADD SUPPLEMENT</button></div></div>`:''}`:''}`;
+}
+
 function ViewToday(){
   const vd=VD();
   const plan=buildDay(vd), d=day(vd), meta=DTYPE[plan.def.type];
@@ -5516,7 +5567,7 @@ function ViewToday(){
     ${foldOpen('food')?`<div class="panel">
       <div class="fvtog"><span>${S.ui.fv==='micro'?'VITAMINS + MINERALS':'MACROS'}</span>
         <div class="seg2"><button class="${S.ui.fv==='micro'?'':'on'}" data-act="foodview" data-v="macro" aria-pressed="${S.ui.fv!=='micro'}">MACROS</button><button class="${S.ui.fv==='micro'?'on':''}" data-act="foodview" data-v="micro" aria-pressed="${S.ui.fv==='micro'}">MICROS</button></div></div>
-      ${S.ui.fv==='micro'?microPanelHTML(d.food,N):`      ${N?`<div class="fuelbar">
+      ${S.ui.fv==='micro'?microPanelHTML(d.food,N,suppOf(d)):`      ${N?`<div class="fuelbar">
         ${[['kcal',ft.kcal,N.kcal,'var(--amber)'],['P',ft.p,N.protein,'var(--rust)'],['C',ft.c,N.carbs,'var(--steel)'],['F',ft.f,N.fat,'var(--moss)']].map(([l,v,t2,c])=>`
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(v/t2*100,0,100)}%;background:${c}"></div></div></div>`).join('')}
@@ -5531,6 +5582,7 @@ function ViewToday(){
           <span style="color:var(--dim);font-size:var(--fs-detail)">${Math.round(f.kcal*q)} kcal</span>
           <button class="x" data-act="delfood" data-v="${i}" aria-label="Remove ${esc(f.n)}">${svg('x',13)}</button></div>
         ${open?`<div class="fdet"><div class="fdm"><span><i>P</i> ${r1(f.p*q)}g</span><span><i>C</i> ${r1(f.c*q)}g</span><span><i>F</i> ${r1(f.f*q)}g</span></div>${entryMicroHTML(f)}</div>`:''}`; }).join('')}</div>`:''}`:''}
+      ${SuppSection(d,vd)}
       ${!d.food.length&&foodOf(addDays(vd,-1)).length?`<button class="btn ghost" data-act="copyyday" style="border:none;border-top:1px solid var(--rule)">${svg('rot',13)} COPY ${vd===T?"YESTERDAY'S":'THE DAY BEFORE'} FOOD · ${foodOf(addDays(vd,-1)).length} ITEM${foodOf(addDays(vd,-1)).length>1?'S':''}</button>`:''}
       <button class="btn ghost" data-act="foodopen" style="border:none;border-top:1px solid var(--rule)">${foodOpen?svg('x',13)+' CLOSE FOOD SEARCH':svg('plus',13)+' ADD FOOD'}</button>
       ${foodOpen?`<div class="foodpick">
@@ -6348,7 +6400,7 @@ document.addEventListener('pointercancel', endDrag);
 /* Destructive taps that can be taken back for a few seconds. The whole state is snapshotted just before; the toast
    offers UNDO only if the tap really changed something (the first tap of a tap-twice-to-confirm does not).
    Not included: deleting 90-day check-ins or past blocks, because their photos are erased from the phone for good. */
-const UNDOABLE = {'w-del':'Set deleted','delset':'Set deleted','delfood':'Food removed','dellog':'Entry removed','w-discard':'Workout dropped',
+const UNDOABLE = {'w-del':'Set deleted','delset':'Set deleted','delfood':'Food removed','delsupp':'Supplement removed','dellog':'Entry removed','w-discard':'Workout dropped',
   'w-rmex':'Exercise removed','f-del':'Session deleted','wl-delday':'Workout deleted','wl-rtdel':'Routine deleted','deloneoff':'Event removed',
   'deledit':'Commitment removed','delmyfood':'Removed from My foods'};
 function doUndo(){
@@ -6488,6 +6540,22 @@ function handleClick(e){
     case 'gunit': foodGU=v; foodFocus=true; break;
     case 'foodopen': foodOpen=!foodOpen; foodQ=''; foodFocus=foodOpen; break;
     case 'foodview': S.ui.fv=v==='micro'?'micro':'macro'; if (v==='micro') loadMicros(); commit(); break;
+    case 'suppform': suppOpen=!suppOpen; break;
+    case 'addsupp': {
+      const key=(document.getElementById('sp_k')||{}).value, amt=num((document.getElementById('sp_a')||{}).value), unit=(document.getElementById('sp_u')||{}).value;
+      if (!(amt>0)){ toast('Enter an amount'); return; }
+      const a=suppAmount(key,amt,unit);
+      if (a==null){ toast(unit==='IU'?'IU only converts for vitamins A, D and E':'Pick a unit'); return; }
+      const s={k:key,a:Math.round(a*1e4)/1e4};
+      (d.supps=Array.isArray(d.supps)?d.supps:[]).push(s);
+      if ((document.getElementById('sp_save')||{checked:true}).checked && !S.mysupps.some(x=>x.k===s.k&&x.a===s.a)) S.mysupps.push({...s});
+      suppSel=MICRO_KEYS.indexOf(key); loadMicros();
+      commit(); render(); toast(`${suppLabel(s)} added`); return;
+    }
+    case 'addmysupp': { const s=S.mysupps[+v]; if (!s) return; (d.supps=Array.isArray(d.supps)?d.supps:[]).push({k:s.k,a:s.a}); loadMicros(); commit(); render(); toast(`${suppLabel(s)} added`); return; }
+    case 'delsupp': { if (Array.isArray(d.supps)) d.supps.splice(+v,1); commit(); break; }
+    case 'delmysupp': { const s=S.mysupps[+v]; if (!s) return; S.mysupps.splice(+v,1); commit(); render(); toast(`${suppLabel(s)} removed from your supplements`); return; }
+    case 'copysupps': { const src=suppOf(S.days[addDays(VD(),-1)]); if (!src.length) return; d.supps=src.map(s=>({k:s.k,a:s.a})); loadMicros(); commit(); render(); toast(`${src.length} supplement${src.length>1?'s':''} copied`); return; }
     case 'foodrow': { const k=VD()+'|'+v; if (foodRows.has(k)) foodRows.delete(k); else { foodRows.add(k); loadMicros(); } break; }
     case 'foodrows': { const ks=d.food.map((_,i)=>VD()+'|'+i); if (ks.every(k=>foodRows.has(k))) ks.forEach(k=>foodRows.delete(k)); else { ks.forEach(k=>foodRows.add(k)); loadMicros(); } break; }
     case 'addfood': {
@@ -6789,6 +6857,10 @@ document.addEventListener('input', e => {
 
 /* selects + time pickers - safe to re-render after commit */
 document.addEventListener('change', e => {
+  if (e.target.id==='sp_k'){                          // supplement form: switching nutrient picks its usual unit
+    const i=MICRO_KEYS.indexOf(e.target.value), u=i>=0?MICRO_DEF[i][1]:'mg', sel=document.getElementById('sp_u');
+    suppSel=i>=0?i:suppSel; if (sel) sel.value=u.startsWith('µg')?'µg':u==='g'?'g':'mg'; return;
+  }
   const el=e.target.closest('[data-in]'); if(!el) return;
   if (el.tagName!=='SELECT' && el.type!=='time' && el.type!=='date') return;
   if ((el.type==='time'||el.type==='date') && !el.value) return;

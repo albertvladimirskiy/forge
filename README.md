@@ -77,6 +77,12 @@ branded and mixed dishes have no USDA record of their own, so each one borrows t
 approximate and the micro view says how many of the day's foods were estimated. Supplements, protein bars/powders, energy drinks and
 a few oddities have no sensible stand-in and show no data.
 
+**Supplements** (Today → FOOD → SUPPLEMENTS → + ADD): pick a vitamin, mineral or fiber, an amount and a unit (mg, µg, g, or IU for
+vitamins A, D and E), and it's stored on that day as `supps: [{ k: 'vitc', a: 500 }]` in the nutrient's own unit. They add into the MICROS
+totals (each row says how much came from supplements). "Keep it" saves a one-tap preset in `S.mysupps`; COPY YESTERDAY'S SUPPLEMENTS repeats a
+day. Totals are checked against US adult upper limits; the ones that apply to supplements only (magnesium, niacin, vitamin A, vitamin E,
+folate) compare against the supplement amount alone, and a warning shows when a limit is passed.
+
 On **Today → FOOD**, MACROS / MICROS switches the day's overview (the choice is saved). The micro percentages are of FDA Daily Values; the ones that track energy
 (fiber, thiamin, riboflavin, niacin, the saturated-fat limit) scale with that day's calorie target, the same one the macro bars use,
 and show their scaled target ("62% of 42 g"). The rest are fixed adult values, because they depend on age and sex rather than calories. FOODS EATEN closes and opens the list,
