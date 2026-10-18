@@ -108,4 +108,18 @@ module.exports = { name: 'Food data: no duplicates, micronutrients, collapsible 
       a.ok(w[0] <= w[1], 'page is wider than the phone: ' + w);
     } finally { await pg.ctx.close(); }
   },
+
+  async 'energy-linked targets scale with the calorie target, the rest stay fixed'(page, a){
+    const r = await page.evaluate(async () => {
+      loadMicros(); await new Promise(res => { const t = setInterval(() => { if (microReady()) { clearInterval(t); res(); } }, 20); });
+      const list = [{ n: 'Banana', kcal: 105, p: 1, c: 27, f: 0, q: 1, ...microRef(FOODS.find(x => x[0] === 'Banana')) }];
+      const strip = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      return { base: strip(microPanelHTML(list)), big: strip(microPanelHTML(list, { kcal: 3000 })), scale: [microScale(null), microScale({ kcal: 3000 }), microScale({ kcal: 500 })] };
+    });
+    a.deepEqual(r.scale, [1, 1.5, 0.75]);
+    a.match(r.big, /Fiber[^%]*% of 42 g/, 'fiber target is 14 g per 1,000 kcal: 42 g at 3,000 kcal');
+    a.match(r.big, /scaled to your 3,000 kcal target/);
+    a.ok(!/Potassium[^%]*% of/.test(r.big), 'potassium is not scaled');
+    a.ok(!/scaled to your/.test(r.base), 'no scaling note at 2,000 kcal / no target');
+  },
 } };
