@@ -122,4 +122,57 @@ module.exports = { name: 'Food data: no duplicates, micronutrients, collapsible 
     a.ok(!/Potassium[^%]*% of/.test(r.big), 'potassium is not scaled');
     a.ok(!/scaled to your/.test(r.base), 'no scaling note at 2,000 kcal / no target');
   },
+
+  async 'supplements: log a nutrient and amount, convert IU, remember it, and count it in the totals'(page, a){
+    await page.evaluate(() => { S.ui.fold.food = true; S.ui.fv = 'micro'; day(VD()).food = []; render(); });
+    const days0 = await page.evaluate(() => Object.keys(S.days).length);
+    await page.click('[data-act=suppform]');
+    const add = async (key, amt, unit) => { await page.selectOption('#sp_k', key); await page.fill('#sp_a', String(amt)); await page.selectOption('#sp_u', unit); await page.click('[data-act=addsupp]'); if (!(await page.$('#sp_k'))) await page.click('[data-act=suppform]'); };
+    await add('vitc', 500, 'mg');
+    a.deepEqual(await page.evaluate(() => day(VD()).supps), [{ k: 'vitc', a: 500 }]);
+    await add('vitd', 2000, 'IU');
+    a.equal(await page.evaluate(() => day(VD()).supps[1].a), 50, '2000 IU of vitamin D is 50 µg');
+    await add('b12', 1000, 'µg');
+    await add('zn', 15, 'mg');
+    a.deepEqual(await page.evaluate(() => day(VD()).supps.map(s => s.k + ':' + s.a)), ['vitc:500', 'vitd:50', 'b12:1000', 'zn:15']);
+    // the unit box follows the nutrient, and IU is refused where it means nothing
+    await page.selectOption('#sp_k', 'zn');
+    a.equal(await page.$eval('#sp_u', e => e.value), 'mg');
+    await page.fill('#sp_a', '10'); await page.selectOption('#sp_u', 'IU'); await page.click('[data-act=addsupp]');
+    a.equal(await page.evaluate(() => day(VD()).supps.length), 4, 'IU for zinc must not be saved');
+    await page.waitForFunction(() => /500 mg of that from supplements/.test(document.getElementById('app').textContent));
+    const t = await app(page);
+    a.match(t, /Includes 4 supplements/);
+    a.match(t, /Vitamin C 556 mg|Vitamin C 500 mg/, 'vitamin C total shows');
+    // kept as one-tap presets (no duplicates), and logging one adds it again
+    a.equal(await page.evaluate(() => S.mysupps.length), 4);
+    await page.click('[data-act=addmysupp][data-v="0"]');
+    a.equal(await page.evaluate(() => day(VD()).supps.length), 5);
+    await page.click('[data-act=delsupp][data-v="4"]');
+    a.equal(await page.evaluate(() => day(VD()).supps.length), 4);
+    a.equal(await page.evaluate(() => Object.keys(S.days).length), days0, 'only today got a record');
+  },
+
+  async 'supplements above the adult upper limit are flagged, and yesterday can be copied'(page, a){
+    await page.evaluate(() => { S.ui.fold.food = true; S.ui.fv = 'micro';
+      S.days[dkey(-1)] = { blocks: {}, habits: {}, rv: {}, nudge: {}, food: [], supps: [{ k: 'zn', a: 60 }, { k: 'mg', a: 400 }, { k: 'vitc', a: 500 }] }; render(); });
+    a.match(await page.evaluate(() => document.querySelector('[data-act=copysupps]').textContent), /YESTERDAY'S SUPPLEMENTS · 3/);
+    const n0 = await page.evaluate(() => Object.keys(S.days).length);
+    await page.click('[data-act=copysupps]');
+    a.equal(await page.evaluate(() => day(VD()).supps.length), 3);
+    await page.waitForFunction(() => /above the adult upper limit/.test(document.getElementById('app').textContent));
+    const t = await app(page);
+    a.match(t, /Today is above the adult upper limit of 40 mg/, 'zinc 60 mg > 40 mg');
+    a.match(t, /Supplements alone are above the adult upper limit of 350 mg/, 'supplemental magnesium 400 mg > 350 mg');
+    a.equal((t.match(/above the adult upper limit/g) || []).length, 2, 'vitamin C 500 mg is fine');
+  },
+
+  async 'a day with only supplements still shows micros, and old saved days without supplements load'(page, a){
+    await page.evaluate(() => { S.ui.fold.food = true; S.ui.fv = 'micro'; delete day(VD()).supps; day(VD()).food = []; render(); });
+    a.match(await app(page), /Log some food or a supplement/);
+    await page.evaluate(() => { day(VD()).supps = [{ k: 'se', a: 100 }, { k: 'bogus', a: 5 }, null, { k: 'ca', a: -3 }]; render(); loadMicros(); });
+    await page.waitForFunction(() => /Includes \d+ supplement/.test(document.getElementById('app').textContent));
+    a.match(await app(page), /Includes 1 supplement\./, 'malformed entries are ignored');
+    a.deepEqual(await page.evaluate(() => [suppAmount('vita', 5000, 'IU'), suppAmount('vite', 400, 'IU'), suppAmount('zn', 5, 'IU'), suppAmount('se', 100, 'µg'), suppAmount('mg', 0.4, 'g')]), [1500, 268, null, 100, 400]);
+  },
 } };
