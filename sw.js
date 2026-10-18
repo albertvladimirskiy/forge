@@ -1,5 +1,5 @@
-const CACHE = 'forge-v24';
-const ASSETS = ['./','./index.html','./foods-db.js','./exercises-db.js','./quotes-db.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const CACHE = 'forge-v25';
+const ASSETS = ['./','./index.html','./foods-db.js','./exercises-db.js','./quotes-db.js','./micros-db.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
