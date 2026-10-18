@@ -2130,20 +2130,27 @@ function dayMicros(list){
   return {tot,seen,n,approx,missing};
 }
 const fmtMicro=v=>v>=100?String(Math.round(v)):v>=10?String(Math.round(v*10)/10):String(Math.round(v*100)/100);
-function microPanelHTML(list){
+/* Daily Values are set for 2,000 kcal. The ones that track energy intake (fiber 14 g per 1,000 kcal, the B vitamins that
+   turn food into energy, and the saturated-fat limit of 10% of calories) scale with the day's calorie target, the same
+   one the macro bars use. The rest are fixed adult values: vitamins A/C/D/E/K, minerals, choline and the sodium and
+   cholesterol limits are set by age and sex, not by how much you eat. */
+const MICRO_SCALED=new Set(['Fiber','Thiamin (B1)','Riboflavin (B2)','Niacin (B3)','Saturated fat']);
+const microScale=N=>N&&N.kcal>0?clamp(N.kcal/2000,0.75,2.5):1;
+function microPanelHTML(list,N){
   if (!list.length) return `<div class="note" style="border-top:none">Log some food and its vitamins and minerals add up here.</div>`;
   if (!microReady()){ loadMicros(); return `<div class="note" style="border-top:none">${microState===3?"Couldn't load the micronutrient data.":'Loading micronutrient data…'}</div>`; }
   const m=dayMicros(list);
   let h=`<div class="note" style="border-top:none;padding-bottom:2px">Counted from <b style="color:var(--text)">${m.n} of ${list.length}</b> food${list.length===1?'':'s'} (USDA data)${m.approx?`, ${m.approx} of them estimated from a similar USDA food`:''}.${m.missing.length?` No micronutrient data for: ${esc(m.missing.slice(0,5).join(', '))}${m.missing.length>5?` and ${m.missing.length-5} more`:''}. Custom foods and a few restaurant and packaged items have none, so those totals run a little low.`:''}</div>`;
+  const k=microScale(N);
   let grp='';
   MICRO_DEF.forEach(([l,u,dv,g,lim],i)=>{
     if (g!==grp){ grp=g; h+=`<div class="mhead">${g}</div>`; }
     if (!m.seen[i]){ h+=`<div class="mrow"><div class="mt"><span>${l}</span><span style="color:var(--faint)">—</span></div></div>`; return; }
-    const v=m.tot[i], pct=dv?v/dv*100:null;
-    h+=`<div class="mrow"><div class="mt"><span>${l}</span><span><b>${fmtMicro(v)} ${u}</b>${pct!=null?`<em>${Math.round(pct)}%${lim?' of limit':''}</em>`:''}</span></div>
+    const sc=MICRO_SCALED.has(l)&&dv?dv*k:dv, v=m.tot[i], pct=sc?v/sc*100:null;
+    h+=`<div class="mrow"><div class="mt"><span>${l}</span><span><b>${fmtMicro(v)} ${u}</b>${pct!=null?`<em>${Math.round(pct)}%${lim?' of limit':''}${sc!==dv?` of ${fmtMicro(sc)} ${u}`:''}</em>`:''}</span></div>
       ${pct!=null?`<div class="bar"><div class="barfill" style="width:${clamp(pct,0,100)}%;background:${lim&&pct>100?'var(--rust)':pct>=100?'var(--moss)':'var(--steel)'}"></div></div>`:''}</div>`;
   });
-  return h+`<div class="note">Percentages are of the FDA Daily Value for adults (a 2,000 kcal diet). Your own needs differ with age, sex and training. Sodium, saturated fat and cholesterol are limits, not goals. Choline is measured less often than the rest, so it can run low.</div>`;
+  return h+`<div class="note">Percentages are of the FDA Daily Value for adults.${k!==1?` Fiber, thiamin, riboflavin, niacin and the saturated-fat limit are scaled to your ${N.kcal.toLocaleString()} kcal target (the rest don't change with calories).`:''} Your own needs differ with age, sex and training. Sodium, saturated fat and cholesterol are limits, not goals. Choline is measured less often than the rest, so it can run low.</div>`;
 }
 /* the compact list shown when a single food is opened in the day's list */
 function entryMicroHTML(e){
@@ -5509,7 +5516,7 @@ function ViewToday(){
     ${foldOpen('food')?`<div class="panel">
       <div class="fvtog"><span>${S.ui.fv==='micro'?'VITAMINS + MINERALS':'MACROS'}</span>
         <div class="seg2"><button class="${S.ui.fv==='micro'?'':'on'}" data-act="foodview" data-v="macro" aria-pressed="${S.ui.fv!=='micro'}">MACROS</button><button class="${S.ui.fv==='micro'?'on':''}" data-act="foodview" data-v="micro" aria-pressed="${S.ui.fv==='micro'}">MICROS</button></div></div>
-      ${S.ui.fv==='micro'?microPanelHTML(d.food):`      ${N?`<div class="fuelbar">
+      ${S.ui.fv==='micro'?microPanelHTML(d.food,N):`      ${N?`<div class="fuelbar">
         ${[['kcal',ft.kcal,N.kcal,'var(--amber)'],['P',ft.p,N.protein,'var(--rust)'],['C',ft.c,N.carbs,'var(--steel)'],['F',ft.f,N.fat,'var(--moss)']].map(([l,v,t2,c])=>`
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(v/t2*100,0,100)}%;background:${c}"></div></div></div>`).join('')}

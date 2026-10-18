@@ -77,7 +77,9 @@ branded and mixed dishes have no USDA record of their own, so each one borrows t
 approximate and the micro view says how many of the day's foods were estimated. Supplements, protein bars/powders, energy drinks and
 a few oddities have no sensible stand-in and show no data.
 
-On **Today → FOOD**, MACROS / MICROS switches the day's overview (the choice is saved). FOODS EATEN closes and opens the list,
+On **Today → FOOD**, MACROS / MICROS switches the day's overview (the choice is saved). The micro percentages are of FDA Daily Values; the ones that track energy
+(fiber, thiamin, riboflavin, niacin, the saturated-fat limit) scale with that day's calorie target, the same one the macro bars use,
+and show their scaled target ("62% of 42 g"). The rest are fixed adult values, because they depend on age and sex rather than calories. FOODS EATEN closes and opens the list,
 tapping a food opens its macros and micros, and EXPAND ALL / COLLAPSE ALL does every food at once.
 
 ### Custom workouts, fighting and the exercise library (`exercises-db.js`)
