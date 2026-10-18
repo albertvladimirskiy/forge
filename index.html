@@ -1641,29 +1641,6 @@ const ARCH = {
   note:'Broad shoulders, visible abs at rest, thick back and forearms, and a waist that stays small. Built to move, not to pose.'
 };
 
-/* ------------------------------------------------------ supplements ------- */
-/* Tiered by actual evidence quality. Food first, always.                     */
-const SUPPS = [
-  {t:1,n:'Creatine monohydrate',d:'3–5 g daily, any time, forever',
-   w:'The most studied sports supplement in existence and the only one with a large, consistent effect on strength and lean mass. Monohydrate only — the fancy forms cost more and do nothing extra. No loading phase needed.'},
-  {t:1,n:'Vitamin D3',d:'1000–2000 IU daily, with a meal',
-   w:'Genuinely common to run low on, especially through winter or if you train indoors. Affects bone, immune function and possibly strength. Get a blood level before going higher than this.'},
-  {t:1,n:'Whey or casein protein',d:'1–2 scoops as needed',
-   w:'Not magic — it is just convenient food. Useful precisely on the days when hitting your protein target from meals is not going to happen.'},
-  {t:1,n:'Caffeine',d:'100–200 mg, 30–45 min pre-session',
-   w:'Reliably improves output and perceived effort. Keep it away from the 8 hours before bed — trading sleep for a better session is a losing trade in this program.'},
-  {t:2,n:'Creatine timing / omega-3 (EPA+DHA)',d:'1–2 g combined EPA+DHA daily',
-   w:'Decent evidence for recovery and joint comfort, strong evidence for general cardiovascular health. Oily fish twice a week does the same job.'},
-  {t:2,n:'Magnesium glycinate',d:'200–400 mg, evening',
-   w:'Worth it only if your intake is genuinely low. Glycinate is gentler on the gut than oxide. Mild help with sleep quality for some people.'},
-  {t:2,n:'Electrolytes / sodium',d:'Around heavy sweat sessions',
-   w:'Matters more than people think for tennis in heat and for long conditioning. Plain salt in water works.'},
-  {t:3,n:'BCAAs',d:'Skip',
-   w:'Redundant the moment you are eating adequate total protein, which this program already has you doing. Money better spent on food.'},
-  {t:3,n:'Testosterone boosters, fat burners, "natural anabolics"',d:'Skip',
-   w:'No credible evidence at legal doses, and the category is where contamination problems cluster. This is the aisle that ends collegiate eligibility.'},
-];
-
 /* ----------------------------------------------------- meal templates ---- */
 /* Items are [FOODS name, servings]. Totals are computed at runtime so the
    displayed numbers are always real.                                        */
@@ -2018,7 +1995,7 @@ function pillars(){
   const TWp=trendWeight(), bw=TWp&&TWp.kg;
   /* bestLift() so a session logged on Today counts even if the Log tab's
      own squat/bench/etc fields haven't been re-typed since — matches how
-     STRENGTH STANDARDS and THE LIFTS THAT BUILD IT already read strength. */
+     STRENGTH STANDARDS already reads strength. */
   const lift=(!bw)?0:LIFTS.map(s=>{ const cur=bestLift(s.k); return cur?clamp(cur/(bw*s.m)*100,0,100):0; }).reduce((a,b)=>a+b,0)/LIFTS.length;
   const read=Object.values(S.books).filter(v=>v===2).length;
   const dl=daysLogged();
@@ -5827,26 +5804,11 @@ function ViewTarget(){
       <p class="t" style="color:var(--faint)">FFMI is lean mass scaled to height. Untrained men sit near 19, well-trained near 21–22, and the natural ceiling is about 24–25. The ${ARCH.ffmi} target is "visibly built, still an athlete" — reachable without drugs, unlike most superhero physiques.</p>
     </div></div>
 
-    ${sect('eye','WHAT THE SCREEN VERSION ACTUALLY IS')}
-    <div class="panel"><div style="padding:14px 13px 4px">
-      <p class="t">Worth knowing what you are actually aiming at. The shirtless scenes are a peak, held for about a day: dehydrated, carb-depleted, oiled, and lit from above by someone paid to make it look like that. Nobody walks around in that condition, including the actor.</p>
-      <p class="t">The <b>sustainable</b> version of that build is the one in the target column — around ${ARCH.bfLow}–${ARCH.bfHigh}% body fat, where abs are visible at rest and you can still train hard, sleep well, and think straight. Below about 8% year-round, strength stalls, sleep degrades, and mood usually follows.</p>
-      <p class="t">Also true: the on-screen impression is mostly <b>shoulders, back width and forearms</b> against a small waist. That is why this program pulls as much as it presses, and why the waist measurement matters more than the scale.</p>
-    </div></div>
-
     ${Lsh&&Lwa?(()=>{ const r=Lsh.shoulder/Lwa.waist;
       return `<div class="panel"><div class="stand"><div class="standtop"><span style="font-weight:600">Shoulder : waist</span>
         <span>${r.toFixed(2)} <span style="color:var(--faint)">/ ${ARCH.vTaper} target</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(r/ARCH.vTaper*100,0,100)}%;background:${r>=ARCH.vTaper?'var(--moss)':'var(--steel)'}"></div></div></div>
-        <div class="note">An aesthetic heuristic rather than a scientific one, but it tracks the thing people actually register. Move it by widening the shoulders and back, not by shrinking the waist below a healthy point.</div></div>`;})():''}
-
-    ${sect('dumb','THE LIFTS THAT BUILD IT')}
-    <div class="panel">${LIFTS.map(s=>{
-      const cur=bestLift(s.k), goal=L&&L.weight?trendWeight().kg*s.m:null, pct=(cur&&goal)?clamp(cur/goal*100,0,100):0;
-      return `<div class="stand"><div class="standtop"><span style="font-weight:600">${s.l}</span>
-        <span>${cur?dispExact(cur):'—'} <span style="color:var(--faint)">/ ${goal?dispLoad(goal,s.k):'—'}</span></span></div>
-        <div class="bar"><div class="barfill" style="width:${pct}%;background:${pct>=100?'var(--moss)':'var(--steel)'}"></div></div></div>`;}).join('')}
-      <div class="note">These are the numbers that produce the build. Hit all six and the physique follows almost automatically, provided the eating supports it. Exact working weights for every session are on Today.</div></div>`;
+        <div class="note">An aesthetic heuristic rather than a scientific one, but it tracks the thing people actually register. Move it by widening the shoulders and back, not by shrinking the waist below a healthy point.</div></div>`;})():''}`;
 }
 
 /* ======================================================= build: meals ==== */
@@ -5892,8 +5854,7 @@ function ViewFuel(){
 
   if(!N) return `${sect('flame','DAILY TARGETS')}
     <div class="panel"><button class="empty" data-act="golog" style="width:100%">Log a weight on the <b>LOG</b> tab and your exact calorie and macro targets appear here.</button></div>
-    ${MealSection(null)}
-    ${SuppSection()}`;
+    ${MealSection(null)}`;
 
   const adjNote = q&&q.phase==='lean' ? 'Set your goal to <b>Lean out</b> in Plan and this drops into a deficit automatically.'
     : q&&q.phase==='build' ? 'Set your goal to <b>Add muscle</b> in Plan for a small surplus.'
@@ -5927,28 +5888,7 @@ function ViewFuel(){
       <p class="t">Judge by the two-week weight average, never a single morning.</p>
       <p class="t" style="color:var(--faint)">These targets are population-average estimates from your height, weight, age and training load — a starting point to adjust from over weeks. They are not a clinical prescription. Talk to a doctor or a registered dietitian before making significant dietary changes, particularly with any medical condition or a complicated history with food.</p>
     </div></div>
-
-    ${SuppSection()}`;
-}
-
-/* ==================================================== build: supplements == */
-function SuppSection(){
-  return `
-    ${sect('shield','SUPPLEMENTS')}
-    <div class="hint">Food first — supplements are the last 5%, not the first. Ordered by how good the evidence actually is.</div>
-    ${[1,2,3].map(tier=>{
-      const list=SUPPS.filter(s=>s.t===tier);
-      const head=tier===1?['WORTH IT','var(--moss)']:tier===2?['SITUATIONAL','var(--amber)']:['SKIP IT','var(--rust)'];
-      return `<div class="panel acc" style="margin-bottom:11px"><div class="acc-bar" style="background:${head[1]}"></div>
-        <div class="eyebrow" style="padding:12px 13px 2px;color:${head[1]}">${head[0]}</div>
-        ${list.map(s=>`<div class="stand">
-          <div class="standtop"><span style="font-weight:600">${esc(s.n)}</span>
-            <span style="font-size:var(--fs-detail);color:var(--faint)">${esc(s.d)}</span></div>
-          <div class="det" style="margin-top:2px">${esc(s.w)}</div></div>`).join('')}
-      </div>`;}).join('')}
-    <div class="panel"><div class="note" style="border-top:none">
-      Two things that matter specifically for you. <b>One:</b> as a collegiate athlete, supplements are an eligibility risk — the industry is poorly regulated and contamination is a real, documented problem. Use NSF Certified for Sport or Informed Sport products only, and check anything new against your school's compliance office and the NCAA banned-substance list. <b>Two:</b> get bloodwork before guessing. Vitamin D, ferritin, and a basic panel tell you what you actually need instead of what a label claims.
-    </div></div>`;
+`;
 }
 
 /* =============================================================== build === */
