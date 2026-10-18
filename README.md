@@ -61,6 +61,22 @@ from published nutrition info as remembered, not scraped, so treat them as rough
 overwrite anything you have the label for. Search matches every word you type in any order.
 To add your own, append `['Name',kcal,p,c,f]` to any array in that file (or to `FOODS_VENUES`).
 
+### Food data, micronutrients and the food log
+`foods-db.js` is the food list (about 7,600 foods: restaurant and chain items, packaged and grocery items, and USDA generics per 100 g).
+Names are unique, ignoring case, spacing and punctuation; the same food is never listed twice under two serving styles. USDA
+rows come from USDA SR Legacy; the generic and grocery rows were checked against USDA SR28 portion weights. Restaurant and
+brand rows are from published menus and labels as remembered, so treat them as roughly ±10%.
+
+`micros-db.js` holds USDA SR28 values per 100 g for 29 vitamins, minerals, fiber, sugars and fats (`MICRO_DEF` in `index.html` gives
+the order, units and FDA Daily Values). It is loaded the first time a micro view opens. A food row points at its record with an NDB
+number after the gram basis: `[name, kcal, p, c, f, 100, ndb]` for USDA rows and `[name, kcal, p, c, f, 0, ndb, grams]` for per-serving
+rows; a negative NDB means "a close USDA equivalent" rather than the exact item. Logging a food stores that reference on the entry
+(`mk`, `mg` grams, `ma` approximate), so totals never depend on a name lookup; older entries are matched by name. Restaurant
+dishes mostly have no record: the micro view says how many foods it could count and which it couldn't.
+
+On **Today → FOOD**, MACROS / MICROS switches the day's overview (the choice is saved). FOODS EATEN closes and opens the list,
+tapping a food opens its macros and micros, and EXPAND ALL / COLLAPSE ALL does every food at once.
+
 ### Custom workouts, fighting and the exercise library (`exercises-db.js`)
 
 About 6,500 movements in `EXLIB`, grouped as `[muscle, equipment, kind, [names]]` (barbell/dumbbell/machine/cable/bodyweight

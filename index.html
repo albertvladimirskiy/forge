@@ -280,6 +280,27 @@ input[type=date],input[type=time]{min-height:40px}
 .fuelbar{display:flex;flex-direction:column;gap:9px;padding:13px}
 .fb .fbtop{display:flex;justify-content:space-between;font-size:var(--fs-detail);color:var(--faint);margin-bottom:4px}
 .foodlist{border-top:1px solid var(--rule)}
+.flhead{display:flex;align-items:center;gap:8px;width:100%;padding:0 13px;border-top:1px solid var(--rule);font-size:var(--fs-caption);letter-spacing:.12em;font-weight:700;color:var(--faint)}
+.flhead button{padding:11px 0;font:inherit;letter-spacing:inherit;font-weight:inherit;color:inherit}
+.flhead .flmain{flex:1;display:flex;align-items:center;gap:8px;text-align:left}
+.flhead .chev{padding:0}
+.flhead .fl-all{color:var(--amber);letter-spacing:.1em}
+.cmt .cmtname{flex:1;min-width:0;display:flex;align-items:center;gap:6px;text-align:left;color:inherit;font:inherit}
+.cmt .cmtname .chev{padding:0;flex:none}
+.fdet{padding:0 13px 12px;border-bottom:1px solid var(--rule);font-size:var(--fs-detail);color:var(--dim)}
+.fdet .fdm{display:flex;gap:14px;margin-bottom:8px;color:var(--text)}
+.fdet .fdm span i{font-style:normal;color:var(--faint)}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px 16px}
+.mgrid div{display:flex;justify-content:space-between;gap:8px}
+.mgrid div b{font-weight:600;color:var(--text);white-space:nowrap}
+.mhead{padding:12px 13px 4px;font-size:var(--fs-caption);letter-spacing:.14em;font-weight:700;color:var(--faint)}
+.mrow{padding:5px 13px}
+.mrow .mt{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-detail);color:var(--dim)}
+.mrow .mt b{font-weight:600;color:var(--text)}
+.mrow .mt em{font-style:normal;color:var(--faint);margin-left:6px}
+.mrow .bar{margin-top:3px}
+.fvtog{padding:11px 13px 2px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fvtog span{font-size:var(--fs-caption);letter-spacing:.12em;color:var(--faint);font-weight:700}
 .foodpick{border-top:1px solid var(--rule);background:#101317}
 .searchrow{display:flex;align-items:center;gap:9px;padding:11px 13px;border-bottom:1px solid var(--rule)}
 .searchrow input{border:none;background:none;padding:2px 0;font-size:16px}
@@ -1249,111 +1270,111 @@ const ORDERS = [
 
 /* ------------------------------- food database: [name, kcal, p, c, f] ---- */
 const FOODS = [
-['Egg, large',72,6,0,5],['Egg whites, 3',51,11,0,0],['Chicken breast, 6oz',280,53,0,6],['Chicken thigh, 6oz',360,42,0,20],
-['Ground beef 85%, 6oz',360,42,0,20],['Ground turkey, 6oz',340,44,0,18],['Steak (sirloin), 6oz',340,52,0,14],['Salmon, 6oz',350,38,0,22],
-['Tuna, 1 can',100,22,0,1],['White fish, 6oz',180,38,0,2],['Shrimp, 6oz',170,36,2,2],['Pork chop, 6oz',330,44,0,16],
-['Bacon, 2 slices',90,6,0,7],['Sausage link',170,10,1,14],['Deli turkey, 4 slices',80,14,2,1],['Ham, 4 slices',90,14,2,3],
-['Tofu, 1 cup',180,20,4,10],['Whey protein, 1 scoop',120,24,3,1],['Protein bar',210,20,22,7],['Protein shake, bottled',160,30,5,3],
-['Greek yogurt, 1 cup',150,20,9,4],['Cottage cheese, 1 cup',200,24,8,8],['Milk whole, 1 cup',150,8,12,8],['Milk skim, 1 cup',85,8,12,0],
-['Cheese, 1 slice',110,7,0,9],['String cheese',80,7,1,6],['Cream cheese, 2 tbsp',100,2,2,10],['Butter, 1 tbsp',100,0,0,11],
-['Rice cooked, 1 cup',205,4,45,0],['Pasta cooked, 1 cup',220,8,43,1],['Bread, 1 slice',80,4,15,1],['Bagel',280,11,56,2],
-['Tortilla, large',140,4,24,4],['Oats dry, 1/2 cup',150,5,27,3],['Potato, medium',160,4,37,0],['Sweet potato, medium',115,2,27,0],
-['Quinoa cooked, 1 cup',220,8,39,4],['Cereal, 1 cup',140,3,30,2],['Granola, 1/2 cup',210,5,32,7],['Ramen, 1 pack',380,8,52,14],
-['Mac & cheese, 1 cup',310,11,44,10],['Fries, medium',380,4,48,18],['Chips, 1 oz',150,2,15,10],['Crackers, 6',80,2,13,3],
-['Pretzels, 1 oz',110,3,23,1],['Popcorn, 3 cups',95,3,19,1],['Banana',105,1,27,0],['Apple',95,0,25,0],
-['Orange',65,1,16,0],['Berries, 1 cup',70,1,17,0],['Grapes, 1 cup',60,1,16,0],['Mango, 1 cup',100,1,25,0],
-['Watermelon, 1 cup',46,1,12,0],['Pineapple, 1 cup',82,1,22,0],['Dates, 3',200,1,54,0],['Raisins, small box',130,1,31,0],
-['Avocado, half',120,1,6,11],['Almonds, 1 oz (23)',165,6,6,14],['Peanut butter, 2 tbsp',190,8,7,16],['Trail mix, 1 oz',140,4,13,9],
-['Hummus, 2 tbsp',70,2,4,5],['Olive oil, 1 tbsp',120,0,0,14],['Mayo, 1 tbsp',95,0,0,10],['Ranch, 2 tbsp',130,0,2,13],
-['Ketchup, 1 tbsp',17,0,5,0],['Honey, 1 tbsp',64,0,17,0],['Jam, 1 tbsp',55,0,14,0],['Broccoli, 1 cup',30,2,6,0],
-['Salad greens, 2 cups',15,1,3,0],['Tomato',22,1,5,0],['Carrots, 1 cup',52,1,12,0],['Cucumber, 1 cup',16,1,4,0],
-['Bell pepper',30,1,7,0],['Onion, half',22,1,5,0],['Corn, 1 cup',130,5,27,2],['Peas, 1 cup',120,8,21,0],
-['Black beans, 1 cup',220,15,40,1],['Chickpeas, 1 cup',270,15,45,4],['Lentils, 1 cup',230,18,40,1],
-['Burger (fast food)',550,25,45,29],['Cheeseburger, double',740,40,44,45],['Pizza, 1 slice',285,12,36,10],['Burrito (chipotle-style)',900,40,95,35],
-['Chicken bowl w/ rice',700,45,75,20],['Sandwich, turkey',350,20,40,12],['Sub, 6-inch',400,23,45,14],['Hot dog',290,10,24,17],
-['Chicken nuggets, 6',280,14,16,17],['Sushi roll, 8 pc',300,9,45,7],['Pad thai, 1 plate',700,25,85,28],['Fried rice, 1 cup',330,8,42,13],
-['Pho, 1 bowl',450,30,55,10],['Ice cream, 1 cup',270,5,32,14],['Cookie',160,2,22,8],['Donut',260,3,31,14],
-['Dark chocolate, 2 sq',110,1,11,7],['Soda, 1 can',140,0,39,0],['Beer, 1 can',150,1,13,0],['Wine, 1 glass',125,0,4,0],
-['Orange juice, 1 cup',110,2,26,0],['Gatorade, 1 bottle',140,0,36,0],['Energy drink',110,0,28,0],['Latte, medium',190,10,18,7],
-['Coffee w/ cream',35,0,1,3],['Coffee, black',2,0,0,0],
+['Egg, large',72,6,0,5,0,1123,50],['Egg whites, 3',51,11,0,0,0,1124,98],['Chicken breast, 6oz',280,53,0,6,0,5064,170],['Chicken thigh, 6oz',360,42,0,20,0,5098,200],
+['Ground beef 85%, 6oz',360,42,0,20,0,23563,166],['Ground turkey, 6oz',340,44,0,18,0,5306,167],['Steak (sirloin), 6oz',340,52,0,14],['Salmon, 6oz',350,38,0,22,0,15237,170],
+['Tuna, 1 can',100,22,0,1,0,15121,116],['White fish, 6oz',180,38,0,2],['Shrimp, 6oz',170,36,2,2,0,15271,168],['Pork chop, 6oz',330,44,0,16,0,10064,168],
+['Bacon, 2 slices',90,6,0,7,0,10860,16],['Sausage link',170,10,1,14,0,7064,52],['Deli turkey, 4 slices',80,14,2,1,0,7081,80],['Ham, 4 slices',90,14,2,3,0,7028,89],
+['Tofu, 1 cup',180,20,4,10,0,16427,236],['Whey protein, 1 scoop',120,24,3,1,0,14066,34],['Protein bar',210,20,22,7],['Protein shake, bottled',160,30,5,3],
+['Greek yogurt, 1 cup',150,20,9,4,0,1287,205],['Cottage cheese, 1 cup',200,24,8,8,0,1012,204],['Milk whole, 1 cup',150,8,12,8,0,1078,235],['Milk skim, 1 cup',85,8,12,0,0,1085,249],
+['Cheese, 1 slice',110,7,0,9],['String cheese',80,7,1,6],['Cream cheese, 2 tbsp',100,2,2,10,0,1017,29],['Butter, 1 tbsp',100,0,0,11,0,1001,14],
+['Rice cooked, 1 cup',205,4,45,0,0,20051,158],['Pasta cooked, 1 cup',220,8,43,1,0,20121,139],['Bread, 1 slice',80,4,15,1,0,18064,30],['Bagel',280,11,56,2,0,18968,112],
+['Tortilla, large',140,4,24,4,0,18970,47],['Oats dry, 1/2 cup',150,5,27,3,0,8120,40],['Potato, medium',160,4,37,0],['Sweet potato, medium',115,2,27,0,0,11507,134],
+['Quinoa cooked, 1 cup',220,8,39,4,0,20137,183],['Cereal, 1 cup',140,3,30,2],['Granola, 1/2 cup',210,5,32,7],['Ramen, 1 pack',380,8,52,14,0,6583,86],
+['Mac & cheese, 1 cup',310,11,44,10],['Fries, medium',380,4,48,18],['Chips, 1 oz',150,2,15,10,0,19411,28],['Crackers, 6',80,2,13,3],
+['Pretzels, 1 oz',110,3,23,1,0,19047,29],['Popcorn, 3 cups',95,3,19,1,0,19034,25],['Banana',105,1,27,0,0,9040,118],['Apple',95,0,25,0,0,9003,182],
+['Orange',65,1,16,0,0,9202,132],['Berries, 1 cup',70,1,17,0],['Grapes, 1 cup',60,1,16,0],['Mango, 1 cup',100,1,25,0,0,9176,167],
+['Watermelon, 1 cup',46,1,12,0,0,9326,154],['Pineapple, 1 cup',82,1,22,0,0,9266,165],['Dates, 3',200,1,54,0,0,9421,72],['Raisins, small box',130,1,31,0,0,9298,43],
+['Avocado, half',120,1,6,11,0,9037,75],['Almonds, 1 oz (23)',165,6,6,14,0,12061,28],['Peanut butter, 2 tbsp',190,8,7,16,0,16098,32],['Trail mix, 1 oz',140,4,13,9,0,19059,30],
+['Hummus, 2 tbsp',70,2,4,5,0,16158,42],['Olive oil, 1 tbsp',120,0,0,14,0,4053,14],['Mayo, 1 tbsp',95,0,0,10],['Ranch, 2 tbsp',130,0,2,13,0,4639,30],
+['Ketchup, 1 tbsp',17,0,5,0],['Honey, 1 tbsp',64,0,17,0,0,19296,21],['Jam, 1 tbsp',55,0,14,0,0,19297,20],['Broccoli, 1 cup',30,2,6,0,0,11090,88],
+['Salad greens, 2 cups',15,1,3,0],['Tomato',22,1,5,0],['Carrots, 1 cup',52,1,12,0,0,11124,126],['Cucumber, 1 cup',16,1,4,0,0,11205,108],
+['Bell pepper',30,1,7,0,0,11333,150],['Onion, half',22,1,5,0,0,11282,55],['Corn, 1 cup',130,5,27,2,0,11167,150],['Peas, 1 cup',120,8,21,0,0,11304,148],
+['Black beans, 1 cup',220,15,40,1,0,16015,167],['Chickpeas, 1 cup',270,15,45,4,0,16057,165],['Lentils, 1 cup',230,18,40,1,0,16070,198],
+['Burger (fast food)',550,25,45,29],['Cheeseburger, double',740,40,44,45,0,21395,262],['Pizza, 1 slice',285,12,36,10,0,21225,110],['Burrito (chipotle-style)',900,40,95,35],
+['Chicken bowl w/ rice',700,45,75,20,0,36401,400],['Sandwich, turkey',350,20,40,12],['Sub, 6-inch',400,23,45,14],['Hot dog',290,10,24,17],
+['Chicken nuggets, 6',280,14,16,17,0,22974,108],['Sushi roll, 8 pc',300,9,45,7],['Pad thai, 1 plate',700,25,85,28],['Fried rice, 1 cup',330,8,42,13],
+['Pho, 1 bowl',450,30,55,10],['Ice cream, 1 cup',270,5,32,14,0,19095,131],['Cookie',160,2,22,8],['Donut',260,3,31,14],
+['Dark chocolate, 2 sq',110,1,11,7,0,19903,19],['Soda, 1 can',140,0,39,0],['Beer, 1 can',150,1,13,0,0,14003,349],['Wine, 1 glass',125,0,4,0,0,14084,151],
+['Orange juice, 1 cup',110,2,26,0,0,9206,245],['Gatorade, 1 bottle',140,0,36,0,0,14460,543],['Energy drink',110,0,28,0,0,14021,245],['Latte, medium',190,10,18,7],
+['Coffee w/ cream',35,0,1,3,0,1050,18],['Coffee, black',2,0,0,0,0,14209,188],
 ];
 const FOODS_MORE = [
 /* -- the missed items, first -- */
-['Caviar, 1 tbsp',42,4,1,3],['Kiwi',42,1,10,0],['Pumpkin seeds, 1oz',151,7,5,13],['Tomato sauce (marinara), 1/2 cup',70,2,10,3],
+['Caviar, 1 tbsp',42,4,1,3,0,15012,16],['Kiwi',42,1,10,0],['Pumpkin seeds, 1oz',160,9,3,14,0,12016,28],['Tomato sauce (marinara), 1/2 cup',70,2,10,3],
 /* -- proteins: more meat, poultry, seafood -- */
-['Turkey breast, 6oz',240,51,0,2],['Duck breast, 6oz',250,45,0,7],['Venison, 6oz',260,51,0,5],['Lamb chop, 6oz',470,44,0,32],
-['Veal, 6oz',280,46,0,10],['Crab, 6oz',180,34,0,3],['Lobster, 6oz',170,36,1,1],['Scallops, 6oz',200,38,3,2],
-['Mussels, 6oz',250,34,11,6],['Oysters, 6 raw',90,9,5,3],['Anchovies, 5',40,6,0,2],['Sardines, 1 can',190,23,0,11],
-['Smoked salmon, 3oz',100,16,0,4],['Catfish, 6oz',260,32,0,14],['Tilapia, 6oz',220,46,0,4],['Cod, 6oz',180,40,0,1],
-['Halibut, 6oz',250,47,0,5],['Mahi mahi, 6oz',190,42,0,2],['Swordfish, 6oz',260,42,0,9],['Trout, 6oz',280,40,0,12],
-['Calamari, fried, 6oz',350,24,24,18],['Octopus, 6oz',230,42,6,3],['Chorizo, 2oz',260,14,1,22],['Pepperoni, 15 slices',140,6,1,12],
-['Prosciutto, 2 slices',70,10,0,3],['Salami, 4 slices',150,8,1,13],['Pastrami, 4 slices',100,14,1,4],['Roast beef, deli, 4 slices',90,15,1,3],
-['Chicken wings, 6',430,30,0,34],['Chicken drumstick, 2',260,32,0,14],['Ground chicken, 6oz',280,38,0,14],['Ground pork, 6oz',380,38,0,26],
-['Pork tenderloin, 6oz',250,45,0,7],['Pork ribs, 6oz',500,38,0,38],['Bacon, turkey, 2 slices',60,5,0,4],['Beef liver, 4oz',200,27,5,5],
-['Bison, 6oz',290,48,0,10],
+['Turkey breast, 6oz',240,51,0,2,0,5220,164],['Duck breast, 6oz',250,45,0,7,0,5316,177],['Venison, 6oz',260,51,0,5,0,35080,226],['Lamb chop, 6oz',470,44,0,32,0,17411,153],
+['Veal, 6oz',280,46,0,10,0,17139,167],['Crab, 6oz',180,34,0,3,0,15137,184],['Lobster, 6oz',170,36,1,1,0,15148,191],['Scallops, 6oz',200,38,3,2],
+['Mussels, 6oz',250,34,11,6,0,15165,145],['Oysters, 6 raw',90,9,5,3,0,15171,110],['Anchovies, 5',40,6,0,2],['Sardines, 1 can',190,23,0,11,0,15088,92],
+['Smoked salmon, 3oz',100,16,0,4,0,15179,86],['Catfish, 6oz',260,32,0,14,0,15235,180],['Tilapia, 6oz',220,46,0,4,0,15262,172],['Cod, 6oz',180,40,0,1,0,15016,172],
+['Halibut, 6oz',190,38,0,3,0,15037,171],['Mahi mahi, 6oz',190,42,0,2],['Swordfish, 6oz',260,42,0,9,0,15111,152],['Trout, 6oz',280,40,0,12,0,15241,167],
+['Calamari, fried, 6oz',350,24,24,18],['Octopus, 6oz',279,51,7,4,0,15230,170],['Chorizo, 2oz',260,14,1,22,0,7019,57],['Pepperoni, 15 slices',140,6,1,12,0,7057,28],
+['Prosciutto, 2 slices',70,10,0,3],['Salami, 4 slices',150,8,1,13,0,7072,40],['Pastrami, 4 slices',100,14,1,4,0,13355,68],['Roast beef, deli, 4 slices',90,15,1,3,0,7043,79],
+['Chicken wings, 6',430,30,0,34,0,5103,169],['Chicken drumstick, 2',260,32,0,14,0,5069,136],['Ground chicken, 6oz',280,38,0,14,0,5333,148],['Ground pork, 6oz',380,38,0,26,0,10220,128],
+['Pork tenderloin, 6oz',250,45,0,7,0,10222,170],['Pork ribs, 6oz',500,38,0,38],['Bacon, turkey, 2 slices',60,5,0,4,0,7973,16],['Beef liver, 4oz',200,27,5,5,0,13327,113],
+['Bison, 6oz',290,48,0,10,0,17332,170],
 /* -- dairy & eggs -- */
-['Egg yolk, 1',55,3,1,4],['Ricotta, 1/2 cup',210,14,6,15],['Mozzarella, 1oz',85,6,1,6],['Parmesan, 2 tbsp grated',45,4,0,3],
-['Feta, 1/4 cup',100,5,1,8],['Cheddar, shredded, 1/4 cup',110,7,1,9],['Blue cheese, 1oz',100,6,1,8],['Brie, 1oz',95,6,0,8],
-['Swiss cheese, 1 slice',105,8,1,8],['Goat cheese, 1oz',75,5,0,6],['Half and half, 2 tbsp',40,1,1,3],['Heavy cream, 2 tbsp',100,1,1,11],
-['Sour cream, 2 tbsp',60,1,1,6],['Kefir, 1 cup',110,9,12,2],['Skyr, 1 cup',130,22,8,0],['Buttermilk, 1 cup',100,8,12,2],
-['Almond milk, 1 cup',40,1,2,3],['Oat milk, 1 cup',120,3,16,5],['Soy milk, 1 cup',110,8,9,4],['Coconut milk, canned, 1/4 cup',110,1,2,12],
+['Egg yolk, 1',55,3,1,4,0,1125,17],['Ricotta, 1/2 cup',210,14,6,15,0,1036,121],['Mozzarella, 1oz',85,6,1,6,0,1026,28],['Parmesan, 2 tbsp grated',45,4,0,3,0,1032,11],
+['Feta, 1/4 cup',100,5,1,8,0,1019,38],['Cheddar, shredded, 1/4 cup',110,7,1,9,0,1009,27],['Blue cheese, 1oz',100,6,1,8,0,1004,28],['Brie, 1oz',95,6,0,8,0,1006,28],
+['Swiss cheese, 1 slice',105,8,1,8,0,1040,27],['Goat cheese, 1oz',75,5,0,6,0,1159,28],['Half and half, 2 tbsp',40,1,1,3],['Heavy cream, 2 tbsp',100,1,1,11,0,1053,30],
+['Sour cream, 2 tbsp',60,1,1,6,0,1056,30],['Kefir, 1 cup',110,9,12,2,0,1289,267],['Skyr, 1 cup',130,22,8,0],['Buttermilk, 1 cup',100,8,12,2,0,1088,250],
+['Almond milk, 1 cup',40,1,2,3,0,14091,267],['Oat milk, 1 cup',120,3,16,5],['Soy milk, 1 cup',110,8,9,4],['Coconut milk, canned, 1/4 cup',110,1,2,12,0,12118,56],
 /* -- grains & starches -- */
-['Brown rice, 1 cup',215,5,45,2],['Wild rice, 1 cup',165,7,35,1],['Couscous, 1 cup',175,6,36,0],['Farro, 1 cup',200,7,40,1],
-['Barley, 1 cup',190,4,44,1],['Polenta, 1 cup',145,3,31,1],['Grits, 1 cup',150,4,32,1],['Naan bread, 1',260,9,45,5],
-['Pita bread, 1',165,5,33,1],['English muffin',135,5,26,1],['Sourdough, 1 slice',90,4,17,1],['Rye bread, 1 slice',85,3,15,1],
-['Whole wheat bread, 1 slice',80,4,14,1],['Waffle',220,6,25,10],['Pancakes, 2',350,8,42,15],['French toast, 2 slices',350,11,40,15],
-['Croissant',230,5,26,12],['Blueberry muffin',340,6,47,15],['Biscuit',210,4,27,10],['Dinner roll',90,3,15,2],
-['Breadsticks, 2',130,4,22,3],['Soba noodles, 1 cup',210,8,43,0],['Udon noodles, 1 cup',190,5,41,1],['Rice noodles, 1 cup',190,3,44,0],
+['Brown rice, 1 cup',215,5,45,2,0,20037,175],['Wild rice, 1 cup',165,7,35,1,0,20089,164],['Couscous, 1 cup',175,6,36,0,0,20029,156],['Farro, 1 cup',200,7,40,1],
+['Barley, 1 cup',190,4,44,1,0,20006,155],['Polenta, 1 cup',145,3,31,1],['Grits, 1 cup',150,4,32,1],['Naan bread, 1',260,9,45,5,0,28307,89],
+['Pita bread, 1',165,5,33,1,0,18041,60],['English muffin',135,5,26,1],['Sourdough, 1 slice',90,4,17,1,0,18029,33],['Rye bread, 1 slice',85,3,15,1,0,18060,33],
+['Whole wheat bread, 1 slice',80,4,14,1,0,18075,32],['Waffle',220,6,25,10,0,18367,76],['Pancakes, 2',350,8,42,15,0,18293,154],['French toast, 2 slices',350,11,40,15,0,18269,153],
+['Croissant',230,5,26,12,0,18239,57],['Blueberry muffin',340,6,47,15,0,18274,91],['Biscuit',210,4,27,10,0,18016,60],['Dinner roll',90,3,15,2,0,18342,29],
+['Breadsticks, 2',130,4,22,3],['Soba noodles, 1 cup',115,6,24,0,0,20115,116],['Udon noodles, 1 cup',190,5,41,1],['Rice noodles, 1 cup',190,3,44,0,0,20134,177],
 ['Gnocchi, 1 cup',250,6,51,2],['Orzo, 1 cup',220,8,43,1],
 /* -- vegetables -- */
-['Kale, 1 cup',35,3,7,0],['Spinach, cooked, 1 cup',40,5,7,0],['Spinach, raw, 2 cups',15,2,2,0],['Asparagus, 1 cup',27,3,5,0],
-['Brussels sprouts, 1 cup',56,4,11,0],['Cauliflower, 1 cup',27,2,5,0],['Zucchini, 1 cup',20,1,4,0],['Eggplant, 1 cup',20,1,5,0],
-['Mushrooms, 1 cup',15,2,2,0],['Green beans, 1 cup',31,2,7,0],['Cabbage, 1 cup',22,1,5,0],['Bok choy, 1 cup',9,1,2,0],
-['Artichoke, 1 medium',60,4,13,0],['Beets, 1 cup',58,2,13,0],['Radish, 1 cup',19,1,4,0],['Celery, 1 cup',16,1,3,0],
-['Butternut squash, 1 cup',82,2,22,0],['Okra, 1 cup',33,2,7,0],['Leeks, 1 cup',54,1,13,0],['Turnip, 1 cup',36,1,8,0],
-['Jalapeno, 1',4,0,1,0],['Garlic, 3 cloves',13,1,3,0],['Scallions, 1/4 cup',8,0,2,0],
+['Kale, 1 cup',35,3,7,0,0,11233,72],['Spinach, cooked, 1 cup',40,5,7,0,0,11458,175],['Spinach, raw, 2 cups',15,2,2,0,0,11457,64],['Asparagus, 1 cup',27,3,5,0,0,11011,134],
+['Brussels sprouts, 1 cup',56,4,11,0,0,11099,155],['Cauliflower, 1 cup',27,2,5,0,0,11135,107],['Zucchini, 1 cup',20,1,4,0,0,11477,118],['Eggplant, 1 cup',20,1,5,0,0,11209,81],
+['Mushrooms, 1 cup',15,2,2,0,0,11260,67],['Green beans, 1 cup',31,2,7,0,0,11052,100],['Cabbage, 1 cup',22,1,5,0,0,11109,88],['Bok choy, 1 cup',9,1,2,0],
+['Artichoke, 1 medium',60,4,13,0,0,11007,127],['Beets, 1 cup',58,2,13,0,0,11080,135],['Radish, 1 cup',19,1,4,0],['Celery, 1 cup',16,1,3,0,0,11143,100],
+['Butternut squash, 1 cup',82,2,22,0,0,11486,206],['Okra, 1 cup',33,2,7,0,0,11278,99],['Leeks, 1 cup',54,1,13,0,0,11246,89],['Turnip, 1 cup',36,1,8,0,0,11564,128],
+['Jalapeno, 1',4,0,1,0,0,11979,14],['Garlic, 3 cloves',13,1,3,0,0,11215,9],['Scallions, 1/4 cup',8,0,2,0,0,11291,25],
 /* -- fruits -- */
-['Pear',100,1,27,0],['Peach',60,1,15,0],['Plum',30,0,8,0],['Cherries, 1 cup',90,2,22,0],
-['Pomegranate seeds, 1/2 cup',72,1,16,1],['Papaya, 1 cup',55,1,14,0],['Guava, 1',37,1,8,0],['Passionfruit, 1',17,0,4,0],
-['Dragonfruit, 1 cup',60,1,13,0],['Persimmon, 1',118,1,31,0],['Fig, fresh, 2',75,1,19,0],['Figs, dried, 3',110,1,28,0],
-['Apricot, 3',50,1,12,0],['Cranberries, dried, 1/4 cup',90,0,22,0],['Coconut meat, 1/4 cup',100,1,4,9],['Lychee, 10',66,1,17,0],
-['Blackberries, 1 cup',62,2,14,1],['Blueberries, 1 cup',84,1,21,0],
+['Pear',100,1,27,0,0,9252,176],['Peach',60,1,15,0],['Plum',30,0,8,0,0,9279,66],['Cherries, 1 cup',90,2,22,0,0,9070,142],
+['Pomegranate seeds, 1/2 cup',72,1,16,1,0,9286,87],['Papaya, 1 cup',55,1,14,0,0,9226,128],['Guava, 1',37,1,8,0,0,9139,54],['Passionfruit, 1',17,0,4,0],
+['Dragonfruit, 1 cup',60,1,13,0],['Persimmon, 1',118,1,31,0,0,9263,168],['Fig, fresh, 2',75,1,19,0,0,9089,101],['Figs, dried, 3',110,1,28,0,0,9094,44],
+['Apricot, 3',50,1,12,0,0,9021,105],['Cranberries, dried, 1/4 cup',123,0,33,0,0,9079,40],['Coconut meat, 1/4 cup',100,1,4,9,0,12104,28],['Lychee, 10',66,1,17,0],
+['Blackberries, 1 cup',62,2,14,1,0,9042,144],['Blueberries, 1 cup',84,1,21,0,0,9050,147],
 /* -- nuts, seeds & butters -- */
-['Sunflower seeds, 1oz',165,6,7,14],['Walnuts, 1oz',185,4,4,18],['Pecans, 1oz',195,3,4,20],['Cashews, 1oz',155,5,9,12],
-['Pistachios, 1oz',160,6,8,13],['Brazil nuts, 1oz (6)',185,4,3,19],['Macadamia nuts, 1oz',200,2,4,21],['Chia seeds, 1 tbsp',60,2,5,4],
-['Flax seeds, 1 tbsp',55,2,3,4],['Sesame seeds, 1 tbsp',52,2,2,4],['Hemp seeds, 1 tbsp',55,3,1,4],['Almond butter, 2 tbsp',200,7,7,18],
-['Cashew butter, 2 tbsp',190,6,9,16],['Tahini, 2 tbsp',180,5,6,16],
+['Sunflower seeds, 1oz',165,6,7,14,0,12036,28],['Walnuts, 1oz',185,4,4,18,0,12155,28],['Pecans, 1oz',195,3,4,20,0,12142,28],['Cashews, 1oz',155,5,9,12,0,12087,28],
+['Pistachios, 1oz',160,6,8,13,0,12152,28],['Brazil nuts, 1oz (6)',185,4,3,19,0,12078,28],['Macadamia nuts, 1oz',205,2,4,22,0,12131,29],['Chia seeds, 1 tbsp',60,2,5,4,0,12006,12],
+['Flax seeds, 1 tbsp',55,2,3,4,0,12220,10],['Sesame seeds, 1 tbsp',52,2,2,4,0,12023,9],['Hemp seeds, 1 tbsp',55,3,1,4,0,12012,10],['Almond butter, 2 tbsp',200,7,7,18,0,12195,33],
+['Cashew butter, 2 tbsp',190,6,9,16,0,12088,32],['Tahini, 2 tbsp',180,5,6,16,0,12698,30],
 /* -- condiments & sauces -- */
-['Alfredo sauce, 1/4 cup',110,2,3,10],['Pesto, 2 tbsp',160,2,2,16],['Soy sauce, 1 tbsp',10,1,1,0],['Sriracha, 1 tbsp',15,0,3,0],
-['BBQ sauce, 2 tbsp',60,0,14,0],['Salsa, 2 tbsp',10,0,2,0],['Guacamole, 2 tbsp',50,1,3,5],['Vinaigrette, 2 tbsp',130,0,3,13],
-['Caesar dressing, 2 tbsp',150,1,1,16],['Thousand island, 2 tbsp',115,0,5,11],['Buffalo sauce, 2 tbsp',30,0,2,2],['Teriyaki sauce, 2 tbsp',30,1,6,0],
-['Hoisin sauce, 2 tbsp',70,1,14,1],['Fish sauce, 1 tbsp',10,1,1,0],['Worcestershire, 1 tbsp',13,0,3,0],['Dijon mustard, 1 tbsp',15,1,1,1],
-['Relish, 1 tbsp',20,0,5,0],['Cocktail sauce, 2 tbsp',40,0,10,0],['Tzatziki, 2 tbsp',30,1,2,2],['Nutella, 1 tbsp',100,1,11,6],
-['Maple syrup, 1 tbsp',52,0,13,0],['Balsamic glaze, 1 tbsp',40,0,10,0],
+['Alfredo sauce, 1/4 cup',110,2,3,10],['Pesto, 2 tbsp',160,2,2,16,0,6627,38],['Soy sauce, 1 tbsp',10,1,1,0,0,16123,18],['Sriracha, 1 tbsp',15,0,3,0,0,6631,16],
+['BBQ sauce, 2 tbsp',60,0,14,0,0,6150,35],['Salsa, 2 tbsp',10,0,2,0,0,6178,28],['Guacamole, 2 tbsp',50,1,3,5],['Vinaigrette, 2 tbsp',130,0,3,13],
+['Caesar dressing, 2 tbsp',150,1,1,16,0,43015,28],['Thousand island, 2 tbsp',115,0,5,11,0,4017,30],['Buffalo sauce, 2 tbsp',30,0,2,2],['Teriyaki sauce, 2 tbsp',30,1,6,0,0,6112,34],
+['Hoisin sauce, 2 tbsp',70,1,14,1,0,6175,32],['Fish sauce, 1 tbsp',10,1,1,0,0,6179,28],['Worcestershire, 1 tbsp',13,0,3,0,0,6971,16],['Dijon mustard, 1 tbsp',15,1,1,1],
+['Relish, 1 tbsp',20,0,5,0,0,11945,15],['Cocktail sauce, 2 tbsp',40,0,10,0,0,27051,33],['Tzatziki, 2 tbsp',30,1,2,2],['Nutella, 1 tbsp',100,1,11,6],
+['Maple syrup, 1 tbsp',52,0,13,0,0,19353,20],['Balsamic glaze, 1 tbsp',40,0,10,0],
 /* -- composed meals & dishes -- */
-['Lasagna, 1 slice',400,24,34,19],['Chicken parmesan',550,42,30,28],['Chicken tikka masala, 1 cup',440,30,20,27],['Butter chicken, 1 cup',490,28,18,33],
-['Vegetable curry, 1 cup',300,8,30,17],['Falafel, 4 pieces',330,13,32,18],['Shawarma wrap',550,30,50,25],['Gyro',500,27,40,26],
-['Dumplings, 6',300,12,40,10],['Spring rolls, 2',150,4,20,6],['Egg roll, 1',200,6,20,11],['Pot stickers, 6',300,10,35,13],
-['Kimchi, 1/2 cup',23,1,4,0],['Bibimbap, 1 bowl',550,25,75,16],['Poke bowl',500,30,55,17],['Ceviche, 1 cup',180,25,12,3],
+['Lasagna, 1 slice',400,24,34,19,0,36041,216],['Chicken parmesan',550,42,30,28,0,36059,269],['Chicken tikka masala, 1 cup',440,30,20,27],['Butter chicken, 1 cup',490,28,18,33],
+['Vegetable curry, 1 cup',300,8,30,17],['Falafel, 4 pieces',330,13,32,18,0,16138,99],['Shawarma wrap',550,30,50,25],['Gyro',500,27,40,26],
+['Dumplings, 6',300,12,40,10],['Spring rolls, 2',150,4,20,6],['Egg roll, 1',200,6,20,11,0,36601,80],['Pot stickers, 6',300,10,35,13],
+['Kimchi, 1/2 cup',11,1,2,0,0,11118,74],['Bibimbap, 1 bowl',550,25,75,16],['Poke bowl',500,30,55,17],['Ceviche, 1 cup',180,25,12,3],
 ['Paella, 1 cup',380,20,45,12],['Risotto, 1 cup',350,8,45,14],['Quiche, 1 slice',400,14,25,27],['Frittata, 1 slice',220,14,4,16],
-['Omelette, 3-egg',280,19,2,21],['Breakfast burrito',500,22,45,26],['Bagel with cream cheese',380,13,58,12],['Avocado toast',280,8,30,15],
+['Omelette, 3-egg',280,19,2,21,0,1130,182],['Breakfast burrito',500,22,45,26,0,21519,181],['Bagel with cream cheese',380,13,58,12],['Avocado toast',280,8,30,15],
 ['Overnight oats, 1 cup',350,15,50,10],['Smoothie bowl',400,12,70,8],['Protein smoothie',300,30,35,5],['Acai bowl',450,8,75,14],
-['Chili, 1 cup',300,20,25,13],['Beef stew, 1 cup',280,22,20,12],['Pot roast, 6oz',400,40,5,24],['Meatloaf, 1 slice',280,20,10,18],
-['Meatballs, 4',280,20,8,18],['Stir fry, chicken + veg, 1 plate',450,32,35,18],['Fajitas, chicken, 1 plate',500,35,40,20],['Enchiladas, 2',480,22,45,24],
-['Tacos, beef, 2',340,18,30,16],['Quesadilla',450,20,35,26],['Nachos, 1 plate',700,25,60,40],['Caesar salad w/ chicken',400,32,12,25],
-['Cobb salad',450,30,15,30],['Greek salad',250,8,15,18],['Caprese salad',250,12,8,19],['Club sandwich',550,30,45,27],
+['Chili, 1 cup',300,20,25,13,0,16059,286],['Beef stew, 1 cup',280,22,20,12,0,22905,282],['Pot roast, 6oz',400,40,5,24,0,13373,134],['Meatloaf, 1 slice',280,20,10,18],
+['Meatballs, 4',280,20,8,18,0,7972,97],['Stir fry, chicken + veg, 1 plate',450,32,35,18],['Fajitas, chicken, 1 plate',500,35,40,20],['Enchiladas, 2',480,22,45,24],
+['Tacos, beef, 2',340,18,30,16,0,21082,150],['Quesadilla',450,20,35,26,0,36052,122],['Nachos, 1 plate',700,25,60,40,0,21080,319],['Caesar salad w/ chicken',400,32,12,25],
+['Cobb salad',450,30,15,30],['Greek salad',250,8,15,18],['Caprese salad',250,12,8,19],['Club sandwich',550,30,45,27,0,21462,214],
 ['BLT',400,15,35,22],['Grilled cheese',400,15,35,22],['Tuna melt',450,28,30,24],['French onion soup',250,10,22,13],
-['Minestrone, 1 cup',150,6,25,3],['Chicken noodle soup, 1 cup',120,8,15,3],['Tomato soup, 1 cup',130,3,20,4],['Clam chowder, 1 cup',200,10,18,10],
+['Minestrone, 1 cup',150,6,25,3,0,6039,284],['Chicken noodle soup, 1 cup',120,8,15,3],['Tomato soup, 1 cup',130,3,20,4],['Clam chowder, 1 cup',200,10,18,10,0,27042,252],
 ['Miso soup, 1 cup',40,3,5,1],
 /* -- snacks & sweets -- */
-['Rice cake',35,1,7,0],['Beef jerky, 1oz',115,9,3,7],['Protein cookie',200,15,20,8],['Fig bar',140,1,27,3],
-['Granola bar',120,2,20,4],['Pita chips, 1oz',130,4,20,5],['Tortilla chips, 1oz',140,2,19,7],['Cheese puffs, 1oz',160,2,15,10],
-['Fruit snacks, 1 pack',80,0,21,0],['Pudding, 1 cup',150,3,25,4],['Jello, 1 cup',80,2,19,0],['Brownie',240,3,35,10],
-['Cupcake',200,2,30,9],['Cheesecake, 1 slice',400,7,30,28],['Apple pie, 1 slice',300,2,43,14],['Tiramisu, 1 slice',350,6,35,20],
+['Rice cake',35,1,7,0,0,19816,9],['Beef jerky, 1oz',115,9,3,7,0,19002,28],['Protein cookie',200,15,20,8],['Fig bar',140,1,27,3,0,18170,40],
+['Granola bar',120,2,20,4,0,19020,27],['Pita chips, 1oz',130,4,20,5,0,25037,29],['Tortilla chips, 1oz',140,2,19,7,0,25028,28],['Cheese puffs, 1oz',160,2,15,10,0,19008,29],
+['Fruit snacks, 1 pack',80,0,21,0,0,19919,23],['Pudding, 1 cup',150,3,25,4,0,19201,115],['Jello, 1 cup',80,2,19,0],['Brownie',240,3,35,10,0,18151,59],
+['Cupcake',200,2,30,9],['Cheesecake, 1 slice',400,7,30,28,0,18147,124],['Apple pie, 1 slice',300,2,43,14,0,18301,127],['Tiramisu, 1 slice',350,6,35,20],
 ['Macaron, 1',90,1,12,4],
 /* -- beverages -- */
-['Kombucha, 1 cup',30,0,7,0],['Chai latte, medium',190,8,30,5],['Matcha latte, medium',180,8,24,6],['Hot chocolate',190,8,27,6],
-['Whiskey, 1 shot',105,0,0,0],['Vodka, 1 shot',97,0,0,0],['Margarita',200,0,20,0],['Sparkling water',0,0,0,0],
+['Kombucha, 1 cup',30,0,7,0],['Chai latte, medium',190,8,30,5],['Matcha latte, medium',180,8,24,6],['Hot chocolate',190,8,27,6,0,1105,247],
+['Whiskey, 1 shot',105,0,0,0,0,14052,42],['Vodka, 1 shot',97,0,0,0,0,14051,42],['Margarita',200,0,20,0],['Sparkling water',0,0,0,0],
 ];
 FOODS.push(...FOODS_MORE);
 
@@ -1388,13 +1409,13 @@ const FOODS_VENUES = [
 ['Panera — Chicken Roma Asiago Bagel Stack',570,30,59,24],
 ['Panera — Spicy Steak Asiago Bagel Stack',590,39,59,23],
 /* -- Chick-fil-A -- */
-['Chick-fil-A — Chick-fil-A Sandwich (classic)',466,30,39,21],
-['Chick-fil-A — Spicy Chicken Sandwich',450,28,45,19],
+['Chick-fil-A — Chick-fil-A Sandwich (classic)',466,30,39,21,0,-21526,187],
+['Chick-fil-A — Spicy Chicken Sandwich',450,28,45,19,0,-21526,181],
 ['Chick-fil-A — Grilled Chicken Sandwich',380,28,44,11],
 ['Chick-fil-A — Grilled Chicken Club',520,37,45,22],
 ['Chick-fil-A — Nuggets, 8-count',250,27,11,11],
 ['Chick-fil-A — Grilled Nuggets, 8-count',130,25,1,3],
-['Chick-fil-A — Chick-n-Strips, 4-count',410,39,22,19],
+['Chick-fil-A — Chick-n-Strips, 4-count',410,39,22,19,0,-21143,180],
 ['Chick-fil-A — Cool Wrap',660,43,32,45],
 /* -- Tropical Smoothie Cafe -- */
 ['Tropical Smoothie — Peanut Paradise smoothie, 24oz (w/ protein)',690,22,93,20],
@@ -2048,6 +2069,90 @@ function foodTotals(k){
   // would otherwise poison the whole day's totals: undefined*q is NaN, and NaN
   // stays NaN through every subsequent addition in the reduce.
   return f.reduce((a,x)=>({kcal:a.kcal+(x.kcal||0)*x.q,p:a.p+(x.p||0)*x.q,c:a.c+(x.c||0)*x.q,f:a.f+(x.f||0)*x.q}),{kcal:0,p:0,c:0,f:0});
+}
+
+/* ---------- micronutrients ---------- */
+/* USDA values per 100 g live in micros-db.js (MICROS[ndb] = one row per USDA record, in MICRO_DEF order; a hole means the
+   lab never measured it). It loads the first time a micro view opens. A logged food remembers its USDA record (mk), how many
+   grams it stands for (mg) and whether the match was a close cousin rather than the exact item (ma), so totals never depend
+   on a name lookup. Restaurant, packaged and custom foods mostly have no record: they're counted for macros only, and the
+   micro view says how many foods it could use. */
+const MICRO_DEF=[   // label, unit, FDA daily value (null = none), group, true if it's a limit rather than a goal
+  ['Vitamin A','µg RAE',900,'VITAMINS'],['Vitamin C','mg',90,'VITAMINS'],['Vitamin D','µg',20,'VITAMINS'],['Vitamin E','mg',15,'VITAMINS'],
+  ['Vitamin K','µg',120,'VITAMINS'],['Thiamin (B1)','mg',1.2,'VITAMINS'],['Riboflavin (B2)','mg',1.3,'VITAMINS'],['Niacin (B3)','mg',16,'VITAMINS'],
+  ['Pantothenic acid (B5)','mg',5,'VITAMINS'],['Vitamin B6','mg',1.7,'VITAMINS'],['Folate','µg DFE',400,'VITAMINS'],['Vitamin B12','µg',2.4,'VITAMINS'],
+  ['Choline','mg',550,'VITAMINS'],
+  ['Calcium','mg',1300,'MINERALS'],['Iron','mg',18,'MINERALS'],['Magnesium','mg',420,'MINERALS'],['Phosphorus','mg',1250,'MINERALS'],
+  ['Potassium','mg',4700,'MINERALS'],['Sodium','mg',2300,'MINERALS',true],['Zinc','mg',11,'MINERALS'],['Copper','mg',0.9,'MINERALS'],
+  ['Manganese','mg',2.3,'MINERALS'],['Selenium','µg',55,'MINERALS'],
+  ['Fiber','g',28,'FIBER, SUGAR + FATS'],['Sugars','g',null,'FIBER, SUGAR + FATS'],['Saturated fat','g',20,'FIBER, SUGAR + FATS',true],
+  ['Monounsaturated fat','g',null,'FIBER, SUGAR + FATS'],['Polyunsaturated fat','g',null,'FIBER, SUGAR + FATS'],['Cholesterol','mg',300,'FIBER, SUGAR + FATS',true]];
+let microState=0, foodRows=new Set();   // microState: 0 not asked for, 1 loading, 2 ready, 3 failed
+function loadMicros(){
+  if (typeof MICROS!=='undefined'){ microState=2; return; }
+  if (microState) return;
+  microState=1;
+  const s=document.createElement('script'); s.src='micros-db.js';
+  s.onload=()=>{ microState=2; render(); }; s.onerror=()=>{ microState=3; render(); };
+  document.head.appendChild(s);
+}
+const microReady=()=>typeof MICROS!=='undefined';
+/* which USDA record a logged food stands for: what it remembered, else (older entries) its name in the food list */
+function microRefOf(e){
+  if (e.mk) return {mk:e.mk,mg:e.mg,ma:e.ma};
+  let row=FOODIDX[e.n], g=null;
+  if (!row){ const m=/^(.*), ([\d.]+) (g|oz)$/.exec(e.n||''); if (m){ row=FOODIDX[m[1]]; g=+m[2]*(m[3]==='oz'?28.3495:1); } }
+  if (!row||!row[6]) return null;
+  const mg=row[5]?g:row[7]; if (!mg) return null;
+  return {mk:Math.abs(row[6]),mg,ma:row[6]<0?1:0};
+}
+/* the record a database row carries, ready to store on a logged food. g = grams eaten for a per-100 g row */
+function microRef(f,g){
+  const r=f[6]; if (!r) return {};
+  const mg=f[5]?g:f[7]; if (!(mg>0)) return {};
+  return r<0?{mk:-r,mg:Math.round(mg*10)/10,ma:1}:{mk:r,mg:Math.round(mg*10)/10};
+}
+/* one food's micronutrients (a MICRO_DEF-ordered array, holes kept), or null when there is no record for it */
+function entryMicros(e){
+  const r=microRefOf(e), rec=r&&MICROS[r.mk]; if (!rec) return null;
+  const k=r.mg/100*(e.q||1), out=new Array(MICRO_DEF.length);
+  rec.forEach((v,i)=>{ if (v!=null) out[i]=v*k; });
+  return {v:out,ma:!!r.ma};
+}
+function dayMicros(list){
+  const tot=new Array(MICRO_DEF.length).fill(0), seen=new Array(MICRO_DEF.length).fill(false), missing=[];
+  let n=0, approx=0;
+  for (const e of list){
+    const m=entryMicros(e); if (!m){ missing.push(e.n); continue; }
+    n++; if (m.ma) approx++;
+    m.v.forEach((v,i)=>{ tot[i]+=v; seen[i]=true; });
+  }
+  return {tot,seen,n,approx,missing};
+}
+const fmtMicro=v=>v>=100?String(Math.round(v)):v>=10?String(Math.round(v*10)/10):String(Math.round(v*100)/100);
+function microPanelHTML(list){
+  if (!list.length) return `<div class="note" style="border-top:none">Log some food and its vitamins and minerals add up here.</div>`;
+  if (!microReady()){ loadMicros(); return `<div class="note" style="border-top:none">${microState===3?"Couldn't load the micronutrient data.":'Loading micronutrient data…'}</div>`; }
+  const m=dayMicros(list);
+  let h=`<div class="note" style="border-top:none;padding-bottom:2px">Counted from <b style="color:var(--text)">${m.n} of ${list.length}</b> food${list.length===1?'':'s'} (USDA data)${m.approx?`, ${m.approx} matched to a close USDA equivalent`:''}.${m.missing.length?` No micronutrient data for: ${esc(m.missing.slice(0,5).join(', '))}${m.missing.length>5?` and ${m.missing.length-5} more`:''}. Restaurant, packaged and custom foods usually have none, so those totals run low.`:''}</div>`;
+  let grp='';
+  MICRO_DEF.forEach(([l,u,dv,g,lim],i)=>{
+    if (g!==grp){ grp=g; h+=`<div class="mhead">${g}</div>`; }
+    if (!m.seen[i]){ h+=`<div class="mrow"><div class="mt"><span>${l}</span><span style="color:var(--faint)">—</span></div></div>`; return; }
+    const v=m.tot[i], pct=dv?v/dv*100:null;
+    h+=`<div class="mrow"><div class="mt"><span>${l}</span><span><b>${fmtMicro(v)} ${u}</b>${pct!=null?`<em>${Math.round(pct)}%${lim?' of limit':''}</em>`:''}</span></div>
+      ${pct!=null?`<div class="bar"><div class="barfill" style="width:${clamp(pct,0,100)}%;background:${lim&&pct>100?'var(--rust)':pct>=100?'var(--moss)':'var(--steel)'}"></div></div>`:''}</div>`;
+  });
+  return h+`<div class="note">Percentages are of the FDA Daily Value for adults (a 2,000 kcal diet). Your own needs differ with age, sex and training. Sodium, saturated fat and cholesterol are limits, not goals. Choline is measured less often than the rest, so it can run low.</div>`;
+}
+/* the compact list shown when a single food is opened in the day's list */
+function entryMicroHTML(e){
+  if (!microReady()){ loadMicros(); return `<div>${microState===3?"Couldn't load the micronutrient data.":'Loading micronutrient data…'}</div>`; }
+  const m=entryMicros(e);
+  if (!m) return `<div>No micronutrient data for this food.</div>`;
+  const short=l=>l.replace('Pantothenic acid','Pantothenic').replace('Monounsaturated fat','Mono fat').replace('Polyunsaturated fat','Poly fat').replace('Saturated fat','Sat fat');
+  const rows=MICRO_DEF.map(([l,u],i)=>m.v[i]!=null?`<div><span>${short(l)}</span><b>${fmtMicro(m.v[i])} ${u}</b></div>`:'').join('');
+  return `<div class="mgrid">${rows}</div>${m.ma?`<div style="margin-top:6px;color:var(--faint)">Matched to a close USDA equivalent, so treat these as approximate.</div>`:''}`;
 }
 
 /* ========================================================== progression == */
@@ -2921,7 +3026,7 @@ function recentFoods(max=12){
     for (let i=list.length-1;i>=0;i--){
       const f=list[i], key=String(f.n||'').trim().toLowerCase();
       if (!key || seen.has(key)) continue;
-      seen.add(key); out.push({n:f.n,kcal:f.kcal||0,p:f.p||0,c:f.c||0,f:f.f||0});
+      seen.add(key); out.push({n:f.n,kcal:f.kcal||0,p:f.p||0,c:f.c||0,f:f.f||0,...(f.mk?{mk:f.mk,mg:f.mg,ma:f.ma}:{})});
       if (out.length>=max) return out;
     }
   }
@@ -5149,7 +5254,7 @@ function obFinish(){
 /* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
    is remembered. After-action opens by itself in the evening (or once you've written in it). */
 const FOLD_DEF = {
-  rail:()=>false, arc:()=>false, food:()=>true, habits:()=>true, last14:()=>false,
+  rail:()=>false, arc:()=>false, food:()=>true, foodlist:()=>true, habits:()=>true, last14:()=>false,
   review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
 };
 function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
@@ -5168,7 +5273,7 @@ const TOUR={
   today:['TODAY',[
     '<b>NEXT</b> is what to do now. Tap a workout block to open it and log sets: a blank weight means the plan\'s weight, and the rest timer starts after each set.',
     'Tap the <b>day strip</b> to look at or log another day. The <b>SWAP ⇄</b> badge changes today\'s workout.',
-    '<b>ADD WORKOUT</b> builds your own session, <b>ADD FIGHTING</b> logs mat, ring or bag time, and <b>FOOD</b> tracks calories and water.',
+    '<b>ADD WORKOUT</b> builds your own session, <b>ADD FIGHTING</b> logs mat, ring or bag time, and <b>FOOD</b> tracks calories and water; its <b>MICROS</b> switch adds up vitamins and minerals.',
     'The five bars at the top are your overall scores: tap one to see what builds it. The quote line opens your daily briefing.']],
   wlog:['TRAIN',[
     '<b>WORKOUTS</b> is everything you have logged: REPEAT loads one onto today. <b>MUSCLES</b> shows weekly sets per muscle.',
@@ -5402,19 +5507,23 @@ function ViewToday(){
 
     ${foldHead('food','food','FOOD',`${Math.round(ft.kcal).toLocaleString()}${N?` / ${N.kcal.toLocaleString()}`:''} kcal · ${Math.round(ft.p)}g P`)}
     ${foldOpen('food')?`<div class="panel">
-      ${N?`<div class="fuelbar">
+      <div class="fvtog"><span>${S.ui.fv==='micro'?'VITAMINS + MINERALS':'MACROS'}</span>
+        <div class="seg2"><button class="${S.ui.fv==='micro'?'':'on'}" data-act="foodview" data-v="macro" aria-pressed="${S.ui.fv!=='micro'}">MACROS</button><button class="${S.ui.fv==='micro'?'on':''}" data-act="foodview" data-v="micro" aria-pressed="${S.ui.fv==='micro'}">MICROS</button></div></div>
+      ${S.ui.fv==='micro'?microPanelHTML(d.food):`      ${N?`<div class="fuelbar">
         ${[['kcal',ft.kcal,N.kcal,'var(--amber)'],['P',ft.p,N.protein,'var(--rust)'],['C',ft.c,N.carbs,'var(--steel)'],['F',ft.f,N.fat,'var(--moss)']].map(([l,v,t2,c])=>`
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(v/t2*100,0,100)}%;background:${c}"></div></div></div>`).join('')}
       </div>
       ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}
       ${vd===T&&new Date().getHours()>=18&&N.protein>0&&ft.p<N.protein*0.5?`<div class="note" style="color:var(--amber);border-top:none;padding-top:0">${svg('target',10,'var(--amber)')} Only ${Math.round(ft.p)}g protein logged with evening here — most of that gap won't get made up after tonight. Front-load the next meal.</div>`:''}`
-      :`<button class="note" data-act="golog" style="border-top:none;width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on Body → Log and targets appear here. Tap to go there now.</span></button>`}
+      :`<button class="note" data-act="golog" style="border-top:none;width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on Body → Log and targets appear here. Tap to go there now.</span></button>`}`}
       ${WaterRow(d,N)}
-      ${d.food.length?`<div class="foodlist">${d.food.map((f,i)=>`
-        <div class="cmt"><span style="flex:1">${esc(f.n)}${f.q!==1?` <span style="color:var(--faint)">x${f.q}</span>`:''}</span>
-          <span style="color:var(--dim);font-size:var(--fs-detail)">${Math.round(f.kcal*f.q)} kcal</span>
-          <button class="x" data-act="delfood" data-v="${i}" aria-label="Remove ${esc(f.n)}">${svg('x',13)}</button></div>`).join('')}</div>`:''}
+      ${d.food.length?`<div class="flhead"><button class="flmain" data-act="fold" data-v="foodlist" aria-expanded="${foldOpen('foodlist')}"><span class="chev ${foldOpen('foodlist')?'open':''}">${svg('chev',11,'var(--faint)')}</span><span>FOODS EATEN · ${d.food.length}</span></button>${foldOpen('foodlist')?`<button class="fl-all" data-act="foodrows">${d.food.every((_,i)=>foodRows.has(vd+'|'+i))?'COLLAPSE ALL':'EXPAND ALL'}</button>`:''}</div>
+      ${foldOpen('foodlist')?`<div class="foodlist">${d.food.map((f,i)=>{ const open=foodRows.has(vd+'|'+i), q=f.q||1, r1=x=>Math.round(x*10)/10;
+        return `<div class="cmt"><button class="cmtname" data-act="foodrow" data-v="${i}" aria-expanded="${open}"><span class="chev ${open?'open':''}">${svg('chev',11)}</span><span>${esc(f.n)}${q!==1?` <span style="color:var(--faint)">x${q}</span>`:''}</span></button>
+          <span style="color:var(--dim);font-size:var(--fs-detail)">${Math.round(f.kcal*q)} kcal</span>
+          <button class="x" data-act="delfood" data-v="${i}" aria-label="Remove ${esc(f.n)}">${svg('x',13)}</button></div>
+        ${open?`<div class="fdet"><div class="fdm"><span><i>P</i> ${r1(f.p*q)}g</span><span><i>C</i> ${r1(f.c*q)}g</span><span><i>F</i> ${r1(f.f*q)}g</span></div>${entryMicroHTML(f)}</div>`:''}`; }).join('')}</div>`:''}`:''}
       ${!d.food.length&&foodOf(addDays(vd,-1)).length?`<button class="btn ghost" data-act="copyyday" style="border:none;border-top:1px solid var(--rule)">${svg('rot',13)} COPY ${vd===T?"YESTERDAY'S":'THE DAY BEFORE'} FOOD · ${foodOf(addDays(vd,-1)).length} ITEM${foodOf(addDays(vd,-1)).length>1?'S':''}</button>`:''}
       <button class="btn ghost" data-act="foodopen" style="border:none;border-top:1px solid var(--rule)">${foodOpen?svg('x',13)+' CLOSE FOOD SEARCH':svg('plus',13)+' ADD FOOD'}</button>
       ${foodOpen?`<div class="foodpick">
@@ -6331,7 +6440,7 @@ function handleClick(e){
       let n=0;
       m.slots.forEach(s=>s.items.forEach(([nm,qq])=>{
         const it=FOODIDX[nm]; if(!it) return;
-        dt.food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq}); n++;
+        dt.food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq,...microRef(it)}); n++;
       }));
       commit(); render(); toast(`${n} items logged — ${Math.round(foodTotals(T).kcal)} kcal today`); return;
     }
@@ -6340,7 +6449,7 @@ function handleClick(e){
       const slot=m.slots[+v2]; if(!slot) return;
       slot.items.forEach(([nm,qq])=>{
         const it=FOODIDX[nm]; if(!it) return;
-        day(T).food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq});
+        day(T).food.push({n:it[0],kcal:it[1],p:it[2],c:it[3],f:it[4],q:qq,...microRef(it)});
       });
       commit(); render(); toast(`${slot.w} logged`); return;
     }
@@ -6371,6 +6480,9 @@ function handleClick(e){
     /* ---- food ---- */
     case 'gunit': foodGU=v; foodFocus=true; break;
     case 'foodopen': foodOpen=!foodOpen; foodQ=''; foodFocus=foodOpen; break;
+    case 'foodview': S.ui.fv=v==='micro'?'micro':'macro'; if (v==='micro') loadMicros(); commit(); break;
+    case 'foodrow': { const k=VD()+'|'+v; if (foodRows.has(k)) foodRows.delete(k); else { foodRows.add(k); loadMicros(); } break; }
+    case 'foodrows': { const ks=d.food.map((_,i)=>VD()+'|'+i); if (ks.every(k=>foodRows.has(k))) ks.forEach(k=>foodRows.delete(k)); else { ks.forEach(k=>foodRows.add(k)); loadMicros(); } break; }
     case 'addfood': {
       const f=FOODS[+v];
       if (f[5]){   // per-100 g row: scale by the amount box (default 100 g / 4 oz)
@@ -6378,10 +6490,10 @@ function handleClick(e){
         const g=foodGU==='oz'?amt*28.3495:amt, k=g/f[5];
         const r1=x=>Math.round(x*10)/10;
         const label=`${f[0]}, ${r1(amt)} ${foodGU}`;
-        d.food.push({n:label,kcal:Math.round(f[1]*k),p:r1(f[2]*k),c:r1(f[3]*k),f:r1(f[4]*k),q:1});
+        d.food.push({n:label,kcal:Math.round(f[1]*k),p:r1(f[2]*k),c:r1(f[3]*k),f:r1(f[4]*k),q:1,...microRef(f,g)});
         commit(); foodFocus=true; render(); toast(`${label} added`); return;
       }
-      d.food.push({n:f[0],kcal:f[1],p:f[2],c:f[3],f:f[4],q:+v2});
+      d.food.push({n:f[0],kcal:f[1],p:f[2],c:f[3],f:f[4],q:+v2,...microRef(f)});
       commit(); foodFocus=true; render(); toast(`${f[0]} added`); return;
     }
     case 'addcustomfood': {
@@ -6400,10 +6512,10 @@ function handleClick(e){
       commit(); render(); toast(`${n} added`); return;
     }
     case 'water': d.water=Math.max(0,Math.round((d.water||0)+(+v))); commit(); break;
-    case 'delfood': d.food.splice(+v,1); commit(); break;
+    case 'delfood': d.food.splice(+v,1); foodRows.clear(); commit(); break;
     case 'addmyfood': case 'addrecent': {
       const f=a==='addmyfood'?S.myfoods[+v]:recentFoods()[+v]; if (!f) return;
-      d.food.push({n:f.n,kcal:f.kcal,p:f.p,c:f.c,f:f.f,q:+v2||1});
+      d.food.push({n:f.n,kcal:f.kcal,p:f.p,c:f.c,f:f.f,q:+v2||1,...(f.mk?{mk:f.mk,mg:f.mg,...(f.ma?{ma:1}:{})}:{})});
       commit(); foodFocus=true; render(); toast(`${f.n} added`); return;
     }
     case 'delmyfood': {
