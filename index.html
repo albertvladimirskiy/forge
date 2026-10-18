@@ -2134,7 +2134,7 @@ function microPanelHTML(list){
   if (!list.length) return `<div class="note" style="border-top:none">Log some food and its vitamins and minerals add up here.</div>`;
   if (!microReady()){ loadMicros(); return `<div class="note" style="border-top:none">${microState===3?"Couldn't load the micronutrient data.":'Loading micronutrient data…'}</div>`; }
   const m=dayMicros(list);
-  let h=`<div class="note" style="border-top:none;padding-bottom:2px">Counted from <b style="color:var(--text)">${m.n} of ${list.length}</b> food${list.length===1?'':'s'} (USDA data)${m.approx?`, ${m.approx} matched to a close USDA equivalent`:''}.${m.missing.length?` No micronutrient data for: ${esc(m.missing.slice(0,5).join(', '))}${m.missing.length>5?` and ${m.missing.length-5} more`:''}. Restaurant, packaged and custom foods usually have none, so those totals run low.`:''}</div>`;
+  let h=`<div class="note" style="border-top:none;padding-bottom:2px">Counted from <b style="color:var(--text)">${m.n} of ${list.length}</b> food${list.length===1?'':'s'} (USDA data)${m.approx?`, ${m.approx} of them estimated from a similar USDA food`:''}.${m.missing.length?` No micronutrient data for: ${esc(m.missing.slice(0,5).join(', '))}${m.missing.length>5?` and ${m.missing.length-5} more`:''}. Custom foods and a few restaurant and packaged items have none, so those totals run a little low.`:''}</div>`;
   let grp='';
   MICRO_DEF.forEach(([l,u,dv,g,lim],i)=>{
     if (g!==grp){ grp=g; h+=`<div class="mhead">${g}</div>`; }
@@ -2152,7 +2152,7 @@ function entryMicroHTML(e){
   if (!m) return `<div>No micronutrient data for this food.</div>`;
   const short=l=>l.replace('Pantothenic acid','Pantothenic').replace('Monounsaturated fat','Mono fat').replace('Polyunsaturated fat','Poly fat').replace('Saturated fat','Sat fat');
   const rows=MICRO_DEF.map(([l,u],i)=>m.v[i]!=null?`<div><span>${short(l)}</span><b>${fmtMicro(m.v[i])} ${u}</b></div>`:'').join('');
-  return `<div class="mgrid">${rows}</div>${m.ma?`<div style="margin-top:6px;color:var(--faint)">Matched to a close USDA equivalent, so treat these as approximate.</div>`:''}`;
+  return `<div class="mgrid">${rows}</div>${m.ma?`<div style="margin-top:6px;color:var(--faint)">Estimated from a similar USDA food (restaurant and packaged dishes aren't analysed individually), so treat these as rough.</div>`:''}`;
 }
 
 /* ========================================================== progression == */
