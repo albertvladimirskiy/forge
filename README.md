@@ -71,8 +71,11 @@ brand rows are from published menus and labels as remembered, so treat them as r
 the order, units and FDA Daily Values). It is loaded the first time a micro view opens. A food row points at its record with an NDB
 number after the gram basis: `[name, kcal, p, c, f, 100, ndb]` for USDA rows and `[name, kcal, p, c, f, 0, ndb, grams]` for per-serving
 rows; a negative NDB means "a close USDA equivalent" rather than the exact item. Logging a food stores that reference on the entry
-(`mk`, `mg` grams, `ma` approximate), so totals never depend on a name lookup; older entries are matched by name. Restaurant
-dishes mostly have no record: the micro view says how many foods it could count and which it couldn't.
+(`mk`, `mg` grams, `ma` approximate), so totals never depend on a name lookup; older entries are matched by name. Restaurant,
+branded and mixed dishes have no USDA record of their own, so each one borrows the per-gram profile of the closest USDA stand-in
+(a Big Mac uses USDA's Big Mac, an unlisted burger uses a similar burger, a latte uses a milky coffee); those are always flagged
+approximate and the micro view says how many of the day's foods were estimated. Supplements, protein bars/powders, energy drinks and
+a few oddities have no sensible stand-in and show no data.
 
 On **Today → FOOD**, MACROS / MICROS switches the day's overview (the choice is saved). FOODS EATEN closes and opens the list,
 tapping a food opens its macros and micros, and EXPAND ALL / COLLAPSE ALL does every food at once.

@@ -32,7 +32,7 @@ module.exports = { name: 'Food data: no duplicates, micronutrients, collapsible 
       return { bad, withRef, total: FOODS.length, longest, defs: w };
     });
     a.deepEqual(r.bad, []);
-    a.ok(r.withRef > 5000, 'expected most of the list to carry micronutrient data, got ' + r.withRef + ' of ' + r.total);
+    a.ok(r.withRef > 6900, 'expected most of the list to carry micronutrient data, got ' + r.withRef + ' of ' + r.total);
     a.ok(r.longest <= r.defs, 'a micro record has more values than MICRO_DEF has nutrients');
   },
 
