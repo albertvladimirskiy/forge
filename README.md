@@ -83,6 +83,8 @@ totals (each row says how much came from supplements). "Keep it" saves a one-tap
 day. Totals are checked against US adult upper limits; the ones that apply to supplements only (magnesium, niacin, vitamin A, vitamin E,
 folate) compare against the supplement amount alone, and a warning shows when a limit is passed.
 
+**Swapping exercises** (Today → open a workout block → SWAP EXERCISE): replace any program lift with a library exercise (e.g. incline bench for pause bench on Upper A). Suggestions are variations of the current lift, and search covers the whole library. The swap keeps the original's sets, reps and step, but the new lift keeps its own weights and history, so it starts with no prescription until you log it. Swaps apply wherever that lift appears; "put it back" restores the original, whose history is kept.
+
 On **Today → FOOD**, MACROS / MICROS switches the day's overview (the choice is saved). The micro percentages are of FDA Daily Values; the ones that track energy
 (fiber, thiamin, riboflavin, niacin, the saturated-fat limit) scale with that day's calorie target, the same one the macro bars use,
 and show their scaled target ("62% of 42 g"). The rest are fixed adult values, because they depend on age and sex rather than calories. FOODS EATEN closes and opens the list,

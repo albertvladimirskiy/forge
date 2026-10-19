@@ -299,6 +299,9 @@ input[type=date],input[type=time]{min-height:40px}
 .mrow .mt b{font-weight:600;color:var(--text)}
 .mrow .mt em{font-style:normal;color:var(--faint);margin-left:6px}
 .mrow .bar{margin-top:3px}
+.swapnote{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--rule2);margin:10px 0 0;padding:9px 11px;color:var(--dim)}
+.swapnote b{color:var(--text)}
+.swappick{border-top:1px solid var(--rule);margin-top:10px}
 .msup{font-size:var(--fs-caption);color:var(--faint);margin-top:2px}
 .mwarn{font-size:var(--fs-caption);color:var(--rust);margin-top:4px;line-height:1.4}
 .suppchips{display:flex;flex-wrap:wrap;gap:7px;padding:6px 13px 4px}
@@ -1803,6 +1806,8 @@ const DEFAULTS = {
   fights:{},          // { date:[{ id, disc, min, rounds, rpe, worked, caught }] }
   routines:[],        // [{ id, name, items:[exerciseId] }]
   myfoods:[],         // custom foods you chose to keep: [{ n, kcal, p, c, f }]
+  exsw:{},            // program lifts you swapped for another exercise: { programKey: libraryExerciseId }
+  exreg:{},           // every library exercise ever swapped in, so its logged sets keep showing: { libraryExerciseId: programKey }
   mysupps:[],         // supplements you chose to keep for one-tap logging: [{ k: nutrient key, a: amount in that nutrient's unit }]
   myex:[],            // exercises you created: [{ id, n, mu, eq, k }]
   cpref:{ rest:90, fav:{}, recent:[], restEx:{}, restSound:true, bar:{}, plates:{}, barEx:{}, notes:{} },
@@ -2570,9 +2575,11 @@ const chk=(on,c)=>`<div class="box" style="${on?`background:${c||'var(--amber)'}
    don't read as duplicates of each other. */
 function exRxLine(ex,label){
   const rx=prescribe(ex);
-  const pre=label?`<b>${esc(EXS[ex].n)}:</b> `:'';
-  if (!rx||rx.mode==='start')
-    return `<div class="rx dim">${svg('target',10,'var(--faint)')} ${pre}First time: work up to a hard clean ${EXS[ex].reps}, log it below</div>`;
+  const pre=label||EXS[ex].from?`<b>${esc(EXS[ex].n)}:</b> `:'';
+  if (!rx||rx.mode==='start'){
+    const lb=EXS[ex].from?lastBefore(libOf(ex),VD()):null;   // a swapped-in exercise you've done before: show what you did
+    return `<div class="rx dim">${svg('target',10,'var(--faint)')} ${pre}First time in this plan: work up to a hard clean ${EXS[ex].reps}, log it below${lb?` · last logged ${esc(shortDate(lb.date))}: ${esc(fmtSets(exInfo(libOf(ex)).k,lb.sets))}`:''}</div>`;
+  }
   const w=dispLoad(rx.w,ex);
   const map={ deload:[`DELOAD: ${w} · 3×5 easy`,'var(--moss)'],
     first:[`START: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
@@ -2590,7 +2597,7 @@ function exRxLine(ex,label){
 }
 /* block-level wrapper: a block may log 0, 1, or 2 exercises (supersets) */
 function rxLine(b){
-  const exs=BLOCKEX[b.id]; if(!exs) return '';
+  if(!BLOCKEX[b.id]) return ''; const exs=blockKeys(b);
   return exs.map(ex=>exRxLine(ex,exs.length>1)).join('');
 }
 /* A program lift's set log. It deliberately offers the same tools as a custom-workout exercise card: steppers, warm-up
@@ -2599,7 +2606,30 @@ function rxLine(b){
    exercise: rest, bar and history are shared with it, so setting them in one place sets them in the other. */
 const libOf = ex => EXLINK_ID[ex]||ex;
 function gRxW(ex){ const rx=prescribe(ex); return rx&&rx.w>0 ? num(wIn(snapLoadKg(rx.w,ex))) : null; }
-let gHist=null;
+let gHist=null, gSwap=null, gSwapQ='';
+/* the picker under a program lift: same muscle first, or search the whole library. Only exercises logged as weight × reps
+   (or bodyweight + added weight) can run through the progression engine. */
+function swapRowsHTML(ex){
+  const base=baseEx(ex), now=libOf(effEx(base)), cur=exInfo(now), q=gSwapQ.trim();
+  const ok=o=>(o.k==='wr'||o.k==='bw')&&o.id!==now;
+  const last=o=>{ const l=lastBefore(o.id,VD()); return l?` · last ${esc(fmtSets(o.k,l.sets.slice(0,3)).split('  ·  ')[0])}`:''; };
+  const row=o=>`<div class="fres"><button class="fresmain exrow" data-act="g-swapset" data-v="${base}" data-v2="${o.id}">
+      <span class="exn">${esc(o.n)}${o.my?' <em>custom</em>':''}</span>
+      <span class="exm">${esc(EX_MUL[o.mu]||'')} · ${esc(EX_EQL[o.eq]||'')}${last(o)}</span></button></div>`;
+  if (q){ const l=exSearch(q,'','').filter(ok).slice(0,40); return l.map(row).join('')||'<div class="empty">No match. Only weight × reps exercises can be swapped in.</div>'; }
+  /* no search yet: variations of this lift first (incline / decline / dumbbell versions of a bench press), then the rest of the muscle */
+  const stem=cur.n.replace(/^(barbell|dumbbell|kettlebell|cable|machine|smith machine|smith|weighted|trap bar|ez bar|ez)\s+/i,'');
+  const vars=exSearch(stem,cur.mu,'').filter(ok).slice(0,12), seen=new Set(vars.map(o=>o.id));
+  const rest=exSearch('',cur.mu,'').filter(o=>ok(o)&&!seen.has(o.id)).slice(0,28);
+  const sec=(t,l)=>l.length?`<div class="exsec">${t}</div>`+l.map(row).join(''):'';
+  return sec(`VARIATIONS OF ${esc(cur.n.toUpperCase())}`,vars)+sec(`MORE ${esc((EX_MUL[cur.mu]||'').toUpperCase())}. SEARCH FOR ANYTHING ELSE`,rest);
+}
+function swapPickerHTML(ex){
+  return `<div class="swappick"><div class="eyebrow" style="margin:12px 0 6px">SWAP ${esc(EXS[baseEx(ex)].n.toUpperCase())} FOR…</div>
+    <div class="searchrow">${svg('search',14,'var(--faint)')}<input type="text" id="swq" placeholder="e.g. incline bench, hack squat" value="${esc(gSwapQ)}" autocomplete="off"></div>
+    <div class="foodresults" id="swres">${swapRowsHTML(ex)}</div>
+    <div class="note" style="padding-top:6px">It keeps the same sets and reps, starts its own weights, and the original's history is kept. You can put the original back any time.</div></div>`;
+}
 const isBarbellLift = ex => !EXS[ex].added && exInfo(libOf(ex)).eq==='barbell';
 function exGymHTML(ex,label){
   const sets=(S.gym[VD()]&&S.gym[VD()][ex])||[], E=EXS[ex], lib=libOf(ex);
@@ -2615,8 +2645,9 @@ function exGymHTML(ex,label){
       <button class="stp" data-act="g-step" data-v="${ex}|${f}" data-v2="1" aria-label="Increase ${lab}">+</button></div></div>`;
   const rw=gRxW(ex);
   return `<div class="setlog">
-    ${flagged?`<div class="painnote">${svg('shield',11,'var(--rust)')} <div>${esc(PAINSWAP[ex])}<button class="unflag" data-act="painflag" data-v="${ex}">clear flag</button></div></div>`:''}
+    ${flagged?`<div class="painnote">${svg('shield',11,'var(--rust)')} <div>${esc(PAINSWAP[ex]||'Swap for a lighter or more comfortable variation, and keep it pain-free.')}<button class="unflag" data-act="painflag" data-v="${ex}">clear flag</button></div></div>`:''}
     ${exNoteHTML(ex)}
+    ${E.from?`<div class="note swapnote">${svg('rot',11,'var(--steel)')} <div>Swapped in for <b>${esc(EXS[E.from].n)}</b>. This lift keeps its own weights and history.<button class="unflag" data-act="g-swapreset" data-v="${E.from}">put it back</button></div></div>`:''}
     <div class="eyebrow" style="margin:12px 0 8px">TODAY'S SETS — ${esc(E.n).toUpperCase()}${E.added?' (ADDED WEIGHT)':''}</div>
     ${sets.map((s,i)=>{ const isPR = !s.wu&&pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r; if (!s.wu) n++;
       return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':n}</span>`}
@@ -2635,15 +2666,17 @@ function exGymHTML(ex,label){
       <button data-act="g-ramp" data-v="${ex}">${svg('trend',11)} WARM-UP RAMP</button>
       ${isBarbellLift(ex)?`<button data-act="w-exbar" data-v="${lib}">${svg('dumb',11)} BAR: ${trimNum(barFor(lib))} ${wUnit()}${(S.cpref.barEx[lib]||{})[unitKey()]>0?' (THIS LIFT)':''}</button>`:''}
       <button data-act="g-hist" data-v="${ex}">${svg('trend',11)} HISTORY</button>
+      <button data-act="g-swap" data-v="${baseEx(ex)}" aria-expanded="${gSwap===baseEx(ex)}">${svg('rot',11)} SWAP EXERCISE</button>
       <button data-act="w-exrest" data-v="${lib}" aria-label="Rest after this exercise: ${restLabel((S.cpref.restEx||{})[lib])}. Tap to change.">${svg('clock',11)} REST: ${restLabel((S.cpref.restEx||{})[lib])}</button>
       ${!flagged?`<button class="flagbtn" data-act="painflag" data-v="${ex}">${svg('shield',10)} pain?</button>`:''}
     </div>
     <div style="margin-top:8px;font-size:var(--fs-caption);color:var(--faint)">Blank weight = prescribed. Blank reps = target.</div>
     ${gHist===ex?histHTML(lib,VD(),exInfo(lib)):''}
+    ${gSwap===baseEx(ex)?swapPickerHTML(ex):''}
   </div>`;
 }
 function gymHTML(b){
-  const exs=BLOCKEX[b.id]; if(!exs) return '';
+  if(!BLOCKEX[b.id]) return ''; const exs=blockKeys(b);
   return exs.map(ex=>exGymHTML(ex,exs.length>1)).join('')+`<div class="setlog" style="padding:0 0 4px 42px">${restPrefsHTML()}</div>`;
 }
 
@@ -2703,6 +2736,27 @@ const EXLINK_ID = Object.fromEntries(Object.entries(EXLINK).map(([k,n])=>[k,exSl
 const EXLINK_REV = {};   // library id -> program keys whose logged sets also count as history for it
 Object.entries(EXLINK_ID).forEach(([k,id])=>{ (EXLINK_REV[id]=EXLINK_REV[id]||[]).push(k); });
 EXLINK_REV[exSlug('Barbell Deadlift')] = ['dead'];
+
+/* ---------- swapping a program lift for another exercise ---------- */
+/* Any lift in a planned session can be swapped for any weight-and-reps (or bodyweight-and-added-weight) exercise in the library:
+   incline bench for bench, a hack squat for the back squat. The replacement gets its own entry in EXS, copied from the lift it
+   replaces (sets, reps, step size), so it runs through the same progression engine, set log, rest timer and history as the
+   original. It starts fresh: the first time says "work up to a hard clean set". The original's history is kept, and RESET
+   puts the original back. S.exsw is the current swaps, S.exreg remembers every exercise ever swapped in. */
+function registerSwap(lib,orig){
+  const E=exInfo(lib); if (EXS[lib]||!E) return;
+  const o=EXS[orig]||{}, added=E.k==='bw';
+  EXS[lib]={n:E.n,inc:o.inc||2.27,sets:o.sets||3,reps:o.reps||8,added,from:orig};
+  EXLINK_ID[lib]=lib; const r=(EXLINK_REV[lib]=EXLINK_REV[lib]||[]); if (!r.includes(lib)) r.push(lib);
+}
+function registerSwaps(){
+  const known=id=>exInfo(id).n!==id.replace(/-/g,' ');      // exInfo falls back to a made-up name for ids it can't find
+  for (const [lib,orig] of Object.entries(S.exreg||{})) if (EXS[orig]&&!EXS[lib]&&known(lib)) registerSwap(lib,orig);
+  for (const [orig,lib] of Object.entries(S.exsw||{})) if (!(EXS[orig]&&EXS[lib])){ if (EXS[orig]&&known(lib)) registerSwap(lib,orig); else delete S.exsw[orig]; }
+}
+const effEx=key=>{ const l=S.exsw&&S.exsw[key]; return l&&EXS[l]?l:key; };
+const baseEx=ex=>(EXS[ex]&&EXS[ex].from)||ex;
+const blockKeys=b=>(BLOCKEX[b.id]||[]).map(effEx);
 
 const EXDB = [], EXBYID = {};
 (function(){
@@ -2938,9 +2992,11 @@ function normalizeCustom(){
   if (!S.cpref.fav || typeof S.cpref.fav!=='object') S.cpref.fav={};
   if (!Array.isArray(S.cpref.recent)) S.cpref.recent=[];
   ['cust','fights'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
+  ['exsw','exreg'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
   ['routines','myex','myfoods','mysupps'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
   S.myfoods=S.myfoods.filter(f=>f&&typeof f.n==='string'&&f.n.trim()&&isFinite(f.kcal));
   S.mysupps=S.mysupps.filter(s=>s&&typeof s.k==='string'&&MICRO_KEYS.includes(s.k)&&s.a>0);
+  registerSwaps();
   for (const k in S.cust){
     const c=Object.assign(newCW('with'),S.cust[k]);
     if (!Array.isArray(c.items)) c.items=[];
@@ -3018,7 +3074,7 @@ function ssCopy(cw,srcSup,srcItems){
 /* ---------- starting points for a workout ---------- */
 function planItemIds(def){
   const ids=[];
-  for (const b of def.blocks) for (const key of (BLOCKEX[b.id]||[])){ const id=EXLINK_ID[key]; if (id && !ids.includes(id)) ids.push(id); }
+  for (const b of def.blocks) for (const key0 of (BLOCKEX[b.id]||[])){ const key=effEx(key0), id=EXLINK_ID[key]; if (id && !ids.includes(id)) ids.push(id); }
   return ids;
 }
 function lastCustBefore(date){
@@ -3556,7 +3612,7 @@ function wlWorkouts(){
     const rows=[];
     if (p){
       for (const ex of p.lifts) rows.push([EXS[ex].n,fmtSets(EXS[ex].added?'bw':'wr',g[ex])]);
-      for (const b of p.blocks) if (!(BLOCKEX[b.id]||[]).some(ex=>p.lifts.includes(ex))) rows.push([b.l,'done']);
+      for (const b of p.blocks) if (![...(BLOCKEX[b.id]||[]),...blockKeys(b)].some(ex=>p.lifts.includes(ex))) rows.push([b.l,'done']);
     }
     if (hasC) for (const id of cw.items) if ((cw.sets[id]||[]).length){ const E=exInfo(id); rows.push([E.n,fmtSets(E.k,cw.sets[id])]); }
     return `<div class="panel"><button class="wlhead" data-act="wl-day" data-v="${k}" aria-expanded="${open}">
@@ -6715,7 +6771,7 @@ function handleClick(e){
       ['sw_','sr_'].forEach(p=>{ const el=document.getElementById(p+ex); if (el) el.value=''; });
       commit();
       /* the same rest timer a custom workout uses: not after a warm-up, and in a superset only after its last exercise */
-      const grp=Object.values(BLOCKEX).find(g=>g.length>1&&g.includes(ex));
+      const grp=Object.values(BLOCKEX).map(g=>g.map(effEx)).find(g=>g.length>1&&g.includes(ex));
       if (!set.wu && (!grp || grp[grp.length-1]===ex) && restFor(libOf(ex))>0) restStart(restFor(libOf(ex)));
       render();
       const n=workSets(S.gym[VD()][ex]).length;
@@ -6753,6 +6809,16 @@ function handleClick(e){
       commit(); render(); toast(`${steps.length} warm-up sets added: ${steps.map(([w,r])=>w+'×'+r).join(', ')}`); return;
     }
     case 'g-hist': gHist=gHist===v?null:v; break;
+    case 'g-swap': gSwap=gSwap===v?null:v; gSwapQ=''; break;                 // v = the program lift's own key
+    case 'g-swapset': {
+      const lib=v2, E=exInfo(lib), orig=v;
+      if (!EXS[orig]||EXS[orig].from||!(E.k==='wr'||E.k==='bw')) return;
+      gSwap=null; gSwapQ=''; gHist=null;
+      if (lib===(EXLINK_ID[orig]||orig)){ delete S.exsw[orig]; commit(); render(); toast(`${EXS[orig].n} is back in the plan`); return; }
+      registerSwap(lib,orig); S.exsw[orig]=lib; S.exreg[lib]=orig;
+      commit(); render(); toast(`${E.n} replaces ${EXS[orig].n}. It starts fresh; the original's history is kept.`,false,5000); return;
+    }
+    case 'g-swapreset': { if (!S.exsw[v]) return; delete S.exsw[v]; gSwap=null; commit(); render(); toast(`${EXS[v].n} is back in the plan`); return; }
     case 'painflag':
       if (S.flags[v]) delete S.flags[v]; else S.flags[v]=T;
       commit(); break;
@@ -6839,6 +6905,7 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.fd){ if (fdraft) fdraft[t.dataset.fd]=t.value; return; }
   if (t.dataset && t.dataset.exnote){ const k=t.dataset.exnote, v=t.value.slice(0,200); if (v.trim()) S.cpref.notes[k]=v; else delete S.cpref.notes[k]; commitSoon(); return; }
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commitSoon(); } return; }
+  if (t.id==='swq'){ gSwapQ=t.value; const r=document.getElementById('swres'); if (r&&gSwap) r.innerHTML=swapRowsHTML(gSwap); return; }   // swap picker search: swap only the list
   if (t.id==='foodq'){ foodQ=t.value; const r=document.getElementById('foodres'); if (r) r.innerHTML=foodResultsHTML(); return; }   // filter live, swap only the list
   if (t.id==='foodg'){ foodG=t.value; return; }                              // amount box: remember, no re-render
   const el=t.closest('[data-in]'); if(!el) return;
