@@ -45,7 +45,7 @@ module.exports = { name: 'Data saved by the original build', tests: {
       const t = await old.evaluate(() => trendWeight());
       a.equal(t.smoothed, false);
       const want = await old.evaluate(() => { const L = latestField('weight'), p = S.profile, bmr = 10 * L.weight + 6.25 * (+p.height) - 5 * (+p.age) + (p.sex === 'm' ? 5 : -161);
-        return Math.round(bmr * (+p.activity) / 10) * 10; });
+        return Math.round((bmr * (+p.activity) + dayActivity(T).kcal) / 10) * 10; });
       a.equal(await old.evaluate(() => nutrition(T).kcal), want);
     } finally { a.deepEqual(old.errors, []); await old.ctx.close(); }
   },

@@ -6,11 +6,12 @@ const open = page => page.evaluate(() => { S.ui.fold.food = true; render(); });
 
 module.exports = { name: 'Water tracking', tests: {
   async 'US units: add 8 / 16 oz, minus, shown in oz against the Fuel target'(page, a){
-    await page.evaluate(() => { S.log = [{ date: T, weight: 80 }]; });         // 80 kg -> 3.2 L target = 108 oz
+    await page.evaluate(() => { S.log = [{ date: T, weight: 80 }]; });         // 80 kg -> 3.2 L plus the day's training (energy.test.js covers that part)
     await open(page);
-    a.match(await row(page), /WATER ?0 oz \/ 108 oz/);
+    const target = await page.evaluate(() => waterShow(+nutrition(T).water * 1000));
+    a.match(await row(page), new RegExp(`WATER ?0 oz / ${target}`));
     await page.click('[data-act=water][data-v="237"]');
-    a.match(await row(page), /8 oz \/ 108 oz/);
+    a.match(await row(page), new RegExp(`8 oz / ${target}`));
     await page.evaluate(() => document.querySelectorAll('[data-act=water]')[2].click());     // + 16 oz
     a.match(await row(page), /24 oz/);
     await page.evaluate(() => document.querySelectorAll('[data-act=water]')[0].click());     // - 8 oz
@@ -21,8 +22,9 @@ module.exports = { name: 'Water tracking', tests: {
   async 'metric adds 250 / 500 ml and shows litres'(page, a){
     await page.evaluate(() => { S.profile.unit = 'metric'; S.log = [{ date: T, weight: 80 }]; });
     await open(page);
+    const target = await page.evaluate(() => waterShow(+nutrition(T).water * 1000));
     await page.click('[data-act=water][data-v="250"]'); await page.click('[data-act=water][data-v="500"]'); await page.click('[data-act=water][data-v="500"]');
-    a.match(await row(page), /WATER ?1\.3 L \/ 3\.2 L/);
+    a.match(await row(page), new RegExp(`WATER ?1\\.3 L / ${target.replace('.', '\\.')}`));
     a.equal(await water(page), 1250);
   },
 

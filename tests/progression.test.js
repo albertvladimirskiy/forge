@@ -6,7 +6,7 @@ const hint = (page, id, list) => page.evaluate(([id, list]) => { S.cust[dkey(-1)
 module.exports = { name: 'Bodyweight trend and next-weight hint', tests: {
   async 'targets use the 7-day average; a weekly weigher is unchanged'(page, a){
     a.deepEqual(await page.evaluate(() => [trendWeight(), nutrition(T)]), [null, null]);
-    const kcalFor = kg => page.evaluate(kg => { const p = S.profile, bmr = 10 * kg + 6.25 * (+p.height) - 5 * (+p.age || 22) + (p.sex === 'm' ? 5 : -161); return Math.round(bmr * (+p.activity || 1.725) / 10) * 10; }, kg);
+    const kcalFor = kg => page.evaluate(kg => { const p = S.profile, bmr = 10 * kg + 6.25 * (+p.height) - 5 * (+p.age || 22) + (p.sex === 'm' ? 5 : -161); return Math.round((bmr * (+p.activity || 1.3) + dayActivity(T).kcal) / 10) * 10; }, kg);   // this test is about the weight used; training cost has its own tests (energy.test.js)
     await page.evaluate(() => { S.profile.goal = 'recomp'; S.log = [{ date: dkey(-20), weight: 80 }, { date: dkey(-2), weight: 82 }]; });
     a.deepEqual(await page.evaluate(() => { const t = trendWeight(); return [t.smoothed, t.kg]; }), [false, 82]);
     a.equal(await page.evaluate(() => nutrition(T).kcal), await kcalFor(82));
