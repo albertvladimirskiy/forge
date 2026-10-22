@@ -173,6 +173,32 @@ module.exports = { name: 'Training energy: calories, macros and water follow the
     a.ok((await ride(25, 40))[1] > 616, 'faster costs more');
   },
 
+  async 'a run or ride logged with a distance but no time is still counted'(page, a){
+    await setup(page, { day: 'd7' });
+    const one = (id, set) => page.evaluate(([id, set]) => { S.cust[T] = newCW('with'); S.cust[T].items = [id]; S.cust[T].sets[id] = [set]; }, [id, set])
+      .then(() => N(page)).then(n => n.items.find(i => i[0] !== 'Recovery + Planning').slice(1));
+    a.deepEqual(await one('run', { d: 5000 }), [30, 400], '5 km at an assumed 6 min/km, 1 kcal per kg per km');
+    a.deepEqual((await one('bike', { d: 20000 })), [60, 588], '20 km at 3 min/km = 20 km/h, MET 8, net 7');
+  },
+
+  async 'junk in a hand-edited backup is ignored or capped instead of poisoning the day'(page, a){
+    await setup(page, { day: 'd7' });
+    const base = (await N(page)).kcal;
+    await page.evaluate(() => {
+      S.cpref.rest = 1e9; S.profile.sweat = -5; S.profile.activity = 'abc';
+      S.fights[T] = [{ id: 'a', disc: 'bjj', min: Infinity, rpe: 'x' }, { id: 'b', disc: '??', min: null }, { id: 'c', disc: 'bjj', min: 'abc' }];
+      S.cust[T] = newCW('with'); S.cust[T].items = ['bike', 'barbell-bench-press'];
+      S.cust[T].sets.bike = [{ t: 1e12, d: NaN }, { t: 'x', d: {} }];
+      S.cust[T].sets['barbell-bench-press'] = [{ w: 'a', r: 1e9, rpe: [] }, { w: null, r: -5, rpe: 1e9, wu: true }];
+    });
+    const n = await N(page);
+    for (const k of ['tdee', 'kcal', 'carbs', 'fat', 'extra', 'extraMin', 'sweat']) a.ok(Number.isFinite(n[k]) && n[k] >= 0, `${k} is ${n[k]}`);
+    a.ok(Number.isFinite(+n.water) && +n.water > 0, `water is ${n.water}`);
+    for (const i of n.items) a.ok(i.slice(1).every(Number.isFinite), `item ${i}`);
+    a.ok(n.kcal > base && n.kcal < 12000, `capped, not absurd (${n.kcal})`);
+    a.equal(n.items.find(i => i[0] === 'BJJ (gi)')[1], 600, 'a fight is capped at 10 hours');
+  },
+
   async 'sweat carries sodium, potassium, calcium and magnesium, and the Plan setting scales it'(page, a){
     await setup(page, { day: 'd7' });
     let n = await N(page);

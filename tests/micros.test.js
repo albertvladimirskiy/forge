@@ -133,6 +133,7 @@ module.exports = { name: 'Food data: no duplicates, micronutrients, collapsible 
       if (!(await page.$('#sp_k'))) await page.click('[data-act=suppform]'); };
     await add('vitc', 500, 'mg');
     a.deepEqual(await page.evaluate(() => day(VD()).supps), [{ k: 'vitc', a: 500 }]);
+    a.equal(await page.$eval('#sp_a', e => e.value), '', 'the amount box is empty again once the supplement is added');
     await add('vitd', 2000, 'IU');
     a.equal(await page.evaluate(() => day(VD()).supps[1].a), 50, '2000 IU of vitamin D is 50 µg');
     await add('b12', 1000, 'µg');

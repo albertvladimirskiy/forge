@@ -2055,6 +2055,9 @@ const FIGHT_COMBAT=new Set(['bjj','striking','wrestling']);
 const CARDIO_MET=[[/burpee|hiit|tabata|circuit|conditioning|metcon|battle/i,9],[/run|jog|sprint|treadmill/i,9.8],[/walk|hike|ruck/i,4.5],
   [/row|erg/i,7],[/swim/i,8],[/cycl|bike|spin|assault/i,7.5],[/jump rope|skipping|rope/i,11],[/stair|climb/i,8],[/ellip|ski/i,6]];
 const kcalMin=(met,kg)=>Math.max(0,met-1)*3.5*kg/200;
+/* a hand-edited or old backup can hold junk in a set, a fight or a setting; read numbers through this so one bad value is ignored
+   (or capped) instead of poisoning the day's totals */
+const pos=(v,max)=>{ v=+v; return v>0?Math.min(v,max):0; };
 const CYCLE_MET=[[16,4],[19.2,6.8],[22.4,8],[25.7,10],[32.2,12],[Infinity,15.8]];   // [km/h up to, gross MET] (Compendium, by speed)
 const MU_BIG=new Set(['quads','hams','glutes','back','lowback','full','hips']), MU_SMALL=new Set(['biceps','triceps','forearms','calves','neck','core']);
 /* Sweat: about 1.5 ml per kcal of training (0.5 L/h lifting, 1 L/h grappling, 1.4 L/h running), times the Plan > Sweat setting.
@@ -2067,19 +2070,19 @@ const SWEAT_MG_L={Sodium:1000,Potassium:195,Calcium:40,Magnesium:10};
    (Compendium light-to-vigorous resistance training), scaled for muscle mass; warm-up sets count as light. A set with no RPE
    uses the exercise's other rated sets, else 7. Resting-state EPOC is not added. */
 function liftCost(cw,id,kg){
-  const E=exInfo(id), sets=cw.sets[id]||[], grp=ssOf(cw,id), rest=!grp||grp[grp.length-1]===id?restFor(id):15;
-  const rated=sets.filter(x=>!x.wu&&x.rpe).map(x=>x.rpe), dflt=rated.length?rated.reduce((a,b)=>a+b,0)/rated.length:7;
+  const E=exInfo(id), sets=cw.sets[id]||[], grp=ssOf(cw,id), rest=!grp||grp[grp.length-1]===id?pos(restFor(id),900):15;
+  const rated=sets.filter(x=>!x.wu&&pos(x.rpe,10)).map(x=>pos(x.rpe,10)), dflt=rated.length?rated.reduce((a,b)=>a+b,0)/rated.length:7;
   const size=MU_BIG.has(E.mu)?1.15:MU_SMALL.has(E.mu)?0.85:1;
   let min=0, kcal=0;
   for (const x of sets){
-    const work=E.k==='carry'?clamp(x.d||0,10,120):clamp((x.r||10)*3,15,90), gap=x.wu?Math.min(rest,30):rest, m=(work+gap)/60;
-    const met=x.wu?3:(3.5+2.5*clamp(((x.rpe||dflt)-5)/4,0,1))*size+(E.mu==='plyo'?1.5:0);
+    const work=E.k==='carry'?clamp(pos(x.d,500),10,120):clamp((pos(x.r,100)||10)*3,15,90), gap=x.wu?Math.min(rest,30):rest, m=(work+gap)/60;
+    const met=x.wu?3:(3.5+2.5*clamp(((pos(x.rpe,10)||dflt)-5)/4,0,1))*size+(E.mu==='plyo'?1.5:0);
     min+=m; kcal+=kcalMin(met,kg)*m;
   }
   return {min,kcal};
 }
 function fightMet(f){
-  const r=FIGHT_MET[f.disc]||[6,10], rpe=clamp(+f.rpe||5,1,10);     // no rating logged: a middling 5
+  const r=FIGHT_MET[f.disc]||[6,10], rpe=clamp(pos(f.rpe,10)||5,1,10);     // no rating logged: a middling 5
   return r[0]+(r[1]-r[0])*(rpe-1)/9;
 }
 function physicalItems(k){
@@ -2087,11 +2090,11 @@ function physicalItems(k){
 }
 function dayActivity(k){
   const L=trendWeight(), out={items:[],kcal:0,min:0,sweat:0}; if(!L||!k) return out;
-  const kg=L.kg, cw=S.cust[k], fights=S.fights[k]||[], sf=+S.profile.sweat||1;
-  const add=(l,min,kcal)=>{ if (min>0 && kcal>0) out.items.push({l,min:Math.round(min),kcal:Math.round(kcal),met:kcal/min/(kg*0.0175),sweat:Math.round(kcal*SWEAT_ML_PER_KCAL*sf)}); };   // met = net MET
-  let logged=fights.reduce((a,f)=>a+(+f.min||0),0);
+  const kg=L.kg, cw=S.cust[k], fights=S.fights[k]||[], sf=clamp(+S.profile.sweat||1,0.5,2);
+  const add=(l,min,kcal)=>{ if (min>0 && kcal>0 && isFinite(min) && isFinite(kcal)) out.items.push({l,min:Math.round(min),kcal:Math.round(kcal),met:kcal/min/(kg*0.0175),sweat:Math.round(kcal*SWEAT_ML_PER_KCAL*sf)}); };   // met = net MET
+  let logged=fights.reduce((a,f)=>a+pos(f.min,600),0);
   const take=min=>{ const t=Math.min(min,logged); logged-=t; return min-t; };    // logged fight minutes already cover this much
-  for (const f of fights) add(FIGHT_L[f.disc]||'Fighting', +f.min||0, kcalMin(fightMet(f),kg)*(+f.min||0));
+  for (const f of fights){ const fm=pos(f.min,600); add(FIGHT_L[f.disc]||'Fighting', fm, kcalMin(fightMet(f),kg)*fm); }
   for (const c of physicalItems(k)){
     let s=m2s(c.s), e=m2s(c.e); if (e<=s) e+=1440;
     const m=FIGHT_COMBAT.has(c.sp)?take(e-s):e-s, met=SPORTMET[c.sp]!=null?SPORTMET[c.sp]:SPORTMET[''];
@@ -2111,7 +2114,8 @@ function dayActivity(k){
       if (E.k==='wr'||E.k==='bw'||E.k==='carry'){ const c=liftCost(cw,id,kg); lmin+=c.min; lkcal+=c.kcal; continue; }
       let mins=0, kcal=0;
       for (const x of sets){
-        const m=(x.t||0)/60, km=(x.d||0)/1000; mins+=m;
+        const km=pos(x.d,300000)/1000, tt=pos(x.t,21600), m=tt>0?tt/60:km*(/walk|hike|ruck/i.test(E.n)?12:/cycl|bike|spin/i.test(E.n)?3:6);   // distance with no time: assume 12 / 3 / 6 min per km for a walk / ride / anything else
+        mins+=m;
         if (E.k==='cardio' && km>0 && /run|jog|sprint|treadmill/i.test(E.n)) kcal+=km*kg;           // ~1 kcal per kg per km, whatever the pace
         else if (E.k==='cardio' && km>0 && /walk|hike|ruck/i.test(E.n)) kcal+=km*kg*0.6;
         else if (E.k==='cardio' && km>0 && m>0 && /cycl|bike|spin/i.test(E.n)) kcal+=kcalMin(CYCLE_MET.find(r=>km/(m/60)<=r[0])[1],kg)*m;
@@ -2131,7 +2135,7 @@ function nutrition(k){
   const L=trendWeight(); if(!L) return null;
   const p=S.profile,kg=L.kg,cm=+p.height,age=+p.age||22;
   const bmr=10*kg+6.25*cm-5*age+(p.sex==='m'?5:-161);
-  const A=dayActivity(k), base=bmr*(+p.activity||1.3), tdee=base+A.kcal;
+  const A=dayActivity(k), base=bmr*clamp(+p.activity||1.3,1.2,2), tdee=base+A.kcal;
   const adj=p.goal==='gain'?1.10:p.goal==='lean'?0.85:1.0;
   const kcal=Math.round(tdee*adj/10)*10;
   /* protein follows bodyweight (more while cutting); fat stays in a g/kg band so training calories land in carbs, which is
@@ -6689,6 +6693,7 @@ function handleClick(e){
       (d.supps=Array.isArray(d.supps)?d.supps:[]).push(s);
       if ((document.getElementById('sp_save')||{checked:true}).checked && !S.mysupps.some(x=>x.k===s.k&&x.a===s.a)) S.mysupps.push({...s});
       suppSel=MICRO_KEYS.indexOf(key); loadMicros();
+      const box=document.getElementById('sp_a'); if (box) box.value='';      // sp_a survives re-renders (the micro table arriving mid-typing), so empty it once the amount is saved
       commit(); render(); toast(`${suppLabel(s)} added`); return;
     }
     case 'addmysupp': { const s=S.mysupps[+v]; if (!s) return; (d.supps=Array.isArray(d.supps)?d.supps:[]).push({k:s.k,a:s.a}); loadMicros(); commit(); render(); toast(`${suppLabel(s)} added`); return; }
