@@ -1636,16 +1636,15 @@ const PAINSWAP = {
 const CTAGS = [['','Other'],['physical','Physical / sport'],['class','Class'],['work','Work']];
 const TAGCOLOR = {physical:'var(--moss)', class:'var(--steel)', work:'var(--amber)', '':'var(--faint)'};
 
-/* sport-specific MET values for tagged-physical commitments, so the fuel
-   target reflects what the activity actually costs rather than one flat
-   number for everything from BJJ to a walk. Source: Compendium of Physical
-   Activities, rounded to sane single decimals. First entry is the fallback
-   used when no sport is picked (matches the old flat estimate).            */
+/* sport-specific GROSS MET values for tagged-physical commitments (the energy cost is (MET - 1), since the resting part is
+   already in the base). Source: Compendium of Physical Activities, rounded. Combat entries are CLASS averages (warm-up,
+   drilling and rest included); live rolling or sparring runs hotter, so log that as a fight with an effort rating instead.
+   First entry is the fallback used when no sport is picked.                                                              */
 const SPORTS = [
-  ['','General / other',7.0],
-  ['bjj','BJJ / grappling',10.3],
-  ['striking','Boxing / striking',9.0],
-  ['wrestling','Wrestling',9.0],
+  ['','General / other',6.0],
+  ['bjj','BJJ / grappling',8.0],
+  ['striking','Boxing / striking',8.0],
+  ['wrestling','Wrestling',8.0],
   ['basketball','Basketball',8.0],
   ['soccer','Soccer',10.0],
   ['tennis','Tennis',8.0],
@@ -1794,7 +1793,7 @@ const ALLDAYS = Object.fromEntries([...WEEK_STD,D8,D9].map(d=>[d.id,d]));
 
 /* ================================================================ state == */
 const DEFAULTS = {
-  profile:{ unit:'imperial', sex:'m', age:22, height:178, activity:1.725, goal:'recomp',
+  profile:{ unit:'imperial', sex:'m', age:22, height:178, activity:1.3, sweat:1, goal:'recomp',
             wake:'06:00', sleep:'22:30', trainPref:'morning', commute:15, program:'standard' },
   fixed:{ mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] },
   extra:{}, swap:{},
@@ -2041,37 +2040,116 @@ function pillars(){
 }
 function phaseIdx(){ const d=daysLogged(); return d>=1095?3:d>=540?2:d>=180?1:0; }
 
+/* ------------------------------------------------ energy cost of a day's training ----
+   Maintenance = BMR x "daily life outside training" + what the day's training actually costs. Four sources, each costed at
+   NET MET (MET - 1: the resting part is already in the base) x bodyweight:
+     - the planned session, at the minutes the schedule gave it (shortened when tagged practice trims it);
+     - fights logged on Today, by discipline and effort rating;
+     - a custom workout: lifting sets by set count and rest, cardio and holds by their logged time (runs and walks by distance);
+     - calendar commitments tagged Physical, by sport.
+   A logged fight displaces the same minutes of a tagged combat class and then of a planned striking / grappling / engine
+   session, so logging the class you were already planning does not count it twice. MET values are population averages. */
+const PLAN_MET={strength:5,strike:7.5,ground:7.5,engine:8,craft:4.5,recover:3};   // gross, whole-session averages including rests
+const FIGHT_MET={pads:[5,9],drills:[3.5,6],conditioning:[6,10],other:[5,9]};       // [easy, all-out]; anything else is live work: [6,10]
+const FIGHT_COMBAT=new Set(['bjj','striking','wrestling']);
+const CARDIO_MET=[[/burpee|hiit|tabata|circuit|conditioning|metcon|battle/i,9],[/run|jog|sprint|treadmill/i,9.8],[/walk|hike|ruck/i,4.5],
+  [/row|erg/i,7],[/swim/i,8],[/cycl|bike|spin|assault/i,7.5],[/jump rope|skipping|rope/i,11],[/stair|climb/i,8],[/ellip|ski/i,6]];
+const kcalMin=(met,kg)=>Math.max(0,met-1)*3.5*kg/200;
+/* a hand-edited or old backup can hold junk in a set, a fight or a setting; read numbers through this so one bad value is ignored
+   (or capped) instead of poisoning the day's totals */
+const pos=(v,max)=>{ v=+v; return v>0?Math.min(v,max):0; };
+const CYCLE_MET=[[16,4],[19.2,6.8],[22.4,8],[25.7,10],[32.2,12],[Infinity,15.8]];   // [km/h up to, gross MET] (Compendium, by speed)
+const MU_BIG=new Set(['quads','hams','glutes','back','lowback','full','hips']), MU_SMALL=new Set(['biceps','triceps','forearms','calves','neck','core']);
+/* Sweat: about 1.5 ml per kcal of training (0.5 L/h lifting, 1 L/h grappling, 1.4 L/h running), times the Plan > Sweat setting.
+   What it carries, in mg per litre (mean of published whole-body values: sodium ~44 mmol/L, potassium ~5, calcium ~1; magnesium
+   is the least certain, sources differ 2-4x). Iron, zinc and chloride are not modelled. */
+const SWEAT_ML_PER_KCAL=1.5;
+const SWEAT_MG_L={Sodium:1000,Potassium:195,Calcium:40,Magnesium:10};
+/* One exercise's sets in a custom workout: work time from the reps, rest from the rest timer (a superset partner rests only after
+   the last of the group), average gross MET (rests included) from 3.5 at RPE 5 or less up to 6.0 at RPE 9 or more
+   (Compendium light-to-vigorous resistance training), scaled for muscle mass; warm-up sets count as light. A set with no RPE
+   uses the exercise's other rated sets, else 7. Resting-state EPOC is not added. */
+function liftCost(cw,id,kg){
+  const E=exInfo(id), sets=cw.sets[id]||[], grp=ssOf(cw,id), rest=!grp||grp[grp.length-1]===id?pos(restFor(id),900):15;
+  const rated=sets.filter(x=>!x.wu&&pos(x.rpe,10)).map(x=>pos(x.rpe,10)), dflt=rated.length?rated.reduce((a,b)=>a+b,0)/rated.length:7;
+  const size=MU_BIG.has(E.mu)?1.15:MU_SMALL.has(E.mu)?0.85:1;
+  let min=0, kcal=0;
+  for (const x of sets){
+    const work=E.k==='carry'?clamp(pos(x.d,500),10,120):clamp((pos(x.r,100)||10)*3,15,90), gap=x.wu?Math.min(rest,30):rest, m=(work+gap)/60;
+    const met=x.wu?3:(3.5+2.5*clamp(((pos(x.rpe,10)||dflt)-5)/4,0,1))*size+(E.mu==='plyo'?1.5:0);
+    min+=m; kcal+=kcalMin(met,kg)*m;
+  }
+  return {min,kcal};
+}
+function fightMet(f){
+  const r=FIGHT_MET[f.disc]||[6,10], rpe=clamp(pos(f.rpe,10)||5,1,10);     // no rating logged: a middling 5
+  return r[0]+(r[1]-r[0])*(rpe-1)/9;
+}
 function physicalItems(k){
   return [ ...(S.fixed[DOW[dowIdx(k)]]||[]), ...(S.extra[k]||[]) ].filter(c=>c.t==='physical');
 }
-function activityMinutes(k){
-  return physicalItems(k).reduce((a,c)=>{ let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440; return a+(e-s); }, 0);
-}
-/* calories burned by tagged-physical commitments on date k, one MET per
-   item based on its chosen sport (SPORTMET), rather than one flat number
-   for everything — a BJJ round and a brisk walk no longer cost the same.  */
-function extraKcal(k){
-  const L=trendWeight(); if(!L||!k) return 0;
-  const items=physicalItems(k); if(!items.length) return 0;
-  const kcal=items.reduce((a,c)=>{
-    let s=m2s(c.s), e=m2s(c.e); if(e<=s) e+=1440;
-    const met=SPORTMET[c.sp]!=null?SPORTMET[c.sp]:SPORTMET[''];
-    return a+met*3.5*L.kg/200*(e-s);
-  },0);
-  return Math.round(kcal);
+function dayActivity(k){
+  const L=trendWeight(), out={items:[],kcal:0,min:0,sweat:0}; if(!L||!k) return out;
+  const kg=L.kg, cw=S.cust[k], fights=S.fights[k]||[], sf=clamp(+S.profile.sweat||1,0.5,2);
+  const add=(l,min,kcal)=>{ if (min>0 && kcal>0 && isFinite(min) && isFinite(kcal)) out.items.push({l,min:Math.round(min),kcal:Math.round(kcal),met:kcal/min/(kg*0.0175),sweat:Math.round(kcal*SWEAT_ML_PER_KCAL*sf)}); };   // met = net MET
+  let logged=fights.reduce((a,f)=>a+pos(f.min,600),0);
+  const take=min=>{ const t=Math.min(min,logged); logged-=t; return min-t; };    // logged fight minutes already cover this much
+  for (const f of fights){ const fm=pos(f.min,600); add(FIGHT_L[f.disc]||'Fighting', fm, kcalMin(fightMet(f),kg)*fm); }
+  for (const c of physicalItems(k)){
+    let s=m2s(c.s), e=m2s(c.e); if (e<=s) e+=1440;
+    const m=FIGHT_COMBAT.has(c.sp)?take(e-s):e-s, met=SPORTMET[c.sp]!=null?SPORTMET[c.sp]:SPORTMET[''];
+    add(c.l+(c.sp?' · '+SPORTLABEL[c.sp]:''), m, kcalMin(met,kg)*m);
+  }
+  const rep=!!cw && cw.mode==='replace' && cw.items.length>0;       // a replacement stands in for the planned session
+  if (!rep){
+    const plan=buildDay(k), e=plan.entries.find(x=>x.id==='train'), t=plan.def.type;
+    let m=e?e.e-e.s:0; if (t==='strike'||t==='ground'||t==='engine') m=take(m);
+    add(plan.def.title, m, kcalMin(PLAN_MET[t]||5,kg)*m);
+  }
+  if (cw){
+    const blk=blkOf(cw); let lmin=0, lkcal=0;                          // blk: sets that belong to planned blocks, already in the planned session
+    for (const id of cw.items){
+      if (blk.has(id)) continue;
+      const E=exInfo(id), sets=cw.sets[id]||[]; if (!sets.length) continue;
+      if (E.k==='wr'||E.k==='bw'||E.k==='carry'){ const c=liftCost(cw,id,kg); lmin+=c.min; lkcal+=c.kcal; continue; }
+      let mins=0, kcal=0;
+      for (const x of sets){
+        const km=pos(x.d,300000)/1000, tt=pos(x.t,21600), m=tt>0?tt/60:km*(/walk|hike|ruck/i.test(E.n)?12:/cycl|bike|spin/i.test(E.n)?3:6);   // distance with no time: assume 12 / 3 / 6 min per km for a walk / ride / anything else
+        mins+=m;
+        if (E.k==='cardio' && km>0 && /run|jog|sprint|treadmill/i.test(E.n)) kcal+=km*kg;           // ~1 kcal per kg per km, whatever the pace
+        else if (E.k==='cardio' && km>0 && /walk|hike|ruck/i.test(E.n)) kcal+=km*kg*0.6;
+        else if (E.k==='cardio' && km>0 && m>0 && /cycl|bike|spin/i.test(E.n)) kcal+=kcalMin(CYCLE_MET.find(r=>km/(m/60)<=r[0])[1],kg)*m;
+        else {
+          const hit=CARDIO_MET.find(r=>r[0].test(E.n));
+          kcal+=kcalMin(hit?hit[1]:E.mu==='mobility'?2.5:E.mu==='combat'?7:E.k==='time'?3.5:E.mu==='sport'?7:6.5,kg)*m;
+        }
+      }
+      add(E.n, mins, kcal);
+    }
+    add(cw.name||'Workout', lmin, lkcal);
+  }
+  for (const i of out.items){ out.kcal+=i.kcal; out.min+=i.min; out.sweat+=i.sweat; }
+  return out;
 }
 function nutrition(k){
   const L=trendWeight(); if(!L) return null;
   const p=S.profile,kg=L.kg,cm=+p.height,age=+p.age||22;
   const bmr=10*kg+6.25*cm-5*age+(p.sex==='m'?5:-161);
-  const tdee=bmr*(+p.activity||1.725);
-  const extra=extraKcal(k);
+  const A=dayActivity(k), base=bmr*clamp(+p.activity||1.3,1.2,2), tdee=base+A.kcal;
   const adj=p.goal==='gain'?1.10:p.goal==='lean'?0.85:1.0;
-  const kcal=Math.round((tdee+extra)*adj/10)*10;
-  const protein=Math.round(kg*2.0);
-  const fat=Math.round(kcal*0.27/9);
+  const kcal=Math.round(tdee*adj/10)*10;
+  /* protein follows bodyweight (more while cutting); fat stays in a g/kg band so training calories land in carbs, which is
+     what hard sessions run on */
+  const protein=Math.round(kg*(p.goal==='lean'?2.2:2.0));
+  const fat=Math.round(clamp(kcal*0.27/9,kg*0.8,kg*1.2));
   const carbs=Math.max(20,Math.round((kcal-protein*4-fat*9)/4));
-  return {tdee:Math.round(tdee),kcal,protein,fat,carbs,water:(kg*40/1000).toFixed(1),extra,extraMin:k?activityMinutes(k):0};
+  /* water: 40 ml per kg plus the sweat lost; the sweat's sodium, potassium, calcium and magnesium go into the micro targets */
+  const loss={}; for (const e in SWEAT_MG_L) loss[e]=Math.round(SWEAT_MG_L[e]*A.sweat/1000);
+  /* energy availability: what is left for the body after training, per kg of lean mass. Under ~30 kcal/kg for long stretches is
+     the IOC's low-energy-availability range (RED-S). Needs a body-fat reading. */
+  const bf=latestField('bf'), ffm=bf?kg*(1-bf.bf/100):null, ea=ffm?Math.round((kcal-A.kcal)/ffm):null;
+  return {tdee:Math.round(tdee),base:Math.round(base),kcal,protein,fat,carbs,water:((kg*40+A.sweat)/1000).toFixed(1),
+    act:A.items,extra:Math.round(A.kcal),extraMin:A.min,sweat:A.sweat,loss,ea};
 }
 function foodTotals(k){
   const f=day(k).food;
@@ -2176,14 +2254,14 @@ function microPanelHTML(list,N,supps){
   MICRO_DEF.forEach(([l,u,dv,g,lim],i)=>{
     if (g!==grp){ grp=g; h+=`<div class="mhead">${g}</div>`; }
     if (!m.seen[i]){ h+=`<div class="mrow"><div class="mt"><span>${l}</span><span style="color:var(--faint)">—</span></div></div>`; return; }
-    const sc=MICRO_SCALED.has(l)&&dv?dv*k:dv, v=m.tot[i], pct=sc?v/sc*100:null;
+    const sc=dv?(MICRO_SCALED.has(l)?dv*k:dv)+((N&&N.loss&&N.loss[l])||0):dv, v=m.tot[i], pct=sc?v/sc*100:null;   // energy-linked ones scale with calories; sodium, potassium, calcium and magnesium add what training sweat carries
     const ul=MICRO_UL[l], over=ul&&(ul[1]?m.supp[i]:v)>ul[0];
     h+=`<div class="mrow"><div class="mt"><span>${l}</span><span><b>${fmtMicro(v)} ${u}</b>${pct!=null?`<em>${Math.round(pct)}%${lim?' of limit':''}${sc!==dv?` of ${fmtMicro(sc)} ${u}`:''}</em>`:''}</span></div>
       ${m.supp[i]>0?`<div class="msup">${fmtMicro(m.supp[i])} ${u} of that from supplements</div>`:''}
       ${pct!=null?`<div class="bar"><div class="barfill" style="width:${clamp(pct,0,100)}%;background:${over||lim&&pct>100?'var(--rust)':pct>=100?'var(--moss)':'var(--steel)'}"></div></div>`:''}
       ${over?`<div class="mwarn">${ul[1]?'Supplements alone are':'Today is'} above the adult upper limit of ${fmtMicro(ul[0])} ${u}. Check the label, or ask a pharmacist or doctor if this is on purpose.</div>`:''}</div>`;
   });
-  return h+`<div class="note">Percentages are of the FDA Daily Value for adults.${k!==1?` Fiber, thiamin, riboflavin, niacin and the saturated-fat limit are scaled to your ${N.kcal.toLocaleString()} kcal target (the rest don't change with calories).`:''} Your own needs differ with age, sex and training. Sodium, saturated fat and cholesterol are limits, not goals. Choline is measured less often than the rest, so it can run low.${supps.length?' Upper limits are the US adult levels; some apply only to supplements, so those compare against your supplement amount alone.':''}</div>`;
+  return h+`<div class="note">Percentages are of the FDA Daily Value for adults.${k!==1?` Fiber, thiamin, riboflavin, niacin and the saturated-fat limit are scaled to your ${N.kcal.toLocaleString()} kcal target (the rest don't change with calories).`:''}${N&&N.sweat>0?` Sodium, potassium, calcium and magnesium targets include what today's training sweat carries (about ${N.loss.Sodium.toLocaleString()} mg sodium).`:''} Your own needs differ with age, sex and training. Sodium, saturated fat and cholesterol are limits, not goals. Choline is measured less often than the rest, so it can run low.${supps.length?' Upper limits are the US adult levels; some apply only to supplements, so those compare against your supplement amount alone.':''}</div>`;
 }
 /* the compact list shown when a single food is opened in the day's list */
 function entryMicroHTML(e){
@@ -2495,14 +2573,12 @@ function mealTotals(m){
   return {kcal:Math.round(kcal),p:Math.round(p),c:Math.round(c),f:Math.round(f)};
 }
 /* "best fit" meal template: closest calorie match first, with a modest nudge
-   toward the tag that fits today — training-day carbs on a training day (or
-   any day with tagged sport activity), lean-out on a cut, otherwise rest —
+   toward the tag that fits today — training-day carbs on a day whose training costs 350+ kcal, lean-out on a cut, otherwise rest —
    so two similarly-sized templates don't come out as a coin flip. */
 function bestMeal(){
   const N=nutrition(T); if(!N) return null;
-  const plan=buildDay(T);
   const wantTag = S.profile.goal==='lean' ? 'lean'
-    : (plan.def.type!=='recover'||extraKcal(T)>0) ? 'training' : 'rest';
+    : N.extra>=350 ? 'training' : 'rest';
   let best=null,bs=Infinity;
   MEALS.forEach(m=>{ const t=mealTotals(m);
     const score=Math.abs(t.kcal-N.kcal)-(m.tag===wantTag?150:0);
@@ -3006,6 +3082,9 @@ function normalizeCustom(){
     S.cust[k]=c;
   }
   for (const k in S.fights) if (!Array.isArray(S.fights[k])) delete S.fights[k];
+  /* "Weekly load" (1.55 / 1.725 / 1.9) used to fold training into one multiplier. Training is now added day by day, so the setting
+     means daily life outside training; the old values would count it twice. Reset them once. */
+  if (!S.meta.act2){ if ([1.55,1.725,1.9].includes(+S.profile.activity)) S.profile.activity=1.3; S.meta.act2=true; }
   S.motiv = Object.assign({why:'',quotes:[],links:[],qmode:'mix',qoff:[],qsolid:false}, (S.motiv&&typeof S.motiv==='object')?S.motiv:{});
   if (!['mix','only','off'].includes(S.motiv.qmode)) S.motiv.qmode='mix';
   S.motiv.qoff = Array.isArray(S.motiv.qoff) ? S.motiv.qoff.filter(c=>typeof c==='string') : [];
@@ -5628,7 +5707,7 @@ function ViewToday(){
         <div class="fb"><div class="fbtop"><span>${l}</span><span style="color:var(--text)">${Math.round(v)}<span style="color:var(--faint)">/${t2}</span></span></div>
         <div class="bar"><div class="barfill" style="width:${clamp(v/t2*100,0,100)}%;background:${c}"></div></div></div>`).join('')}
       </div>
-      ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Target raised +${N.extra} kcal for ${N.extraMin} min of tagged physical activity this day.</div>`:''}
+      ${N.extra>0?`<div class="note" style="color:var(--steel);border-top:none;padding-top:0">${svg('trend',10,'var(--steel)')} Training this day adds +${N.extra} kcal to the target: ${N.act.map(a=>`${esc(a.l)} ${a.min} min (+${a.kcal})`).join(', ')}.</div>`:''}
       ${vd===T&&new Date().getHours()>=18&&N.protein>0&&ft.p<N.protein*0.5?`<div class="note" style="color:var(--amber);border-top:none;padding-top:0">${svg('target',10,'var(--amber)')} Only ${Math.round(ft.p)}g protein logged with evening here — most of that gap won't get made up after tonight. Front-load the next meal.</div>`:''}`
       :`<button class="note" data-act="golog" style="border-top:none;width:100%;text-align:left;display:flex;gap:8px;align-items:flex-start">${svg('trend',10,'var(--amber)')}<span>Log a weight on Body → Log and targets appear here. Tap to go there now.</span></button>`}`}
       ${WaterRow(d,N)}
@@ -5846,8 +5925,10 @@ function ViewPlan(){
       <label class="f"><span>Age</span><input type="number" data-in="profile.age" value="${p.age}" inputmode="numeric"></label>
       <label class="f"><span>Height (${p.unit==='imperial'?'in':'cm'})</span>
         <input type="number" step="0.5" data-in="profile.heightD" value="${p.unit==='imperial'?Math.round(p.height/2.54*10)/10:p.height}" inputmode="decimal"></label>
-      <label class="f"><span>Weekly load</span><select data-in="profile.activity">
-        ${[['1.55','3-4 sessions'],['1.725','5-6 sessions'],['1.9','Twice daily']].map(([v,l])=>`<option value="${v}" ${String(p.activity)===v?'selected':''}>${l}</option>`).join('')}</select></label>
+      <label class="f"><span>Daily life (outside training)</span><select data-in="profile.activity">
+        ${[['1.3','Mostly seated'],['1.45','On your feet a lot'],['1.6','Physical job']].map(([v,l])=>`<option value="${v}" ${String(p.activity)===v?'selected':''}>${l}</option>`).join('')}</select></label>
+      <label class="f"><span>Sweat (water + electrolytes)</span><select data-in="profile.sweat">
+        ${[['0.75','Light sweater, cool room'],['1','Average'],['1.4','Heavy sweater, hot room or gear']].map(([v,l])=>`<option value="${v}" ${String(+p.sweat||1)===v?'selected':''}>${l}</option>`).join('')}</select></label>
       <label class="f"><span>Goal</span><select data-in="profile.goal">
         ${[['recomp','Recomposition'],['gain','Add muscle'],['lean','Lean out']].map(([v,l])=>`<option value="${v}" ${p.goal===v?'selected':''}>${l}</option>`).join('')}</select></label>
     </div></div>
@@ -6080,7 +6161,10 @@ function ViewFuel(){
     <div class="panel"><button class="empty" data-act="golog" style="width:100%">Log a weight on the <b>LOG</b> tab and your exact calorie and macro targets appear here.</button></div>
     ${MealSection(null)}`;
 
-  const adjNote = q&&q.phase==='lean' ? 'Set your goal to <b>Lean out</b> in Plan and this drops into a deficit automatically.'
+  /* say what the GOAL setting does; only on recomposition does it fall back to what the body numbers suggest */
+  const adjNote = S.profile.goal==='lean' ? 'Your goal is <b>Lean out</b>: the target sits about 15% under maintenance.'
+    : S.profile.goal==='gain' ? 'Your goal is <b>Add muscle</b>: the target sits about 10% over maintenance.'
+    : q&&q.phase==='lean' ? 'Set your goal to <b>Lean out</b> in Plan and this drops into a deficit automatically.'
     : q&&q.phase==='build' ? 'Set your goal to <b>Add muscle</b> in Plan for a small surplus.'
     : 'Your goal is set to recomposition — eating near maintenance while the lifts climb.';
 
@@ -6096,10 +6180,13 @@ function ViewFuel(){
       <div class="fbtop" style="margin-bottom:5px"><span>LOGGED TODAY</span><span style="color:var(--text)">${Math.round(ftoday.kcal)} / ${N.kcal}</span></div>
       <div class="bar"><div class="barfill" style="width:${clamp(ftoday.kcal/N.kcal*100,0,100)}%;background:var(--amber)"></div></div>
     </div>
-    <div style="padding:0 13px 13px"><p class="t" style="margin:0">Maintenance is near <b>${N.tdee} kcal</b>. ${adjNote}</p>
+    <div style="padding:0 13px 13px"><p class="t" style="margin:0">Maintenance today is near <b>${N.tdee} kcal</b>: ${N.base} for your body and daily life${N.extra>0?`, plus ${N.extra} for training`:''}. ${adjNote}</p>
       ${(()=>{ const w=trendWeight(), c=x=>Math.round((imp?x*2.20462:x)*10)/10; return w&&w.smoothed?`<p class="t" style="margin:8px 0 0;color:var(--faint)">Based on your 7-day average weight, ${c(w.kg)} ${imp?'lb':'kg'} (${w.n} weigh-ins), so one salty day doesn't move your targets.</p>`:''; })()}
-      ${N.extra>0?`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('trend',11,'var(--steel)')} <b>+${N.extra} kcal today</b> for ${N.extraMin} minutes of tagged physical activity beyond training, costed per sport (BJJ and grappling run hotter than a walk) — adjust it any time in Plan.</p>`
-        :`<p class="t" style="margin:8px 0 0;color:var(--faint)">Tag any extra activity — practice, a match, a long hike — as <b>Physical</b> in Plan and pick the sport, and this number moves up on its own for that day.</p>`}
+      ${N.act.length?`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('trend',11,'var(--steel)')} <b>Training today:</b> ${N.act.map(a=>`${esc(a.l)}, ${a.min} min (+${a.kcal} kcal)`).join('; ')}. It comes from your planned session, fights and workouts you log, and anything tagged Physical in Plan, costed by sport and effort. Carbs rise with it; protein and fat stay tied to bodyweight.</p>`
+        :`<p class="t" style="margin:8px 0 0;color:var(--faint)">No training on the schedule today. Log a fight or workout, or tag an activity as <b>Physical</b> in Plan, and this number moves up on its own.</p>`}
+      ${N.sweat>0?`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('trend',11,'var(--steel)')} <b>Sweat:</b> about ${(N.sweat/1000).toFixed(1)} L lost today, carrying roughly ${N.loss.Sodium.toLocaleString()} mg sodium, ${N.loss.Potassium} mg potassium, ${N.loss.Calcium} mg calcium and ${N.loss.Magnesium} mg magnesium. Your water target and those four MICROS targets already include it. Heavy sweater, or a hot room? Change <b>Sweat</b> in Plan.</p>`:''}
+      ${N.act.filter(a=>a.min>=60&&a.met>=5).map(a=>`<p class="t" style="margin:8px 0 0;color:var(--steel)">${svg('flame',11,'var(--steel)')} <b>During ${esc(a.l)}:</b> ${a.min>=150?'up to 90':'30-60'} g of carbs an hour, and drink to replace most of the roughly ${(a.sweat/a.min*60/1000).toFixed(1)} L an hour you lose, with some sodium in it.</p>`).join('')}
+      ${N.ea!=null&&N.ea<30?`<p class="t" style="margin:8px 0 0;color:var(--amber)">${svg('shield',11,'var(--amber)')} <b>Low energy availability:</b> this target leaves about ${N.ea} kcal per kg of lean mass once training is paid for. Weeks under roughly 30 are linked to lost strength, poor recovery and hormone and bone problems (IOC, RED-S). Raise the target or slow the cut.</p>`:''}
     </div></div>
 
     ${MealSection(N)}
@@ -6346,7 +6433,7 @@ let lastRenderedView=null;
    is lost unless render() carries it across: the exercise sheet's scroll position, the muscle/equipment chip
    rows' horizontal scroll, and half-typed fields in the custom-food, body-log and program-lift set forms. */
 let scrollReset=false, lastRenderedDay=null;                               // set by actions that change what the sheet lists (muscle/equipment filter)
-const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_)/;            // f_date is left out on purpose: after saving, the date goes back to today
+const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_|sp_a$)/;            // f_date is left out on purpose: after saving, the date goes back to today
 function render(){
   _memo=null;
   document.documentElement.dataset.text=(S.ui&&S.ui.text)||'';
@@ -6606,6 +6693,7 @@ function handleClick(e){
       (d.supps=Array.isArray(d.supps)?d.supps:[]).push(s);
       if ((document.getElementById('sp_save')||{checked:true}).checked && !S.mysupps.some(x=>x.k===s.k&&x.a===s.a)) S.mysupps.push({...s});
       suppSel=MICRO_KEYS.indexOf(key); loadMicros();
+      const box=document.getElementById('sp_a'); if (box) box.value='';      // sp_a survives re-renders (the micro table arriving mid-typing), so empty it once the amount is saved
       commit(); render(); toast(`${suppLabel(s)} added`); return;
     }
     case 'addmysupp': { const s=S.mysupps[+v]; if (!s) return; (d.supps=Array.isArray(d.supps)?d.supps:[]).push({k:s.k,a:s.a}); loadMicros(); commit(); render(); toast(`${suppLabel(s)} added`); return; }
@@ -6932,7 +7020,7 @@ document.addEventListener('change', e => {
   if (el.tagName!=='SELECT' && el.type!=='time' && el.type!=='date') return;
   if ((el.type==='time'||el.type==='date') && !el.value) return;
   const key=el.dataset.in.split('.')[1];
-  S.profile[key]=(key==='activity')?+el.value:el.value;
+  S.profile[key]=(key==='activity'||key==='sweat')?+el.value:el.value;
   commit(); render();
 });
 

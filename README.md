@@ -1,11 +1,11 @@
 # FORGE — deploy + data guide
 
-Eight files, no build step. `index.html` is the app; `foods-db.js` is the big food library, `exercises-db.js` the exercise library and `quotes-db.js` the athlete quote library it loads.
+Nine files, no build step. `index.html` is the app; `foods-db.js` is the big food library, `exercises-db.js` the exercise library, `micros-db.js` the USDA micronutrient table and `quotes-db.js` the athlete quote library it loads.
 
 ## Deploy (GitHub Pages, ~4 min)
 
 1. New public repo, e.g. `forge`.
-2. Upload all eight files to the root.
+2. Upload all nine files to the root.
 3. Settings → Pages → Deploy from a branch → `main` / `(root)` → Save.
 4. Open `https://<username>.github.io/forge/` on your phone.
 
@@ -27,8 +27,46 @@ separate from the code files. So:
 | Different device | separate file per device |
 
 Fuel and Target use the **7-day average** of your weigh-ins (not a single reading) for calorie, macro, activity and strength-standard
-math; the weight chart draws it as a dashed line. Today's food panel also tracks **water** against 40 ml per kg of bodyweight, and
+math; the weight chart draws it as a dashed line. Today's food panel also tracks **water**, and
 has COPY YESTERDAY'S FOOD, RECENT foods and saved MY FOODS.
+
+### How the day's calories, macros and water are worked out
+
+Each day's target is **maintenance + the goal adjustment** (BUILD +10%, CUT -15%). Maintenance for a date is
+`BMR x daily life + what that day's training costs`. BMR is Mifflin-St Jeor. *Daily life* is Plan -> **Daily life (outside
+training)**: mostly seated 1.3, on your feet a lot 1.45, physical job 1.6. Training is **not** inside that number; it is added day by day, so
+a rest day, a lifting day and a double day each get their own target. Four sources, each costed at **net MET** (MET - 1, because
+the resting part is already in the base) x bodyweight x minutes:
+
+| Source | How it is costed |
+|---|---|
+| The planned session | Its scheduled minutes (shortened when tagged practice trims it) x a session-average MET by day type: strength 5, striking and grappling 7.5, engine 8, craft 4.5, recovery 3 (`PLAN_MET`). Skipped if a custom workout is set to *replace* it. |
+| A fight logged with ADD FIGHTING | Minutes x MET from the discipline and your 1-10 effort rating (`FIGHT_MET`: live work runs 6 at effort 1 to 10 at effort 10; pads/bag 5-9; drilling 3.5-6; conditioning 6-10). No rating counts as 5. |
+| A custom workout | **Lifting sets** (weights, bodyweight, carries): each set is its reps' work time (3 s a rep) plus that exercise's rest, at an average MET that follows the set's **RPE**: 3.5 at RPE 5 or less, rising to 6.0 at RPE 9 or more (Compendium light to vigorous resistance training). Sets without an RPE use the exercise's other rated sets, else 7. Big-muscle lifts (legs, back, full body) count x1.15, isolation (arms, calves, core, neck) x0.85, plyos +1.5 MET, warm-up sets are light (MET 3, 30 s rest). A superset partner rests 15 s, only the last of the group takes the full rest. More sets, harder sets, longer rest all cost more. **Cardio and holds**: logged time at a MET from the exercise name; runs and walks with a distance use about 1 / 0.6 kcal per kg per km (a distance with no time assumes 6 / 12 min per km), rides use speed (3 min per km if no time) (MET 4 under 16 km/h up to 15.8 over 32 km/h). Sets that belong to a planned block are skipped, they are already in the planned session. |
+| A commitment tagged Physical in Plan | Its minutes x the sport's MET (`SPORTS`; combat entries are class averages). |
+
+**No double counting:** minutes of fights you log displace the same minutes of a tagged BJJ / striking / wrestling class first, then of a
+planned striking / grappling / engine session. Logging the class you were already going to do replaces it rather than adding to it.
+Lifting plus a fight, or a lifting day plus a run, do add up.
+
+**Macros.** Protein is 2.0 g/kg (2.2 on a CUT). Fat is 27% of calories but held between 0.8 and 1.2 g/kg. Carbs are the rest, so training
+calories land in carbs, which is what hard sessions run on (about 4-5 g/kg on a typical day, 7+ on a double day, inside the 3-10 g/kg
+sports-nutrition range). **Micros** that track energy (fiber, B1-B3, the saturated-fat limit) scale with the day's calories, so they move
+with training too.
+
+**Sweat, water and electrolytes.** Sweat is about 1.5 ml per kcal of training (roughly 0.5 L/h lifting, 1 L/h grappling, 1.4 L/h running),
+times **Plan -> Sweat** (light 0.75, average 1, heavy sweater or hot room 1.4). **Water** is 40 ml/kg plus that sweat. In MICROS the
+**sodium limit** and the **potassium, calcium and magnesium** targets rise by what the sweat carries, per litre: sodium 1,000 mg (published
+whole-body mean about 44 mmol/L, individuals run 20-80), potassium 195 mg, calcium 40 mg, magnesium 10 mg (sources disagree 2-4x on
+magnesium, treat it as the roughest). Iron, zinc and chloride are not modelled. Fuel also shows, for any session of an hour or more at
+vigorous effort, a carbs-per-hour line (30-60 g, up to 90 over 2.5 h) and your hourly sweat rate.
+
+**Energy availability.** With a body-fat reading logged, Fuel shows (target - training kcal) / lean mass and warns under about 30 kcal/kg, the
+IOC's low-energy-availability range (RED-S). The threshold comes mostly from short studies in women, so it is a warning, not a limit: the
+target is never changed by it.
+
+These are population-average estimates (METs are averages, a wearable will disagree by 10-20% either way). Judge them against the
+two-week weight trend and adjust *Daily life* or the goal.
 
 Insurance: **Settings (gear) → Data + backup → Back up now** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
 **Import** to restore. Do it monthly.
@@ -39,7 +77,7 @@ fully close the app and reopen, or reopen twice.
 ## Customizing
 
 All content is plain data at the top of the script in `index.html`: `WEEK_STD` and the program variants `D8`/`D9` (training days, blocks, `steps`, `prog` rules; the Forge Builder program is the Mon/Tue/Thu/Fri Lower A / Upper A / Lower B / Upper B split), `FOODS` (the calorie database — add your staples),
-`BOOKS` (161 titles across nine tracks, each tagged with a phase), `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`, `SPORTS` (the MET value
+`BOOKS` (161 titles across nine tracks, each tagged with a phase), `SKILLS`, `CAPITAL`, `HABITS`, `NEWS`, `PHASES`, `ORDERS`, `SPORTS` (the gross MET value
 per sport used to cost calendar commitments tagged Physical — add a sport your gym does that
 isn't listed, or tune a number if it's over/under-crediting you).
 
@@ -174,7 +212,7 @@ Add your own as one line in `BOOKS`: `{id,tr,p,t,a,w}`.
 
 ## Tests
 
-`tests/` holds browser tests for the app (they load `index.html` straight from disk in headless Chromium, no server needed).
+`tests/` holds browser tests for the app (headless Chromium loads the app from a tiny local http server that `tests/lib.js` starts by itself; loading it from `file://` made Chromium occasionally give a reloaded page empty storage, which looked like lost data and made reload tests flaky).
 They are not part of the deployed site.
 
 ```

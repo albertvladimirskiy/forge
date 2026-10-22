@@ -1,16 +1,6 @@
-const http = require('http'), fs = require('fs'), path = require('path');
+const fs = require('fs'), path = require('path');
+const { serve } = require('./lib');
 const ROOT = path.join(__dirname, '..');
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
-
-/* service workers only run on http(s), so serve the app folder on a local port */
-function serve(){
-  const srv = http.createServer((req, res) => {
-    const p = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]).replace(/^\/$/, '/index.html'));
-    if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()){ res.writeHead(404); return res.end('nope'); }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(res);
-  });
-  return new Promise(r => srv.listen(0, '127.0.0.1', () => r(srv)));
-}
 
 module.exports = { name: 'Offline use (service worker)', tests: {
   async 'every file the service worker caches is actually served'(page, a){
