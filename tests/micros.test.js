@@ -127,7 +127,10 @@ module.exports = { name: 'Food data: no duplicates, micronutrients, collapsible 
     await page.evaluate(() => { S.ui.fold.food = true; S.ui.fv = 'micro'; day(VD()).food = []; render(); });
     const days0 = await page.evaluate(() => Object.keys(S.days).length);
     await page.click('[data-act=suppform]');
-    const add = async (key, amt, unit) => { await page.selectOption('#sp_k', key); await page.fill('#sp_a', String(amt)); await page.selectOption('#sp_u', unit); await page.click('[data-act=addsupp]'); if (!(await page.$('#sp_k'))) await page.click('[data-act=suppform]'); };
+    const add = async (key, amt, unit) => { await page.selectOption('#sp_k', key); await page.fill('#sp_a', String(amt)); await page.selectOption('#sp_u', unit); await page.click('[data-act=addsupp]');
+      /* the first add starts loading the micro table, and its arrival re-renders the form: wait for that or the next entry is typed into a form about to be rebuilt */
+      await page.waitForFunction(() => microState === 2);
+      if (!(await page.$('#sp_k'))) await page.click('[data-act=suppform]'); };
     await add('vitc', 500, 'mg');
     a.deepEqual(await page.evaluate(() => day(VD()).supps), [{ k: 'vitc', a: 500 }]);
     await add('vitd', 2000, 'IU');
