@@ -138,8 +138,9 @@ add one, or use CREATE EXERCISE in the picker (stored in your backup, not the fi
 On **Today**, every day has ADD WORKOUT (lift days say EDIT WORKOUT and set the planned session aside, which leaves the
 program's progression untouched; KEEP BOTH shows the plan too) and ADD FIGHTING (discipline, minutes, rounds, effort, what
 worked / got you caught). Nothing is prescribed in a custom workout: each exercise shows what you did the last time you logged it
-anywhere (30 push-ups last week means 30 is the benchmark and the prefill), flags PRs, and sets from the program's own lifts count
-as history for the matching library exercise (`EXLINK`). Rest timer, plate math for barbell lifts, favorites, routines and a
+anywhere (30 push-ups last week means 30 is the benchmark and the prefill), flags PRs, and the link works both ways (`EXLINK`): sets from the program's own lifts count
+as history for the matching library exercise, and sets you log in your own workout for that exercise (Trap Bar Deadlift for the plan's
+deadlift, Barbell Back Squat for the squat, and so on) count for the plan lift's next prescription, its record and your strength standards. Rest timer, plate math for barbell lifts, favorites, routines and a
 history / lift-PR screen (the TRAIN tab, or the link under the workout area) are included. Custom data lives in `S.cust`,
 `S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
 

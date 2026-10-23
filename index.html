@@ -1834,6 +1834,7 @@ function commitSoon(){ _memo=null; clearTimeout(saveTimer); saveTimer=setTimeout
 function flushSave(){ if (saveTimer){ clearTimeout(saveTimer); commit(); } }
 function commit(){
   _memo=null; clearTimeout(saveTimer); saveTimer=null;
+  syncPRs();
   Store.save(S).then(ok=>{
     if (ok!==false || Date.now()-saveWarnAt<60000) return;
     saveWarnAt=Date.now();
@@ -2275,11 +2276,21 @@ function entryMicroHTML(e){
 
 /* ========================================================== progression == */
 function e1rm(w,r){ return r<=1 ? w : w*(1+r/30); }
+/* A planned lift's sets on a date: the ones logged in the plan, plus sets of the same lift logged in your own workout (the library
+   exercise it is linked to, e.g. Trap Bar Deadlift for the plan's deadlift). Training it either way moves the plan, the records and
+   the strength standards. Sets that belong to a planned block are already counted there. */
+function liftSets(ex,k){
+  const own=(S.gym[k]&&S.gym[k][ex])||[], id=EXLINK_ID[ex], cw=S.cust&&S.cust[k];
+  const mine=id&&cw&&cw.sets&&!blkOf(cw).has(id)?cw.sets[id]||[]:[];
+  return mine.length?own.concat(mine):own;
+}
 function gymSessions(ex){
-  return Object.keys(S.gym||{}).filter(k=>S.gym[k][ex]&&workSets(S.gym[k][ex]).length).sort();
+  const days=new Set(Object.keys(S.gym||{}));
+  if (EXLINK_ID[ex]) for (const k in S.cust) days.add(k);
+  return [...days].filter(k=>workSets(liftSets(ex,k)).length).sort();
 }
 function sessionWork(ex,k){
-  const E=EXS[ex], sets=workSets(S.gym[k][ex]);
+  const E=EXS[ex], sets=workSets(liftSets(ex,k));
   /* Sets count toward the same working weight if they're within WTOL kg of each
      other. Typed lb values and auto-filled blanks can land a cent or two apart
      after the kg conversion (e.g. 72.57 vs 72.58), and an exact match would split
@@ -2300,7 +2311,7 @@ function sessionWork(ex,k){
 function gymBest(ex){
   let best=null;
   for (const k of gymSessions(ex))
-    for (const s of workSets(S.gym[k][ex])){
+    for (const s of workSets(liftSets(ex,k))){
       const v = EXS[ex]&&EXS[ex].added ? s.w : e1rm(s.w,s.r);
       if (best==null||v>best) best=v;
     }
@@ -2335,7 +2346,7 @@ function prescribe(ex,before){
     rx = base==null ? {mode:'start'} : {mode:'deload', w:base*0.6, sets:3, reps:5};
   } else {
     /* deload sessions (flagged dl when logged) are easy by design, so they never set the baseline the next weeks climb from */
-    const ss=gymSessions(ex).filter(k=>(!before||k<before) && !S.gym[k][ex].some(x=>x.dl));
+    const ss=gymSessions(ex).filter(k=>(!before||k<before) && !liftSets(ex,k).some(x=>x.dl));
     if (!ss.length){
       const Lf=latestField(ex), man=Lf?Lf[ex]:null;
       rx = man ? {mode:'first', w:(E.added?man:man*0.8), sets:E.sets, reps:E.reps} : {mode:'start'};
@@ -2379,12 +2390,15 @@ function checkPR(ex,w,r,date){
 /* the stored record is "best set ever logged", so after a set is edited or deleted it has to be worked out again */
 function rebuildPR(ex){
   let best=null;
-  for (const k of gymSessions(ex)) for (const st of workSets(S.gym[k][ex])){
+  for (const k of gymSessions(ex)) for (const st of workSets(liftSets(ex,k))){
     const v=e1rmVal(ex,st.w,st.r);
     if (!best || v>best.e1rm+0.01) best={w:st.w,r:st.r,e1rm:v,date:k};
   }
   if (best) S.prs[ex]=best; else delete S.prs[ex];
 }
+/* records follow the combined history, so a heavy set logged in your own workout shows up as the plan lift's record. Only ever
+   raises or corrects a record from sets that exist; a lift with no sets keeps whatever record it had. */
+function syncPRs(){ if (!S.prs||typeof S.prs!=='object'||Array.isArray(S.prs)) S.prs={}; for (const ex in EXS) if (gymSessions(ex).length) rebuildPR(ex); }
 function bestStreakEver(){
   let max=0,cur=0;
   for (let i=1100;i>=0;i--){ const s=dayScore(dkey(-i)); if(s>0.08){ cur++; if(cur>max)max=cur; } else cur=0; }
@@ -2666,7 +2680,7 @@ function exRxLine(ex,label){
   /* an optional nudge, never a change to the prescription: the last session's hardest logged set */
   let note='';
   if (rx.mode==='progress'){
-    const ss=gymSessions(ex), hard=ss.length?Math.max(0,...S.gym[ss[ss.length-1]][ex].map(x=>x.rpe||0)):0;
+    const ss=gymSessions(ex), hard=ss.length?Math.max(0,...liftSets(ex,ss[ss.length-1]).map(x=>x.rpe||0)):0;
     if (hard>=9.5) note=` <span style="color:var(--faint)">· last session hit RPE ${hard}, repeat it if that was a grind</span>`;
   }
   return `<div class="rx" style="color:${c}">${svg('target',10,c)} ${pre}${txt}${note}</div>`;
@@ -3101,6 +3115,7 @@ function normalizeCustom(){
   S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
   if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
   if (!S.ui.seen||typeof S.ui.seen!=='object'||Array.isArray(S.ui.seen)) S.ui.seen={};
+  syncPRs();      // sets you logged in your own workouts may already beat a plan lift's record
 }
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},sup:{},note:'',t0:null,t1:null,fin:false}; }
