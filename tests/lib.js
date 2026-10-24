@@ -76,4 +76,4 @@ function oldState(){
   return walk(raw);
 }
 
-module.exports = { launch, openApp, serve, oldState, BENCH, SQUAT, LB, workout, logSet, sets, text, app };
+module.exports = { launch, openApp, serve, baseUrl, oldState, BENCH, SQUAT, LB, workout, logSet, sets, text, app };
