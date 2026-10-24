@@ -1863,6 +1863,9 @@ function s2m(x){ x=Math.round(x); const h=Math.floor(x/60)%24, m=x%60; return `$
 function s2disp(x){ const h24=Math.floor(x/60)%24, m=x%60; const ap=h24<12?'a':'p'; let h=h24%12||12; return m===0?`${h}${ap}`:`${h}:${pad(m)}${ap}`; }
 function tdisp(t){ return s2disp(m2s(t)); }
 function num(v){ const n=parseFloat(v); return isFinite(n)?n:null; }
+/* Limits for what a person can really type. Outside them it is a typo: refuse it, because a set or weigh-in becomes a permanent
+   record (and a first-ever lift sets the next prescription). Matches the ranges onboarding already enforces. */
+const LIM={age:[12,90], heightCm:[120,230], liftKg:1500, reps:1000, secs:86400, metres:1e6, kcal:10000, macro:1000, grams:5000};
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function day(k){ if(!S.days[k]) S.days[k]={blocks:{},habits:{},rv:{},nudge:{},food:[]};
   const d=S.days[k]; d.blocks=d.blocks||{}; d.habits=d.habits||{}; d.rv=d.rv||{}; d.nudge=d.nudge||{}; d.food=d.food||[]; return d; }
@@ -2134,7 +2137,7 @@ function dayActivity(k){
 }
 function nutrition(k){
   const L=trendWeight(); if(!L) return null;
-  const p=S.profile,kg=L.kg,cm=+p.height,age=+p.age||22;
+  const p=S.profile,kg=L.kg,cm=clamp(+p.height||178,LIM.heightCm[0],LIM.heightCm[1]),age=clamp(+p.age||22,LIM.age[0],LIM.age[1]);   // clamped: a value saved before the limits existed can't wreck every target
   const bmr=10*kg+6.25*cm-5*age+(p.sex==='m'?5:-161);
   const A=dayActivity(k), base=bmr*clamp(+p.activity||1.3,1.2,2), tdee=base+A.kcal;
   const adj=p.goal==='gain'?1.10:p.goal==='lean'?0.85:1.0;
@@ -2275,7 +2278,11 @@ function entryMicroHTML(e){
 }
 
 /* ========================================================== progression == */
-function e1rm(w,r){ return r<=1 ? w : w*(1+r/30); }
+/* Epley, capped at 10 reps. Past about 10 reps the formula inflates badly (30 reps at 135 lb is not a 270 lb max), so a high-rep set can
+   no longer outrank a heavy one as a "best set" or a PR. */
+function e1rm(w,r){ r=Math.min(r,10); return r<=1 ? w : w*(1+r/30); }
+/* beyond 10 reps the estimate stops climbing, but more reps at the same weight is still progress, so rank it a little higher */
+const repEdge=(w,r)=>r>10?(r-10)*w*0.002:0;
 /* A planned lift's sets on a date: the ones logged in the plan, plus sets of the same lift logged in your own workout (the library
    exercise it is linked to, e.g. Trap Bar Deadlift for the plan's deadlift). Training it either way moves the plan, the records and
    the strength standards. Sets that belong to a planned block are already counted there. */
@@ -2370,7 +2377,7 @@ function prescribe(ex,before){
          the usual rules, which work from what was actually lifted. */
       if (lastWork.drop && ok && drops<2) rx={mode:'repeat', w:lastWork.p, sets:E.sets, reps:E.reps, miss:0, back:true};
       else if (fails>=3) rx={mode:'reset', w:topW*0.9, sets:E.sets, reps:E.reps};
-      else if (ok)      rx={mode:'progress', w:topW+E.inc, sets:E.sets, reps:E.reps};
+      else if (ok)      rx={mode:'progress', w:topW+incFor(ex), sets:E.sets, reps:E.reps};
       else              rx={mode:'repeat', w:topW, sets:E.sets, reps:E.reps, miss:fails};
     }
   }
@@ -2416,25 +2423,32 @@ function dispExact(kg){
   const imp=S.profile.unit==='imperial';
   return imp ? `${Math.round(kg*2.20462*2)/2} lb` : `${Math.round(kg*4)/4} kg`;
 }
-function snapLoadKg(kg,ex){
-  const imp=S.profile.unit==='imperial';
-  const incKg=(ex&&EXS[ex]&&EXS[ex].inc)||2.27;
-  if (imp){ const incLb=Math.round(incKg*2.20462*2)/2; return Math.round(kg*2.20462/incLb)*incLb/2.20462; }
-  return Math.round(kg/incKg)*incKg;
+/* The plan stores its steps as 5 / 10 / 2.5 lb (2.27 / 4.54 / 1.13 kg). A metric user gets the nearest loadable kg step instead
+   (2.5 / 5 / 1.25), so a 100 kg squat climbs to 102.5 and never shows as 99.88 or 104.54. */
+function incFor(ex){
+  const kg=(ex&&EXS[ex]&&EXS[ex].inc)||2.27;
+  return S.profile.unit==='imperial' ? kg : Math.max(1.25,Math.round(kg/1.25)*1.25);
 }
-/* suggested: a next-weight recommendation or an aspirational target, snapped to
-   a loadable increment — the exercise's own progression step (EXS[ex].inc) when
-   known (2.5 lb for light dumbbell isolation work, 5 lb for most barbell lifts,
-   10 lb for deadlift), falling back to a plain 5 lb / 2.5 kg plate otherwise.
-   Never use this for a weight that was actually logged — see dispExact above. */
-function dispLoad(kg,ex){
+/* What a prescribed weight is rounded to for display and for the weight box: the smallest change the bar can make (5 lb, 2.5 lb
+   for small dumbbell lifts; 2.5 kg, 1.25 kg), not the lift's whole step. Rounding to the whole step turned a 10 lb deadlift jump from
+   225 into "240", because 235 is not a multiple of 10. */
+function loadStepKg(ex){
+  if (S.profile.unit==='imperial') return Math.min(Math.round(incFor(ex)*2.20462*2)/2,5)/2.20462;
+  return Math.min(incFor(ex),2.5);
+}
+function snapLoadKg(kg,ex){ const st=loadStepKg(ex); return Math.round(kg/st)*st; }
+/* suggested: a next-weight recommendation or an aspirational target, snapped to a loadable increment (see loadStepKg).
+   Never use this for a weight that was actually logged: see dispExact above. */
+function dispLoad(kg,ex,exact){
   if (kg==null) return '—';
   if (kg<0.5) return 'bodyweight';
-  const imp=S.profile.unit==='imperial';
-  const incKg=(ex&&EXS[ex]&&EXS[ex].inc)||2.27;
-  if (imp){ const incLb=Math.round(incKg*2.20462*2)/2; return `${Math.round(kg*2.20462/incLb)*incLb} lb`; }
-  return `${Math.round(kg/incKg)*incKg} kg`;
+  const v=exact?kg:snapLoadKg(kg,ex);
+  return S.profile.unit==='imperial' ? `${Math.round(v*2.20462*2)/2} lb` : `${Math.round(v*100)/100} kg`;
 }
+/* "last weight + one step" and "repeat last weight" come from weights you actually lifted, so they are loadable as they are and
+   are shown exactly; only a guessed weight (first session from the Log tab, a reset, a deload, a ramp week) is rounded to the bar */
+const rxExact=rx=>!!rx&&!rx.ramp&&(rx.mode==='progress'||rx.mode==='repeat');
+const rxKg=(rx,ex)=>rxExact(rx)?rx.w:snapLoadKg(rx.w,ex);
 function inLoad(v){ const n=num(v); if(n==null) return null;
   return S.profile.unit==='imperial' ? n/2.20462 : n; }
 
@@ -2670,7 +2684,7 @@ function exRxLine(ex,label){
     const lb=EXS[ex].from?lastBefore(libOf(ex),VD()):null;   // a swapped-in exercise you've done before: show what you did
     return `<div class="rx dim">${svg('target',10,'var(--faint)')} ${pre}First time in this plan: work up to a hard clean ${EXS[ex].reps}, log it below${lb?` · last logged ${esc(shortDate(lb.date))}: ${esc(fmtSets(exInfo(libOf(ex)).k,lb.sets))}`:''}</div>`;
   }
-  const w=dispLoad(rx.w,ex);
+  const w=dispLoad(rx.w,ex,rxExact(rx));
   const map={ deload:[`DELOAD: ${w} · 3×5 easy`,'var(--moss)'],
     first:[`START: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
     progress:[`NEW WEIGHT: ${w} · ${rx.sets}×${rx.reps}`,'var(--amber)'],
@@ -2695,7 +2709,7 @@ function rxLine(b){
    difference is that the weight box falls back to the prescription when left blank. `lib` is the matching library
    exercise: rest, bar and history are shared with it, so setting them in one place sets them in the other. */
 const libOf = ex => EXLINK_ID[ex]||ex;
-function gRxW(ex){ const rx=prescribe(ex); return rx&&rx.w>0 ? num(wIn(snapLoadKg(rx.w,ex))) : null; }
+function gRxW(ex){ const rx=prescribe(ex); return rx&&rx.w>0 ? num(wIn(rxKg(rx,ex))) : null; }
 let gHist=null, gSwap=null, gSwapQ='';
 /* the picker under a program lift: same muscle first, or search the whole library. Only exercises logged as weight × reps
    (or bodyweight + added weight) can run through the progression engine. */
@@ -2746,7 +2760,7 @@ function exGymHTML(ex,label){
       <button class="x" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="delset" data-v="${ex}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`;}).join('')}
     ${ge?`<div class="note" style="border:1px solid var(--amber);color:var(--amber);margin-bottom:8px">EDITING SET ${ge.i+1} · change the numbers, then save</div>`:''}
-    <div class="setadd2">${fld('w',E.added?'ADDED WEIGHT':'WEIGHT',wUnit()+(E.added?' · optional':''),rx&&rx.w?dispLoad(rx.w,ex).replace(/ (lb|kg)$/,''):'weight',gs?wIn(gs.w):'')}${fld('r','REPS','',E.reps,gs?gs.r:'')}</div>
+    <div class="setadd2">${fld('w',E.added?'ADDED WEIGHT':'WEIGHT',wUnit()+(E.added?' · optional':''),rx&&rx.w?dispLoad(rx.w,ex,rxExact(rx)).replace(/ (lb|kg)$/,''):'weight',gs?wIn(gs.w):'')}${fld('r','REPS','',E.reps,gs?gs.r:'')}</div>
     ${isBarbellLift(ex)?`<div class="platehint" id="gplate_${ex}">${platesText(rw,lib)}</div>`:''}
     <div style="margin-top:9px"><button class="chip ${dr.wu?'on':''}" data-act="w-wu" data-v="g:${ex}" aria-pressed="${!!dr.wu}">WARM-UP SET</button></div>
     ${rpeRow('g:'+ex,dr.rpe)}
@@ -2948,8 +2962,8 @@ function warmupRamp(target,E,id){
 }
 /* how "good" a set is, for PR detection and for the progress line */
 function exScore(k,s){
-  if (k==='wr') return s.w>0 ? e1rm(s.w,s.r) : s.r*0.01;
-  if (k==='bw') return s.w>0 ? 1000+e1rm(s.w,s.r) : s.r;
+  if (k==='wr') return s.w>0 ? e1rm(s.w,s.r)+repEdge(s.w,s.r) : s.r*0.01;
+  if (k==='bw') return s.w>0 ? 1000+e1rm(s.w,s.r)+repEdge(s.w,s.r) : s.r;
   if (k==='time') return s.t||0;
   if (k==='carry') return (s.w||0)>0 ? s.w*(s.d||0) : (s.d||0);
   return s.d>0 ? s.d : (s.t||0)/1000;
@@ -3082,7 +3096,8 @@ function normalizeCustom(){
   if (!S.cpref.fav || typeof S.cpref.fav!=='object') S.cpref.fav={};
   if (!Array.isArray(S.cpref.recent)) S.cpref.recent=[];
   ['cust','fights'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
-  ['exsw','exreg'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; });
+  ['exsw','exreg'].forEach(k=>{ if (!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])) S[k]={}; for (const x in S[k]) if (typeof S[k][x]!=='string') delete S[k][x]; });
+  if (!S.notif||typeof S.notif!=='object'||Array.isArray(S.notif)) S.notif={on:false};
   ['routines','myex','myfoods','mysupps'].forEach(k=>{ if (!Array.isArray(S[k])) S[k]=[]; });
   S.myfoods=S.myfoods.filter(f=>f&&typeof f.n==='string'&&f.n.trim()&&isFinite(f.kcal));
   S.mysupps=S.mysupps.filter(s=>s&&typeof s.k==='string'&&MICRO_KEYS.includes(s.k)&&s.a>0);
@@ -3115,8 +3130,45 @@ function normalizeCustom(){
   S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
   if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
   if (!S.ui.seen||typeof S.ui.seen!=='object'||Array.isArray(S.ui.seen)) S.ui.seen={};
+  /* A backup that was hand-edited or damaged can hold entries of the wrong type. Drop those (and unreadable numbers) here so one bad
+     entry can't make every screen throw. The import also draws every screen before it commits (adoptState). */
+  const isObj=x=>!!x&&typeof x==='object'&&!Array.isArray(x), isDate=x=>typeof x==='string'&&/^\d{4}-\d\d-\d\d$/.test(x);
+  S.log=(Array.isArray(S.log)?S.log:[]).filter(e=>isObj(e)&&isDate(e.date));
+  for (const e of S.log) for (const k of ['weight','bf','waist','shoulder','rhr','sleep','squat','bench','dead','ohp','row','pullup','frontsq','dip'])
+    if (e[k]!=null && !(typeof e[k]==='number'&&isFinite(e[k]))) delete e[k];
+  for (const k of Object.keys(S.days)) if (!isDate(k)||!isObj(S.days[k])) delete S.days[k];
+  for (const k in S.days){ const d=S.days[k];
+    ['blocks','habits','rv','nudge'].forEach(f=>{ if (d[f]!=null&&!isObj(d[f])) delete d[f]; });
+    if (d.food!=null) d.food=Array.isArray(d.food)?d.food.filter(isObj):[]; }
+  for (const k of Object.keys(S.gym||{})) if (!isDate(k)||!isObj(S.gym[k])) delete S.gym[k];
+  for (const k in S.gym) for (const ex of Object.keys(S.gym[k])) S.gym[k][ex]=Array.isArray(S.gym[k][ex])?S.gym[k][ex].filter(isObj):[];
+  for (const k in S.fights) S.fights[k]=S.fights[k].filter(isObj);
+  for (const k of Object.keys(S.extra||{})) S.extra[k]=Array.isArray(S.extra[k])?S.extra[k].filter(isObj):[];
+  for (const k of Object.keys(S.fixed||{})) S.fixed[k]=Array.isArray(S.fixed[k])?S.fixed[k].filter(isObj):[];
+  for (const k of Object.keys(S.cust)){ const c=S.cust[k];
+    c.items=c.items.filter(x=>typeof x==='string');
+    for (const id of Object.keys(c.sets)) c.sets[id]=Array.isArray(c.sets[id])?c.sets[id].filter(isObj):[]; }
+  S.routines=S.routines.filter(isObj); S.myex=S.myex.filter(isObj); S.nw=(Array.isArray(S.nw)?S.nw:[]).filter(isObj);
+  S.ch90.checkins=S.ch90.checkins.filter(isObj); S.ch90.past=S.ch90.past.filter(isObj); S.campHist=S.campHist.filter(isObj);
   syncPRs();      // sets you logged in your own workouts may already beat a plan lift's record
 }
+/* Make `parsed` the live state, then draw every screen once. If anything throws, put the old state back and rethrow, so a damaged
+   file can never replace working data with something the app can't display. */
+const DRY_SCREENS=[['today',''],['plan',''],['build','target'],['build','fuel'],['build','log'],['build','ch90'],['mind',''],['ledger',''],
+  ['wlog','workouts'],['wlog','body'],['wlog','lifts'],['wlog','fights']];
+function adoptState(parsed){
+  const prev={S,WEEK,view,buildSub,wlSub};
+  try{
+    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
+    if (!(parsed.ui&&parsed.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});         // restoring a backup is never a first run
+    S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;
+    normalizeCustom(); WEEK=WEEKS[S.profile.program]||WEEK_STD;
+    for (const [v,sub] of DRY_SCREENS){ view=v; if (v==='build') buildSub=sub; if (v==='wlog') wlSub=sub; render(); }
+  }catch(err){ S=prev.S; WEEK=prev.WEEK; throw err; }
+  finally{ view=prev.view; buildSub=prev.buildSub; wlSub=prev.wlSub; }
+}
+/* parse a backup, dropping any "__proto__" key (it would swap the prototype of the object it is merged into) */
+const parseBackup=txt=>JSON.parse(txt,(k,v)=>k==='__proto__'?undefined:v);
 function curCW(){ return S.cust[VD()]; }
 function newCW(mode){ return {name:'',mode:mode||'with',items:[],sets:{},sup:{},note:'',t0:null,t1:null,fin:false}; }
 function cwStats(cw){
@@ -3898,18 +3950,22 @@ function wAct(a,v,v2,el){
         const w=wOut(g('w')), r=Math.round(num(g('r'))||0);
         if (w==null){ toast('Enter a weight'); return 'norender'; }
         if (r<1){ toast('Enter your reps'); return 'norender'; }
+        if (w<0||w>LIM.liftKg||r>LIM.reps){ toast('That weight or rep count looks like a typo'); return 'norender'; }
         s={w,r}; if (dr.wu) s.wu=1; if (num(dr.rpe)>0) s.rpe=num(dr.rpe);
       } else if (E.k==='bw'){
         const w=wOut(g('w'))||0, r=Math.round(num(g('r'))||0);
         if (r<1){ toast('Enter your reps'); return 'norender'; }
+        if (Math.abs(w)>LIM.liftKg||r>LIM.reps){ toast('That weight or rep count looks like a typo'); return 'norender'; }
         s={w,r}; if (dr.wu) s.wu=1; if (num(dr.rpe)>0) s.rpe=num(dr.rpe);
       } else if (E.k==='carry'){
         const w=wOut(g('w')), d=dOut(g('d'),E.k);
         if (w==null||!(d>0)){ toast('Enter weight and distance'); return 'norender'; }
+        if (w<0||w>LIM.liftKg||d>LIM.metres){ toast('That weight or distance looks like a typo'); return 'norender'; }
         s={w,d};
       } else {
         const t=Math.round((num(g('tm'))||0)*60+(num(g('ts'))||0)), d=E.k==='cardio'?dOut(g('d'),E.k):null;
         if (!(t>0) && !(d>0)){ toast(E.k==='time'?'Enter a time':'Enter a time or distance'); return 'norender'; }
+        if (t>LIM.secs||d>LIM.metres){ toast('That time or distance looks like a typo'); return 'norender'; }
         s={}; if (t>0) s.t=t; if (d>0) s.d=d;
       }
       if (!cw.sets[id]) cw.sets[id]=[];
@@ -5060,11 +5116,8 @@ async function snapRestore(k){
   try{
     const json=await snapGet(k); if (!json){ toast('Snapshot not found'); return; }
     if (!k.startsWith('undo-')) await snapPut('undo-'+Date.now(),JSON.stringify(S)).catch(()=>{});   // a new key each time: restoring twice must not erase the first undo point
-    const snap=JSON.parse(json);
-    S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),snap);
-    if (!(snap.ui&&snap.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});
-    S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true; normalizeCustom();
-    WEEK=WEEKS[S.profile.program]||WEEK_STD; snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
+    adoptState(parseBackup(json));
+    snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
   }catch(e){ toast('Could not restore that snapshot'); }
 }
 
@@ -6720,8 +6773,11 @@ function handleClick(e){
     case 'addfood': {
       const f=FOODS[+v];
       if (f[5]){   // per-100 g row: scale by the amount box (default 100 g / 4 oz)
-        const amt=num(foodG)||(foodGU==='oz'?4:100);
+        const typed=num(foodG);
+        if (typed!=null && typed<0){ toast('Enter a positive amount'); return; }
+        const amt=typed||(foodGU==='oz'?4:100);
         const g=foodGU==='oz'?amt*28.3495:amt, k=g/f[5];
+        if (g>LIM.grams){ toast('That amount looks like a typo'); return; }
         const r1=x=>Math.round(x*10)/10;
         const label=`${f[0]}, ${r1(amt)} ${foodGU}`;
         d.food.push({n:label,kcal:Math.round(f[1]*k),p:r1(f[2]*k),c:r1(f[3]*k),f:r1(f[4]*k),q:1,...microRef(f,g)});
@@ -6737,6 +6793,7 @@ function handleClick(e){
       const cb=num((document.getElementById('cf_c')||{}).value)||0;
       const ft=num((document.getElementById('cf_f')||{}).value)||0;
       if(!n||k==null){ toast('Name and kcal needed'); return; }
+      if (k<0||k>LIM.kcal||[pr,cb,ft].some(x=>x<0||x>LIM.macro)){ toast(`Check the numbers: kcal 0-${LIM.kcal.toLocaleString()}, each macro 0-${LIM.macro.toLocaleString()} g`); return; }
       d.food.push({n,kcal:k,p:pr,c:cb,f:ft,q:1});
       if ((document.getElementById('cf_save')||{checked:true}).checked){
         const keep={n,kcal:k,p:pr,c:cb,f:ft}, at=S.myfoods.findIndex(x=>x.n.toLowerCase()===n.toLowerCase());
@@ -6814,13 +6871,21 @@ function handleClick(e){
       // Range-check here, once, rather than everywhere it's consumed.
       ['weight','squat','bench','dead','ohp','row','pullup'].forEach(k=>{
         const x=g(k); if(x==null) return;
-        if(k==='weight'){ const kg=imp?x/2.20462:x; if(!(kg>10&&kg<400)){ rejected.push('weight'); return; } }
+        const kg=imp?x/2.20462:x;
+        if(k==='weight'){ if(!(kg>10&&kg<400)){ rejected.push('weight'); return; } }
+        else if(!((k==='pullup'?kg>=0:kg>0)&&kg<=700)){ rejected.push(k==='dead'?'deadlift':k==='ohp'?'press':k); return; }      // a lift is a 1RM: positive, and under 700 kg
         rec[k]=imp?Math.round(x/2.20462*100)/100:x; any=true;
       });
-      ['waist','shoulder'].forEach(k=>{const x=g(k); if(x!=null){rec[k]=imp?Math.round(x*2.54*10)/10:x; any=true;}});
+      ['waist','shoulder'].forEach(k=>{
+        const x=g(k); if(x==null) return;
+        const cm=imp?x*2.54:x; if(!(cm>=30&&cm<=250)){ rejected.push(k); return; }
+        rec[k]=imp?Math.round(x*2.54*10)/10:x; any=true;
+      });
       ['bf','rhr','sleep'].forEach(k=>{
         const x=g(k); if(x==null) return;
         if(k==='bf'&&!(x>=0&&x<=70)){ rejected.push('body fat %'); return; }
+        if(k==='rhr'&&!(x>=25&&x<=220)){ rejected.push('resting HR'); return; }
+        if(k==='sleep'&&!(x>0&&x<=24)){ rejected.push('sleep'); return; }
         rec[k]=x; any=true;
       });
       if(!any&&!rejected.length){ toast('Nothing entered yet'); return; }
@@ -6847,11 +6912,12 @@ function handleClick(e){
       const ex=v, E=EXS[ex], rx=prescribe(ex), dk=VD()+'|g:'+ex, dr=cdraft[dk]||{};
       let w=inLoad((document.getElementById('sw_'+ex)||{}).value);
       let r=num((document.getElementById('sr_'+ex)||{}).value);
-      if (w==null) w = rx&&rx.w!=null ? snapLoadKg(rx.w,ex) : null;   // log what the placeholder shows
+      if (w==null) w = rx&&rx.w!=null ? rxKg(rx,ex) : null;   // log what the placeholder shows
       if (r==null) r = E.reps;
       if (w==null&&!E.added){ toast('Enter a weight'); return; }
       if (w==null) w=0;
       if (w<0 || r<1){ toast('Weight and reps must be positive'); return; }
+      if (w>LIM.liftKg || r>LIM.reps){ toast('That weight or rep count looks like a typo'); return; }
       const ge=gymEdit&&gymEdit.ex===ex&&gymEdit.vd===VD()&&S.gym[VD()]&&S.gym[VD()][ex]&&S.gym[VD()][ex][gymEdit.i]?gymEdit:null;
       const rp=num(dr.rpe), flags=ns=>{ if (rp>0) ns.rpe=rp; else delete ns.rpe; if (dr.wu) ns.wu=1; else delete ns.wu; return ns; };
       if (ge){      // editing: needs real numbers, not the prescription a blank box would fall back to
@@ -6866,7 +6932,7 @@ function handleClick(e){
       const set=flags({w:Math.round(w*100)/100, r:Math.round(r)});
       /* remember what the plan asked for going into today (ignoring today's own sets), so a lighter day can be told from a new baseline */
       const plan=prescribe(ex,VD());
-      if (!set.wu && plan && plan.w>0 && ['progress','repeat','reset'].includes(plan.mode)) set.p=Math.round(snapLoadKg(plan.w,ex)*100)/100;
+      if (!set.wu && plan && plan.w>0 && ['progress','repeat','reset'].includes(plan.mode)) set.p=Math.round(rxKg(plan,ex)*100)/100;
       if (deloadActive()) set.dl=1;
       S.gym[VD()][ex].push(set);
       delete cdraft[dk];
@@ -6962,7 +7028,7 @@ function handleClick(e){
       const txt=(document.getElementById('importtxt')||{}).value;
       if(!txt||!txt.trim()){ importErr='Paste the backup JSON first.'; break; }
       let parsed;
-      try{ parsed=JSON.parse(txt); }
+      try{ parsed=parseBackup(txt); }
       catch(err){ importErr="That didn't parse as valid backup JSON — check nothing got cut off in the paste."; break; }
       // Valid JSON isn't the same as a valid backup: check the shape everything
       // else in the app depends on before overwriting live data with it. This
@@ -6974,10 +7040,8 @@ function handleClick(e){
         && Array.isArray(parsed.log);
       if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
       snapPut('undo-'+Date.now(),JSON.stringify(S)).then(snapDaily).catch(()=>{});   // today's state stays recoverable under "Undo a restore"
-      S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
-      if (!(parsed.ui&&parsed.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});         // restoring a backup is never a first run
-      S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;   // restoring a backup is never a first run
-      normalizeCustom();
+      try{ adoptState(parsed); }
+      catch(err){ importErr=`That file reads as a backup but something in it would break the app (${String(err.message).slice(0,70)}). Nothing was changed; your current data is untouched.`; break; }
       importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
     }
   }
@@ -7014,14 +7078,18 @@ document.addEventListener('input', e => {
   const el=t.closest('[data-in]'); if(!el) return;
   const path=el.dataset.in, val=el.value;
   if (path.startsWith('rv.')){ day(VD()).rv[path.slice(3)]=val; commitSoon(); return; }
+  /* typing "175" passes through "1" and "17", so an out-of-range number is simply not stored; leaving the box (change) says so */
   if (path==='profile.heightD'){
     const n=num(val); if(n==null) return;
-    S.profile.height=S.profile.unit==='imperial'?Math.round(n*2.54*10)/10:n;
+    const cm=S.profile.unit==='imperial'?Math.round(n*2.54*10)/10:n;
+    if (!(cm>=LIM.heightCm[0]&&cm<=LIM.heightCm[1])) return;
+    S.profile.height=cm;
     commitSoon(); return;                               // no render - this was the blank-screen bug
   }
   const key=path.split('.')[1];
   if (el.tagName==='SELECT') return;                    // selects handled on change
-  S.profile[key]=(key==='age'||key==='commute')?(num(val)??S.profile[key]):val;
+  if (key==='age'){ const n=num(val); if (n==null||!(n>=LIM.age[0]&&n<=LIM.age[1])) return; S.profile.age=n; commitSoon(); return; }
+  S.profile[key]=(key==='commute')?(num(val)??S.profile[key]):val;
   commitSoon();                                             // still no render
 });
 
@@ -7032,6 +7100,11 @@ document.addEventListener('change', e => {
     suppSel=i>=0?i:suppSel; if (sel) sel.value=u.startsWith('µg')?'µg':u==='g'?'g':'mg'; return;
   }
   const el=e.target.closest('[data-in]'); if(!el) return;
+  if (el.dataset.in==='profile.age'||el.dataset.in==='profile.heightD'){      // leaving the box: if what's typed was refused, say so and show what is kept
+    const n=num(el.value), imp=S.profile.unit==='imperial', age=el.dataset.in==='profile.age', cm=age?n:(n==null?null:imp?n*2.54:n), r=age?LIM.age:LIM.heightCm;
+    if (n==null||!(cm>=r[0]&&cm<=r[1])){ toast(age?`Age looks off (${r[0]}-${r[1]})`:`Height looks off — ${imp?'inches':'cm'}?`); render(); }
+    return;
+  }
   if (el.tagName!=='SELECT' && el.type!=='time' && el.type!=='date') return;
   if ((el.type==='time'||el.type==='date') && !el.value) return;
   const key=el.dataset.in.split('.')[1];
@@ -7074,7 +7147,29 @@ function checkNotif(){
 function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(checkNotif,45000); }
 
 /* ================================================================== boot == */
+/* Shown when the app can't draw what is saved (a damaged backup, an edited file). Settings can't render either then, so the way back
+   lives here: the newest automatic snapshot that does draw, a raw download of what is stored, or a fresh start. */
+function recoveryScreen(err){
+  const app=document.getElementById('app'); if (!app) return;
+  app.innerHTML=`<div class="wrap" style="padding:28px 18px"><div class="eyebrow" style="color:var(--rust)">FORGE COULDN'T DRAW YOUR SAVED DATA</div>
+    <p class="t" style="margin:12px 0">Nothing has been deleted. The problem: <b>${esc(String(err&&err.message||err).slice(0,120))}</b></p>
+    <button class="btn" id="rc_snap" style="width:100%;margin-top:10px">RESTORE THE NEWEST WORKING SNAPSHOT</button>
+    <button class="btn ghost" id="rc_dl" style="width:100%;margin-top:10px">DOWNLOAD MY RAW DATA</button>
+    <button class="btn ghost" id="rc_reset" style="width:100%;margin-top:10px">START FRESH</button><div class="note" id="rc_msg" style="border:none"></div></div>`;
+  const msg=t=>{ const m=document.getElementById('rc_msg'); if (m) m.textContent=t; };
+  document.getElementById('rc_dl').onclick=()=>{ let raw=null; try{ raw=localStorage.getItem(KEY)||localStorage.getItem(OLDKEY); }catch(e){}
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([raw||'{}'],{type:'application/json'})); a.download=`forge-raw-${dkey()}.json`; a.click(); };
+  document.getElementById('rc_snap').onclick=async()=>{
+    msg('Looking for a snapshot that works…');
+    try{ for (const k of await snapKeys()){ try{ adoptState(parseBackup(await snapGet(k))); commit(); msg('Restored. Reloading…'); setTimeout(()=>location.reload(),400); return; }catch(e){} } }catch(e){}
+    msg('No automatic snapshot could be restored. Download your raw data first, then start fresh.'); };
+  document.getElementById('rc_reset').onclick=()=>{ if (!confirm('Erase everything stored in this app on this device? Download your raw data first if you might want it.')) return;
+    try{ localStorage.removeItem(KEY); localStorage.removeItem(OLDKEY); }catch(e){} location.reload(); };
+}
 (async function boot(){
+  try{ await bootApp(); }catch(err){ recoveryScreen(err); }
+})();
+async function bootApp(){
   const saved=await Store.load();
   if (saved){
     S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),saved);
@@ -7141,7 +7236,7 @@ function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(
     if (document.visibilityState==='visible' && dkey()!==T) location.reload();
   });
   addEventListener('pagehide', flushSave);
-})();
+}
 
 </script>
 </body>
