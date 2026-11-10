@@ -73,8 +73,8 @@ module.exports = { name: 'Today: switching days, minimizing the workout, saving 
   },
 
   async 'Settings holds backup, restore and export (not Codex); the gear says so'(page, a){
-    await page.click('.gear');
-    a.match(await page.evaluate(() => document.querySelector('.view .disp').textContent), /Program, week and data/);
+    await page.click('.gear[data-v=plan]');
+    a.match(await page.evaluate(() => document.querySelector('.view .disp').textContent), /Program, profile and data/);
     a.ok(await page.evaluate(() => !!document.querySelector('[data-act=s-backup]') && !!document.getElementById('importfile') && !!document.querySelector('[data-act=s-csv]')));
     await page.evaluate(() => { view = 'ledger'; render(); });
     a.equal(await page.evaluate(() => !!document.querySelector('[data-act=s-backup]')), false);
@@ -95,10 +95,10 @@ module.exports = { name: 'Today: switching days, minimizing the workout, saving 
   },
 
   async 'five tabs: Today, Train, Body, Mind, Ledger; Codex is gone and its pieces live in Ledger'(page, a){
-    a.deepEqual(await page.evaluate(() => [...document.querySelectorAll('nav .nl')].map(x => x.textContent)), ['TODAY', 'TRAIN', 'BODY', 'MIND', 'LEDGER']);
+    a.deepEqual(await page.evaluate(() => [...document.querySelectorAll('nav .nl')].map(x => x.textContent)), ['TODAY', 'TRAINING LOG', 'BODY', 'MIND', 'LEDGER']);
     await page.click('nav button:nth-child(2)');
     a.equal(await page.evaluate(() => view), 'wlog');
-    a.equal(await page.evaluate(() => document.querySelector('nav button.on .nl').textContent), 'TRAIN');
+    a.equal(await page.evaluate(() => document.querySelector('nav button.on .nl').textContent), 'TRAINING LOG');
     a.equal(await page.evaluate(() => !!document.querySelector('.backbtn')), false, 'Train is a tab now, no back link');
     a.match(await page.evaluate(() => [...document.querySelectorAll('.segbtn')].map(x => x.textContent).join(',')), /WORKOUTS,MUSCLES,LIFTS,FIGHTS,ROUTINES/);
     await page.click('nav button:nth-child(3)');

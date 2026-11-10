@@ -10,14 +10,14 @@ module.exports = { name: 'First-run tour', tests: {
     a.deepEqual(await cards(page), ['QUICK TOUR · TODAY']);
     await page.click('[data-act=tour-ok][data-v=today]');
     a.deepEqual(await cards(page), []);
-    for (const [v, name] of [['wlog', 'TRAIN'], ['build', 'BODY'], ['mind', 'MIND'], ['ledger', 'LEDGER'], ['plan', 'SETTINGS']]){
+    for (const [v, name] of [['wlog', 'TRAINING LOG'], ['build', 'BODY'], ['mind', 'MIND'], ['ledger', 'LEDGER'], ['week', 'MY WEEK'], ['plan', 'SETTINGS']]){
       await go(page, v);
       a.deepEqual(await cards(page), ['QUICK TOUR · ' + name], v + ' should show its card');
       await page.click(`[data-act=tour-ok][data-v=${v}]`);
       a.deepEqual(await cards(page), []);
     }
     await page.reload(); await page.waitForFunction(() => typeof render === 'function' && document.getElementById('app').innerHTML.length > 0);
-    a.equal(await page.evaluate(() => Object.keys(S.ui.seen).length), 6);
+    a.equal(await page.evaluate(() => Object.keys(S.ui.seen).length), 7);
     a.deepEqual(await cards(page), []);
   },
 
@@ -47,13 +47,13 @@ module.exports = { name: 'First-run tour', tests: {
   async 'saved data from before the tour, and restored backups, are not treated as a first run'(page, a){
     const pg = await openApp(page.ctx.browser(), { state: oldState() });
     try {
-      a.equal(await pg.evaluate(() => Object.keys(S.ui.seen).length), 6);
+      a.equal(await pg.evaluate(() => Object.keys(S.ui.seen).length), 7);
       a.deepEqual(await cards(pg), []);
       // a backup without the key restores as "seen"
       const backup = await pg.evaluate(() => { const c = JSON.parse(JSON.stringify(S)); delete c.ui.seen; return JSON.stringify(c); });
       await pg.evaluate(() => { S.ui.seen = {}; view = 'plan'; importOpen = true; render(); });
       await pg.evaluate(json => { document.getElementById('importtxt').value = json; document.querySelector('[data-act=importgo]').click(); }, backup);
-      a.equal(await pg.evaluate(() => Object.keys(S.ui.seen).length), 6);
+      a.equal(await pg.evaluate(() => Object.keys(S.ui.seen).length), 7);
     } finally { await pg.ctx.close(); }
   },
 
