@@ -1252,6 +1252,120 @@ const HABITS = [
   {id:'h4',l:'Outreach sent'},{id:'h5',l:'Read 30 min'},{id:'h6',l:'No alcohol'},
 ];
 
+/* ---------- injuries ----------
+   Today -> REPORT AN INJURY. The stage you are in comes from days since the injury, stretched by severity. Each stage lists rehab,
+   what is still fine, and which kinds of movement (MOVES) to avoid or go light on; every planned block is read against that and
+   marked AVOID / LIGHT. General guidance, not medical advice. A stage's `to` is its end in days for a MILD injury. */
+const MOVES=[   // what a planned block asks of the body, read off its label
+  ['impact',/jump|sprint|rope|hop|burpee|bound|interval|movement skill/i],
+  ['pivot',/shadowbox|bag|pads|spar|rolling|class|stand-up|solo movement|throw|partner/i],
+  ['squat',/squat|lunge|step-up/i], ['single',/split squat|lunge|step-up|single/i],
+  ['hinge',/deadlift|romanian|swing/i], ['carry',/carry/i],
+  ['press',/bench|landmine|incline|overhead|dip|push-up|raise/i], ['pull',/pull-up|chin-up|row\b|face pull|hang/i],
+  ['cardio',/zone 2|engine/i],
+];
+const INJ_SEV={mild:1,mod:2,severe:3.5};   // stage length multiplier
+const INJ_SEVL=[['mild','MILD','Sore, a bit swollen, I can still use it'],['mod','MODERATE','Swollen or bruised, hard to use'],['severe','SEVERE',"Can't use it, or it looks wrong"]];
+const INJURY={
+  ankle:{label:'Ankle sprain',
+    flags:"you can't take 4 steps in a row, the bony tips of the ankle or the outer foot are tender to touch, the foot is numb or changes colour, the ankle looks crooked, or it is no better after a week. A broken bone needs different care.",
+    stages:[
+    {n:'PROTECT',to:3,goal:"Walk without a limp and the swelling is going down.",
+      rehab:['Elevate it above the heart when sitting. A light compression wrap is fine if it feels better.','Walk as pain allows, short and often. Moving beats strict rest, but stay under 4/10 pain.','Trace the alphabet with your big toe 2-3 times a day. Calf pumps, 20 each.','Skip heat, alcohol and hard massage for the first few days.'],
+      ok:'All upper-body lifting seated or lying, floor core, reading. Bike or pool only if completely pain-free.',
+      avoid:['impact','pivot','squat','single','hinge','carry','cardio'],care:[]},
+    {n:'MOVE',to:8,goal:"Walk normally for 5+ minutes, pain-free, and rise onto both toes.",
+      rehab:['Knee-to-wall ankle stretch 3 x 30s; alphabet with the whole foot.','Wall isometrics: push the foot out, in, up and down into a wall, 5 x 10s each.','Calf raises on both feet 3 x 15, pain under 3/10.','Balance on both feet, eyes open, 3 x 30s. Then the hurt leg alone, holding a wall.'],
+      ok:'All upper-body lifting (bench, rows, pull-ups), floor core, easy bike or rower.',
+      avoid:['impact','pivot','single'],care:['squat','hinge','carry','cardio']},
+    {n:'LOAD',to:18,goal:"10 single-leg calf raises and a 30s single-leg stand with eyes closed, no pain.",
+      rehab:['Band work for the ankle, 3 x 15 each way: out, in, up, down.','Single-leg calf raise 3 x 12, then hold a weight.','Single-leg stand on a cushion or folded towel 3 x 30s. Add head turns and a ball toss.','Slow step-downs off a low step 3 x 10. Squats and deadlifts back at about 60% of the old weight.'],
+      ok:'All upper-body lifting, squats and deadlifts at reduced load, bike, rower, swimming, incline walking.',
+      avoid:['impact','pivot'],care:['single','squat','hinge','carry','cardio']},
+    {n:'RETURN',to:1e9,goal:"10 hops on the hurt leg, landing quietly, matching the other side. Then tap HEALED.",
+      rehab:['Walk-jog on flat ground: 1 min jog, 2 min walk, x6. Straight lines first.','Then figure-8s, side-steps, shuttles and small hops. Stop at any sharp pain.','Low box jumps, rope and footwork at half effort before sparring or rolling.','Tape or a lace-up brace for the first weeks of impact and sparring. Keep balance work 2 days a week for months; re-sprains are common.'],
+      ok:'All lifting. The rest of the plan at reduced intensity.',avoid:[],care:['impact','pivot','single']}]},
+  knee:{label:'Knee strain or pain',
+    flags:"the knee locks or gives way, swells within hours, will not fully straighten, or you heard a pop; the foot goes numb, cold or pale; or it is no better after a week.",
+    stages:[
+    {n:'PROTECT',to:4,goal:"Walk without a limp and the swelling is no worse by evening.",
+      rehab:['Quad squeeze: press the knee flat, hold 5s x10, three times a day.','Heel slides lying down 2 x 15, straight-leg raises 3 x 10 if the knee stays straight.','Walk short and often under 4/10 pain. Elevate it when it feels puffy.','Bike with the seat high and no resistance, only if pain-free.'],
+      ok:'Upper-body work from a bench, floor core, bike with no resistance.',
+      avoid:['impact','pivot','squat','single'],care:['hinge','carry','cardio']},
+    {n:'MOVE',to:10,goal:"Full range without a pinch, and 10 slow sit-to-stands from a chair.",
+      rehab:['Sit-to-stand from a high chair 3 x 10.','Glute bridges 3 x 15, then walk-out hamstring bridges 3 x 8.','Side-lying leg raises and clamshells 3 x 15.','Bike with light resistance 10-15 min.'],
+      ok:'Upper-body lifting, floor core, bike, rower with easy effort, light hinges.',
+      avoid:['impact','pivot','squat','single'],care:['hinge','carry','cardio']},
+    {n:'LOAD',to:28,goal:"Squat to parallel with no pain, and 10 slow single-leg step-downs from a low step.",
+      rehab:['Box or goblet squat to a bench 3 x 10, pain under 3/10.','Step-ups on a low step; slow step-downs 3 x 10.','Short-range split squat holding a rail 3 x 8.','Light Romanian deadlifts 3 x 10 and calf raises 3 x 15.'],
+      ok:'All upper-body lifting, hinges, squats to a box, bike, rower, swimming.',
+      avoid:['impact','pivot'],care:['squat','single','hinge','carry','cardio']},
+    {n:'RETURN',to:1e9,goal:"Single-leg squat and 10 hops pain-free, no swelling the next morning. Then tap HEALED.",
+      rehab:['Jog straight lines: 1 min on, 2 min off, x6, flat ground.','Add side-steps, shuttles and small hops once the jog is pain-free the next day.','Low box jumps, rope and footwork, then sparring and rolling at half power.','Keep two strength days a week with squats and step-downs.'],
+      ok:'All lifting. The rest of the plan at reduced intensity.',avoid:[],care:['impact','pivot','single']}]},
+  shoulder:{label:'Shoulder strain or pain',
+    flags:"the shoulder came out of the joint or looks out of place, the arm suddenly can't lift after a fall or a pop, there is numbness or tingling down the arm, constant night pain, or it is no better in 10 days.",
+    stages:[
+    {n:'PROTECT',to:4,goal:"Everyday movements don't hurt and night pain is settling.",
+      rehab:['Pendulums: lean on a table, let the arm hang and swing in small circles, 1 min x3.','Shoulder-blade squeezes, 10 x 5s, three times a day.','Raise the arm only as high as is comfortable. Avoid sleeping on that side.','Keep the elbow, wrist and hand moving. Walk daily.'],
+      ok:'Legs, trunk and conditioning that do not load the arm: squats, bike, running, mobility.',
+      avoid:['press','pull','pivot'],care:['carry','hinge']},
+    {n:'MOVE',to:12,goal:"Lift the arm overhead without pain and no pain at night.",
+      rehab:['Towel wall slides in a pain-free range 2 x 12.','Isometric external rotation: elbow at the side, push the back of the hand into a doorframe, 5 x 10s.','Light band pull-aparts 3 x 15 and very light band rows.','Table slides forward, arm on a towel, 2 x 10.'],
+      ok:'Legs, trunk, conditioning, light pulling.',avoid:['press','pivot'],care:['pull','carry','hinge']},
+    {n:'LOAD',to:30,goal:"Band external rotations 3 x 15 and light overhead reaching, pain under 3/10.",
+      rehab:['Band external and internal rotation, elbow at the side, 3 x 15.','Face pulls and rows at a light load, 3 x 12, slow lowering.','Landmine press or incline push-ups in a short range, 3 x 8, at half the old weight.','Scapular push-ups and short dead hangs once they feel fine.'],
+      ok:'Everything except heavy pressing; pulling at a light load.',avoid:[],care:['press','pull','pivot','carry']},
+    {n:'RETURN',to:1e9,goal:"Push-ups and bench at about 70% feel normal with no night pain. Then tap HEALED.",
+      rehab:['Bench and overhead work back at 60-70% of the old weights, adding 5-10% a week.','Keep banded rotations and face pulls 2 days a week for good.','Pad work and grappling at half power before sparring and rolling.'],
+      ok:'All lifting at reduced load.',avoid:[],care:['press','pivot']}]},
+  back:{label:'Lower-back strain',
+    flags:"a leg is numb or weak, the groin or saddle area is numb, bladder or bowel control changes (that one is an emergency, go now), you have a fever, it followed a serious fall or crash, pain is constant at night, or it is no better in 2 weeks.",
+    stages:[
+    {n:'PROTECT',to:3,goal:"Stand, walk and get out of bed without sharp pain.",
+      rehab:['Keep moving: short walks every hour or two. Long bed rest makes it worse.','Find a comfortable position, such as lying on your back with calves on a chair, and change position often.','Gentle pelvic tilts and knee-to-chest, 10 slow reps, three times a day.','Skip heavy lifting, twisting and long sitting until the sharp pain eases.'],
+      ok:'Supported upper-body work (chest-supported rows, dumbbell press from a bench), walking, easy bike.',
+      avoid:['hinge','squat','single','carry','impact','pivot'],care:['cardio']},
+    {n:'MOVE',to:10,goal:"Walk 30 minutes and bend to put on shoes without pain.",
+      rehab:['Cat-cow 10 slow reps; child pose 3 x 30s.','Curl-up with one knee bent, side plank from the knees and bird-dog: 3 x 6 reps with 8-10s holds.','Glute bridges 3 x 12.','Walk 20-30 minutes a day, building up.'],
+      ok:'Supported upper-body work, walking, bike, floor core.',
+      avoid:['hinge','impact','pivot','carry'],care:['squat','single','cardio']},
+    {n:'LOAD',to:24,goal:"Dowel hip hinge and goblet squat 3 x 10 without pain, and no flare-up the next day.",
+      rehab:['Hip hinge with a dowel along the spine 3 x 10, then light kettlebell deadlifts.','Goblet squat 3 x 10 to a comfortable depth.','Light suitcase carry and Pallof press, upright, 3 x 20m / 10 reps.','Lift at 50-60% of the old weights and add a little each session.'],
+      ok:'Upper-body lifting, light hinges and squats, carries, bike, rower.',
+      avoid:['impact'],care:['hinge','squat','carry','pivot','single']},
+    {n:'RETURN',to:1e9,goal:"Lifts at about 70% feel normal the next morning. Then tap HEALED.",
+      rehab:['Add 5-10% a session on squats, deadlifts and carries.','Bring back sprints, jumps and rotational throws at low volume.','Sparring and rolling at half power for a week.','Keep bird-dog, side plank and carry work as a warm-up.'],
+      ok:'All lifting at reduced load.',avoid:[],care:['hinge','impact','pivot']}]},
+};
+/* the active injury and where it stands, or null. An unknown area or a junk date from a hand-edited backup is ignored. */
+function injNow(){
+  const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k), i=S.injury;      // own keys only: "__proto__" or "constructor" are not areas
+  if (!i||typeof i!=='object'||!own(INJURY,i.area)||!/^\d{4}-\d\d-\d\d$/.test(i.on||'')) return null;
+  const inj=INJURY[i.area], days=Math.max(0,daysBetween(i.on,T)), m=own(INJ_SEV,i.sev)?INJ_SEV[i.sev]:1;
+  let n=inj.stages.findIndex(s=>days<s.to*m); if (n<0) n=inj.stages.length-1;
+  return {...i,inj,days,n,st:inj.stages[n],m};
+}
+function injStatus(b){      // '' | 'care' | 'avoid' for one planned block, today
+  const I=injNow(); if (!I) return '';
+  const t=MOVES.filter(m=>m[1].test(b.l)).map(m=>m[0]);
+  return t.some(x=>I.st.avoid.includes(x))?'avoid':t.some(x=>I.st.care.includes(x))?'care':'';
+}
+/* the share of a planned session still on the table: the energy model costs only that (blocks counted equally; a heuristic) */
+function injFrac(def){
+  if (!injNow()||!def.blocks.length) return 1;
+  return def.blocks.filter(b=>injStatus(b)!=='avoid').length/def.blocks.length;
+}
+/* other ways to use the time: the book you're in (else the next unread), a rotating non-physical skill, and sleep and protein */
+function injFill(I){
+  const out=[], b=BOOKS.find(x=>S.books[x.id]===1)||BOOKS.filter(x=>S.books[x.id]!==2).sort((x,y)=>x.p-y.p)[0];
+  if (b) out.push(`Read 30 min: ${b.t}, ${b.a}. ${S.books[b.id]===1?'You are already in it.':'Next on your list.'}`);
+  const sk=SKILLS.slice(4).filter(s=>(S.tiers[s.id]??0)<s.t.length-1);
+  if (sk.length){ const s=sk[I.days%sk.length], c=S.tiers[s.id]??0; out.push(`Move ${s.n} up a level (next: "${s.t[c+1]}"). Give it 30 focused minutes.`); }
+  out.push('Sleep 8 hours and hit your protein. Repair runs on both, and this is the week to get them right.');
+  return out;
+}
+
 const LIFTS = [
   {k:'squat',l:'Back squat',m:2.0},{k:'bench',l:'Bench press',m:1.5},
   {k:'dead',l:'Deadlift',m:2.5},{k:'ohp',l:'Overhead press',m:1.0},
@@ -1814,6 +1928,7 @@ const DEFAULTS = {
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
   camp:{}, campHist:[],                    // fight camp: { name, date, weighIn, target(kg), disc, start, startW }
+  injury:null,                             // { area: key of INJURY, sev: 'mild'|'mod'|'severe', on: 'YYYY-MM-DD' }
   ui:{ fold:{}, seen:{} },                 // which Today sections you've folded/unfolded; which tour cards you've dismissed
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
@@ -2108,6 +2223,7 @@ function dayActivity(k){
   if (!rep){
     const plan=buildDay(k), e=plan.entries.find(x=>x.id==='train'), t=plan.def.type;
     let m=e?e.e-e.s:0; if (t==='strike'||t==='ground'||t==='engine') m=take(m);
+    m*=injFrac(plan.def);                                              // blocks an injury rules out cost nothing
     add(plan.def.title, m, kcalMin(PLAN_MET[t]||5,kg)*m);
   }
   if (cw){
@@ -2645,7 +2761,7 @@ function dayLoad(k){
 /* ============================================================== ui state == */
 let view='today', openBlock='train', shiftId=null, openTrack='markets', openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
-    foodQ='', foodG='', foodGU='g', copyMode=false, copySel={}, swapOpen=false, foodOpen=false,
+    foodQ='', foodG='', foodGU='g', copyMode=false, copySel={}, swapOpen=false, foodOpen=false, injForm=false, injDraft={area:'ankle',sev:'mild'},
     buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='';
 const T = dkey();
 let viewOff = 0;
@@ -5493,7 +5609,7 @@ function obFinish(){
 /* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
    is remembered. After-action opens by itself in the evening (or once you've written in it). */
 const FOLD_DEF = {
-  rail:()=>false, arc:()=>false, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
+  rail:()=>false, arc:()=>false, injury:()=>true, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
   review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
 };
 function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
@@ -5644,6 +5760,51 @@ function SuppSection(d,vd){
         <div style="padding:0 13px 13px;display:flex;gap:8px"><button class="btn" data-act="addsupp" style="flex:1">ADD SUPPLEMENT</button></div></div>`:''}`:''}`;
 }
 
+const injTag=b=>{ const s=injStatus(b); return s?` <span class="badge" style="margin-left:6px;vertical-align:1px;color:var(--${s==='avoid'?'rust':'amber'});border-color:currentColor">${s==='avoid'?'AVOID':'LIGHT'}</span>`:''; };
+function InjuryPanel(plan){
+  const I=injNow();
+  if (!I){
+    if (!injForm) return '';
+    return `<div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
+      <div class="eyebrow">WHAT HURT?</div>
+      <div class="chips">${Object.entries(INJURY).map(([k,v])=>`<button class="chip ${injDraft.area===k?'on':''}" data-act="inj-pick" data-v="area" data-v2="${k}" aria-pressed="${injDraft.area===k}">${esc(v.label)}</button>`).join('')}</div>
+      <div class="eyebrow">HOW BAD?</div>
+      <div class="chips">${INJ_SEVL.map(([k,l])=>`<button class="chip ${injDraft.sev===k?'on':''}" data-act="inj-pick" data-v="sev" data-v2="${k}" aria-pressed="${injDraft.sev===k}">${l}</button>`).join('')}</div>
+      <div class="note" style="padding:0;border:none">${esc(INJ_SEVL.find(x=>x[0]===injDraft.sev)[2])}.</div>
+      <label class="f"><span>Injured on</span><input type="date" id="inj_on" max="${T}" value="${esc(injDraft.on||T)}"></label>
+      <div style="display:flex;gap:8px"><button class="btn" data-act="inj-save" style="flex:1">START REHAB PLAN</button><button class="btn ghost" data-act="inj-open" style="flex:1">CANCEL</button></div>
+    </div><div class="note">General guidance, not medical advice. Anything serious: see a doctor or physio first.</div></div>`;
+  }
+  const blocks=plan.def.blocks, st=blocks.map(injStatus), no=st.filter(x=>x==='avoid').length, lt=st.filter(x=>x==='care').length;
+  const sum=`${I.st.n} · DAY ${I.days+1}`;
+  return foldHead('injury','shield',esc(I.inj.label.toUpperCase()),sum)+(foldOpen('injury')?`<div class="panel">
+    ${I.sev==='severe'?`<div class="warn"><b>You rated this severe.</b> Get it examined before you follow any of this.</div>`:''}
+    <div style="padding:13px"><div class="eyebrow">${I.st.n} · MOVE ON WHEN</div><div style="margin-top:5px;line-height:1.5">${esc(I.st.goal)}</div></div>
+    <div class="steps" style="border-top:1px solid var(--rule);padding-left:15px"><div class="eyebrow" style="padding:11px 0 2px">REHAB, DAILY</div>
+      ${I.st.rehab.map(r=>`<div class="step"><div class="stepdot"></div><div>${esc(r)}</div></div>`).join('')}</div>
+    <div class="note"><b style="color:var(--text)">Still fine:</b> ${esc(I.st.ok)}</div>
+    <div class="note"><b style="color:var(--text)">Today's ${esc(plan.def.title)}:</b> ${no} of ${blocks.length} blocks off-limits${lt?`, ${lt} to go light on`:''}. ${no||lt?'Marked AVOID and LIGHT below; do the rest as written.':'Nothing here is affected; train as planned.'} Light means half the load, pain under 3/10, no worse the next morning.</div>
+    <div class="steps" style="border-top:1px solid var(--rule);padding-left:15px"><div class="eyebrow" style="padding:11px 0 2px">USE THE TIME</div>
+      ${injFill(I).map(r=>`<div class="step"><div class="stepdot"></div><div>${esc(r)}</div></div>`).join('')}</div>
+    <div class="note"><b style="color:var(--text)">See a doctor if</b> ${esc(I.inj.flags)} General guidance, not medical advice.</div>
+    <div style="display:flex;gap:8px;padding:0 13px 13px"><button class="btn ghost" data-act="inj-sore" style="flex:1">SORE AGAIN · +3 DAYS</button><button class="btn ghost" data-act="inj-heal" style="flex:1">HEALED</button></div>
+  </div>`:'');
+}
+function injAct(a,v,v2){
+  switch(a){
+    case 'inj-open': injForm=!injForm; injDraft={area:injDraft.area,sev:injDraft.sev}; return;
+    case 'inj-pick': { const el=document.getElementById('inj_on'); if (el&&el.value) injDraft.on=el.value; injDraft[v]=v2; return; }
+    case 'inj-save': {
+      const on=(document.getElementById('inj_on')||{}).value||T;
+      if (on>T){ toast("That date hasn't happened yet"); return 'norender'; }
+      S.injury={area:INJURY[injDraft.area]?injDraft.area:'ankle',sev:INJ_SEV[injDraft.sev]?injDraft.sev:'mild',on}; injForm=false;
+      S.ui.fold.injury=true; commit(); toast('Rehab plan is on Today'); return;
+    }
+    case 'inj-sore': { const I=injNow(); if (!I) return; S.injury.on=addDays(S.injury.on,3); if (S.injury.on>T) S.injury.on=T; commit(); toast('Back a few days. Take it slower.'); return; }
+    case 'inj-heal': S.injury=null; injDraft={area:'ankle',sev:'mild'}; commit(); return;
+  }
+}
+
 function ViewToday(){
   const vd=VD();
   const plan=buildDay(vd), d=day(vd), meta=DTYPE[plan.def.type];
@@ -5690,7 +5851,7 @@ function ViewToday(){
       return `<div class="brow ${d.blocks[b.id]?'done':''}">
         <button class="bmain" data-act="block" data-v="${b.id}">
           ${chk(!!d.blocks[b.id],meta.c)}
-          <div style="flex:1"><div class="lab">${esc(b.l)}</div><div class="det">${esc(b.d)}</div>${rxLine(b)}</div></button>
+          <div style="flex:1"><div class="lab">${esc(b.l)}${injTag(b)}</div><div class="det">${esc(b.d)}</div>${rxLine(b)}</div></button>
         ${b.steps?`<button class="chev sm ${bo?'open':''}" data-act="drill" data-v="${b.id}" aria-label="${bo?'Collapse':'Expand'} details for ${esc(b.l)}" aria-expanded="${bo}">${svg('chev',14)}</button>`:''}
       </div>${bo?(stepsHTML(b)+gymHTML(b)+libBlockHTML(b)):''}`;}).join('')}</div>`:''}
     ${shiftId===e.id?`<div class="chips" style="padding:10px 13px 12px 57px;border-bottom:1px solid var(--rule)">
@@ -5753,6 +5914,7 @@ function ViewToday(){
         <button class="chip on" data-act="deloadgo">START DELOAD WEEK</button>
         <button class="chip" data-act="deloadskip">NOT THIS WEEK</button></div></div></div>`:''}
 
+    ${InjuryPanel(plan)}
     <div class="panel acc"><div class="acc-bar" style="background:${meta.c}"></div>
       <div class="tl">${plan.entries.map(entryHTML).join('')}</div>
       ${plan.missed.length?`<div class="warn">${plan.missed.map(esc).join('<br>')}</div>`:''}
@@ -5762,6 +5924,7 @@ function ViewToday(){
       <button class="btn ghost" data-act="view" data-v="plan">${svg('gear',13)} SETTINGS + WEEK</button>
       <button class="btn ghost" data-act="reflow">${svg('rot',13)} RESET TIMES</button>
     </div>
+    ${injNow()?'':`<button class="btn ghost" data-act="inj-open" style="margin-bottom:4px">${svg('shield',13)} HURT? REPORT AN INJURY</button>`}
 
     ${dowIdx(T)===6?`<button class="panel banner steel" data-act="view" data-v="ledger" style="width:100%;text-align:left">
       ${svg('trend',14,'var(--steel)')}<div><b>Sunday.</b> Your weekly review is ready at the top of Ledger - two minutes, then plan the week.</div></button>`:''}
@@ -6613,7 +6776,7 @@ document.addEventListener('pointercancel', endDrag);
    Not included: deleting 90-day check-ins or past blocks, because their photos are erased from the phone for good. */
 const UNDOABLE = {'w-del':'Set deleted','delset':'Set deleted','delfood':'Food removed','delsupp':'Supplement removed','dellog':'Entry removed','w-discard':'Workout dropped',
   'w-rmex':'Exercise removed','f-del':'Session deleted','wl-delday':'Workout deleted','wl-rtdel':'Routine deleted','deloneoff':'Event removed',
-  'deledit':'Commitment removed','delmyfood':'Removed from My foods'};
+  'deledit':'Commitment removed','delmyfood':'Removed from My foods','inj-heal':'Marked healed'};
 function doUndo(){
   if (!undoSnap) return;
   try{
@@ -6646,6 +6809,7 @@ function handleClick(e){
   if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ob-/.test(a)){ if (obAct(a,v,v2,el)!=='norender') render(); return; }
   if (a==='fold'){ S.ui.fold[v]=!foldOpen(v); commit(); render(); return; }
+  if (/^inj-/.test(a)){ if (injAct(a,v,v2)!=='norender') render(); return; }
   if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
