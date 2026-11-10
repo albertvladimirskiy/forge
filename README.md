@@ -159,7 +159,7 @@ worked / got you caught). Nothing is prescribed in a custom workout: each exerci
 anywhere (30 push-ups last week means 30 is the benchmark and the prefill), flags PRs, and the link works both ways (`EXLINK`): sets from the program's own lifts count
 as history for the matching library exercise, and sets you log in your own workout for that exercise (Trap Bar Deadlift for the plan's
 deadlift, Barbell Back Squat for the squat, and so on) count for the plan lift's next prescription, its record and your strength standards. Rest timer, plate math for barbell lifts, favorites, routines and a
-history / lift-PR screen (the TRAIN tab, or the link under the workout area) are included. Custom data lives in `S.cust`,
+history / lift-PR screen (the TRAINING LOG tab, or the link under the workout area) are included. Custom data lives in `S.cust`,
 `S.fights`, `S.routines`, `S.myex` and `S.cpref`, so Export / Import covers it.
 
 Set logging details: the program's own lifts and custom exercises have the same tools — steppers, warm-up set and ramp, plate
@@ -185,11 +185,22 @@ said 155) the app tells you to repeat that weight for the rest of the day, and o
 your new baseline (so you can't get stuck on a weight you can't lift). Deload-week sets are flagged and never become the baseline
 the next weeks climb from; the ramp-week discount only trims a starting weight guessed from the Log tab. The custom workout panel
 on Today minimizes to one line (tap its header); the choice is saved with that day's workout.
-**Train → WORKOUTS** lists every session: your custom ones and the built-in planned ones (any day you logged a program lift or
+**Training log → WORKOUTS** lists every session: your custom ones and the built-in planned ones (any day you logged a program lift or
 ticked a block of Lower A, Upper A, striking, BJJ, engine...). Planned blocks without a progressing lift (box jumps, carries,
 pallof, planks, dead hangs, med-ball throws, swings, dips) have a LOG button inside the block that opens the normal exercise card:
 weight × reps, reps, hold time or carry distance, plus rest timer and history. Those sets are stored in that day's `S.cust`
 entry (`cw.blk` lists which exercises belong to a block), so they feed history and benchmarks like any other exercise.
+
+### Days off: sick, travel, rest
+
+**Today → DAY OFF**: pick SICK, TRAVEL or REST and, for a run of days, a *through* date (up to 30 days). That day's planned session is set
+aside: no training slot on the timeline, nothing in the calendar export, and no training in the day's calories. The streak **pauses** over a
+day off instead of breaking (it doesn't count up either), the weekly "you keep skipping X" pattern ignores it, and the evening streak nag stays
+quiet. Each kind shows short guidance (a "neck check" for sick days, a 20-minute hotel circuit for travel). ADD WORKOUT still works.
+**BACK ON IT** restores the plan for that day and the rest of the run (UNDO works). Stored as `S.off = { date: 'sick'|'travel'|'rest' }`.
+
+**Daily habits** are 7.5h sleep, no phone the first hour, hit protein, 10 min mobility, read 30 min and no alcohol (`HABITS`). Mobility
+replaced "outreach sent" under a new id, so old ticks keep their meaning; outreach is still counted under Ledger → Network.
 
 ### Injuries
 
@@ -210,11 +221,11 @@ block by its label, so custom workouts are not marked. This is general guidance,
   rotation, and play buttons for your own speeches or playlists. Lines live in `BRIEF_LINES`; add your own in the app.
 - **Round timer**: boxing / pro / Muay Thai / MMA / BJJ / wrestling / bag / Tabata presets or custom, synthesized bell and
   clapper, wake lock, drift-free timing. Ends by logging a fight session (or a set, when opened from an exercise card).
-- **Muscle map** (Train → MUSCLES, or MUSCLE MAP on Today): weekly sets per muscle from custom workouts and program lifts,
+- **Muscle map** (Training log → MUSCLES, or MUSCLE MAP on Today): weekly sets per muscle from custom workouts and program lifts,
   with half-set credit to helper muscles on compound lifts. Targets in `MM_REG`, helper rules in `MM_SEC`.
 - **90-day challenge** (Body → 90 DAY): day counter + grid, weekly check-ins with front/side/back photos and
   measurements, side-by-side compare. Photos stay in IndexedDB on the device (not in the JSON backup): use SAVE PHOTOS.
-- **Fight camp** (Train → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
+- **Fight camp** (Training log → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
   weight-cut tracker that flags unsafe paces. Sessions can record sparring partners.
 - **Safety**: daily automatic snapshots (last 14, with undo) in IndexedDB, a weekly backup nudge that saves through the share
   sheet, restore from a backup file (an import takes an undo snapshot first), and a calendar (.ics) export of the week so your
@@ -263,8 +274,9 @@ uncaught error inside the app fails the test. If Playwright or Chromium live som
 features); `migration.test.js` loads it with its dates moved to "now", visits every screen, and checks nothing was lost or changed.
 To refresh it after a future data-shape change, regenerate it from the build you want to protect.
 
-**Settings** (the gear, or SETTINGS + WEEK on Today) holds the program, your week, reminders, calendar export, barbell + plates, body profile, **text size** (normal / large / extra large), and backup, restore, CSV export and snapshots. Tap any of the five bars at the top to see what it is made of.
+**My week** (the calendar icon at the top) holds the week-ahead load check, your fixed commitments, one-off events and the calendar export.
+**Settings** (the gear) holds the program, reminders, wake / sleep boundaries, barbell + plates, body profile, **text size** (normal / large / extra large), and backup, restore, CSV export and snapshots. Tap any of the five bars at the top to see what it is made of.
 
-**Tabs:** TODAY (the day), TRAIN (workout log, muscles, lift records, fights and camp, routines), BODY (target, fuel, log, 90-day), MIND, LEDGER (weekly review, records, capability, capital, net worth, network, and a folded THE ARC / standing orders / file status).
+**Tabs:** TODAY (the day), TRAINING LOG (workout log, muscles, lift records, fights and camp, routines), BODY (target, fuel, log, 90-day), MIND, LEDGER (weekly review, records, capability, capital, net worth, network, and a folded THE ARC / standing orders / file status).
 
 **Tour.** The first time you open each tab (and Settings) a short card explains what it is for; GOT IT dismisses it, SKIP TOUR dismisses them all, and **Settings → Replay the tour** brings them back. The text lives in `TOUR` in `index.html`. Existing installs, imports and restored backups are treated as already toured.

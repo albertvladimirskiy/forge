@@ -1275,7 +1275,7 @@ const CAPITAL = [
 
 const HABITS = [
   {id:'h1',l:'7.5h sleep'},{id:'h2',l:'No phone first hour'},{id:'h3',l:'Hit protein'},
-  {id:'h4',l:'Outreach sent'},{id:'h5',l:'Read 30 min'},{id:'h6',l:'No alcohol'},
+  {id:'h7',l:'10 min mobility'},{id:'h5',l:'Read 30 min'},{id:'h6',l:'No alcohol'},
 ];
 
 /* ---------- injuries ----------
@@ -1364,6 +1364,24 @@ const INJURY={
       rehab:['Add 5-10% a session on squats, deadlifts and carries.','Bring back sprints, jumps and rotational throws at low volume.','Sparring and rolling at half power for a week.','Keep bird-dog, side plank and carry work as a warm-up.'],
       ok:'All lifting at reduced load.',avoid:[],care:['hinge','impact','pivot']}]},
 };
+/* ---------- days off: sick, travel, rest ----------
+   A day off sets the planned session aside (no training slot, no training calories), pauses the streak instead of breaking it,
+   and keeps the day out of the "slipping" pattern and the evening streak nag. ADD WORKOUT still works, e.g. a hotel circuit. */
+const OFFDAY={
+  sick:{l:'SICK',head:'Sick day',lines:[
+    'Neck check: symptoms only above the neck (runny nose, sore throat) means a walk or easy mobility is fine. Fever, chest, body aches or stomach: full rest.',
+    'Fluids, sleep, and keep protein up so you lose as little as possible.',
+    'Come back after a full day without a fever, at about half effort for the first session.']},
+  travel:{l:'TRAVEL',head:'Travel day',lines:[
+    'Hotel-room circuit, 20 min, 3-4 rounds: push-ups, split squats, glute bridges, plank, burpees. ADD WORKOUT logs it.',
+    'Walk wherever you can. Airports and new cities are free steps.',
+    'Pack protein (bars, jerky, a shaker) and water. Eat roughly normally: a travel day is not a cut.']},
+  rest:{l:'REST',head:'Rest day',lines:[
+    'Rest is part of the program. Sleep in if you can.',
+    'An easy walk and 10 minutes of mobility help more than lying still.',
+    'Eat normally: recovery still needs the protein.']},
+};
+const offOf=k=>{ const v=S.off&&S.off[k]; return typeof v==='string'&&Object.prototype.hasOwnProperty.call(OFFDAY,v)?v:null; };
 /* the active injury and where it stands, or null. An unknown area or a junk date from a hand-edited backup is ignored. */
 function injNow(){
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k), i=S.injury;      // own keys only: "__proto__" or "constructor" are not areas
@@ -1954,6 +1972,7 @@ const DEFAULTS = {
   tpref:{ preset:'boxing', custom:{} },    // round timer
   ch90:{ start:null, goal:'', checkins:[] }, // 90-day challenge (photos live in IndexedDB, keyed by id)
   camp:{}, campHist:[],                    // fight camp: { name, date, weighIn, target(kg), disc, start, startW }
+  off:{},                                  // days off: { 'YYYY-MM-DD': 'sick'|'travel'|'rest' }
   injury:null,                             // { area: key of INJURY, sev: 'mild'|'mod'|'severe', on: 'YYYY-MM-DD' }
   ui:{ fold:{}, seen:{} },                 // which Today sections you've folded/unfolded; which tour cards you've dismissed
 };
@@ -2091,9 +2110,10 @@ function buildDay(key){
     out.push({s:slot[0],e:slot[1],l:label,sub,id,kind});
   };
 
-  const trainWin=PREF[p.trainPref]||PREF.morning;
+  const trainWin=PREF[p.trainPref]||PREF.morning, off=offOf(key);
   let trainDur=def.dur;
-  if (physMin>=90 && def.type==='strength'){
+  if (off){}
+  else if (physMin>=90 && def.type==='strength'){
     trainDur=Math.max(50,def.dur-20);
     adapt.push(`${physMin} minutes of tagged practice today. Keep the main lift heavy but skip the conditioning finisher — you have already paid that bill on court.`);
   } else if (physMin>=90 && (def.type==='recover'||def.type==='craft')){
@@ -2102,7 +2122,7 @@ function buildDay(key){
   } else if (physMin>=45 && def.type==='strength'){
     adapt.push(`${physMin} min of tagged practice today. Main lift stays as prescribed; cut the finisher if your legs are already cooked.`);
   }
-  add('train',def.title,def.aim,trainDur,null,trainWin,'train');
+  if (!off) add('train',def.title,def.aim,trainDur,null,trainWin,'train');
   const tr=out.find(o=>o.id==='train');
   add('news','Daily intelligence','Markets, macro, one long piece. Twenty minutes, then stop.',20,wake+40,null,'mind');
   add('meal1','Meal 1','Protein-forward. Within 90 minutes of waking or of training.',30, tr&&tr.s<wake+180?tr.e+20:wake+75,null,'meal');
@@ -2129,7 +2149,7 @@ function dayScore(k){
 function streak(){
   let n=0;
   for(let i=0;i<1200;i++){ const s=dayScore(dkey(-i));
-    if(s>0.08)n++; else if(i===0)continue; else break; }
+    if(s>0.08)n++; else if(i===0||offOf(dkey(-i)))continue; else break; }      // a day off pauses the streak, it doesn't break it
   return n;
 }
 /* the most recent log entry that actually HAS this field — not just the most
@@ -2554,7 +2574,7 @@ function rebuildPR(ex){
 function syncPRs(){ if (!S.prs||typeof S.prs!=='object'||Array.isArray(S.prs)) S.prs={}; for (const ex in EXS) if (gymSessions(ex).length) rebuildPR(ex); }
 function bestStreakEver(){
   let max=0,cur=0;
-  for (let i=1100;i>=0;i--){ const s=dayScore(dkey(-i)); if(s>0.08){ cur++; if(cur>max)max=cur; } else cur=0; }
+  for (let i=1100;i>=0;i--){ const k=dkey(-i), s=dayScore(k); if(s>0.08){ cur++; if(cur>max)max=cur; } else if (!offOf(k)) cur=0; }
   return Math.max(max,streak());
 }
 function totalSessions(){ return Object.keys(S.days).filter(k=>{ const d=S.days[k];
@@ -2661,7 +2681,7 @@ function skipPattern(){
   // profile that's simply new.
   if (daysSinceStart()<28) return null;
   const by=Array.from({length:7},()=>[]);
-  for(let i=1;i<=28;i++){ const k=dkey(-i); by[dowIdx(k)].push(trainRatio(k)); }
+  for(let i=1;i<=28;i++){ const k=dkey(-i); if (!offOf(k)) by[dowIdx(k)].push(trainRatio(k)); }
   let worst=null,wv=2;
   by.forEach((a,i)=>{ if(a.length<2)return; const avg=a.reduce((x,y)=>x+y,0)/a.length;
     if(avg<wv){wv=avg;worst=i;} });
@@ -2791,14 +2811,14 @@ function dayLoad(k){
   const cm=items.reduce((a,c)=>{let s=m2s(c.s),e=m2s(c.e);if(e<=s)e+=1440;return a+(e-s);},0);
   const wi=dowIdx(k);
   const def=S.swap[k]!=null?(ALLDAYS[S.swap[k]]||WEEK[wi]):WEEK[wi];
-  return {commit:cm, train:def.dur, type:def.type};
+  return {commit:cm, train:offOf(k)?0:def.dur, type:def.type};
 }
 
 
 /* ============================================================== ui state == */
 let view='today', openBlock='train', shiftId=null, openTrack=undefined, openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
-    foodQ='', foodG='', foodGU='g', copyMode=false, copySel={}, swapOpen=false, foodOpen=false, injForm=false, injDraft={area:'ankle',sev:'mild'},
+    foodQ='', foodG='', foodGU='g', copyMode=false, copySel={}, swapOpen=false, foodOpen=false, injForm=false, injDraft={area:'ankle',sev:'mild'}, offForm=false, offDraft='sick',
     buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='';
 const T = dkey();
 let viewOff = 0;
@@ -3307,7 +3327,7 @@ function normalizeCustom(){
 }
 /* Make `parsed` the live state, then draw every screen once. If anything throws, put the old state back and rethrow, so a damaged
    file can never replace working data with something the app can't display. */
-const DRY_SCREENS=[['today',''],['plan',''],['build','target'],['build','fuel'],['build','log'],['build','ch90'],['mind',''],['ledger',''],
+const DRY_SCREENS=[['today',''],['plan',''],['week',''],['build','target'],['build','fuel'],['build','log'],['build','ch90'],['mind',''],['ledger',''],
   ['wlog','workouts'],['wlog','body'],['wlog','lifts'],['wlog','fights']];
 function adoptState(parsed){
   const prev={S,WEEK,view,buildSub,wlSub};
@@ -4476,6 +4496,7 @@ function briefTag(){
   if (typeof campDaysOut==='function'){ const d=campDaysOut(); if (d!=null && d>=0 && d<=56) return 'camp'; }
   if (recentPR()) return 'pr';
   if ([7,14,21,30,50,60,75,100,150,200,365].includes(st) && dayScore(T)>0.08) return 'milestone';
+  if (offOf(T)) return 'general';
   if (st>0 && nowH>=18 && dayScore(T)<=0.08) return 'streakRisk';
   if (daysSinceStart()>=2 && dayScore(dkey(-1))<=0.08 && dayScore(dkey(-2))<=0.08 && daysLogged()>0) return 'comeback';
   if (deloadActive()) return 'deload';
@@ -5587,7 +5608,7 @@ function Onboarding(){
         <label class="f"><span>Wake</span><input type="time" data-ob="wake" value="${esc(d.wake)}"></label>
         <label class="f"><span>Sleep</span><input type="time" data-ob="sleep" value="${esc(d.sleep)}"></label></div>
       <div class="obl">Train when possible</div>${chipRow('trainPref',[['morning','Morning'],['midday','Midday'],['evening','Evening']])}
-      <div class="note" style="padding:12px 0 0;border:none">FORGE schedules training, meals and reading into the gaps around your fixed commitments. Add classes, work and team practice later in My Week.</div>`;
+      <div class="note" style="padding:12px 0 0;border:none">FORGE schedules training, meals and reading into the gaps around your fixed commitments. Add classes, work and team practice later under the calendar icon at the top.</div>`;
   } else if (obStep===3){
     body=`<div class="obh">Your program</div>
       ${Object.entries(PROGRAMS).map(([k,pr])=>`<button class="startopt ${d.program===k?'sel':''}" data-act="ob-set" data-v="program" data-v2="${k}"><b>${pr.n}</b><span>${esc(pr.d)}</span></button>`).join('')}
@@ -5617,7 +5638,7 @@ function obAct(a,v,v2){
       d[v]=v2; return;
     }
     case 'ob-back': obStep=Math.max(0,obStep-1); return;
-    case 'ob-skip': S.meta.onboarded=true; commit(); toast('Skipped. Everything is under the gear icon.'); return;
+    case 'ob-skip': S.meta.onboarded=true; commit(); toast('Skipped. Your week is under the calendar icon, settings under the gear.'); return;
     case 'ob-next': {
       if (obStep===1){
         const imp=d.unit==='imperial', age=num(d.age), h=num(d.height), w=num(d.weight);
@@ -5670,7 +5691,7 @@ const TOUR={
     'Tap the <b>day strip</b> to look at or log another day. The <b>SWAP ⇄</b> badge changes today\'s workout.',
     '<b>ADD WORKOUT</b> builds your own session, <b>ADD FIGHTING</b> logs mat, ring or bag time, and <b>FOOD</b> tracks calories and water; its <b>MICROS</b> switch adds up vitamins and minerals.',
     'The five bars at the top are your overall scores: tap one to see what builds it. The quote line opens your daily briefing.']],
-  wlog:['TRAIN',[
+  wlog:['TRAINING LOG',[
     '<b>WORKOUTS</b> is everything you have logged: REPEAT loads one onto today. <b>MUSCLES</b> shows weekly sets per muscle.',
     '<b>LIFTS</b> holds your records, for the program lifts and your own. <b>FIGHTS</b> has sessions and fight camp. <b>ROUTINES</b> are saved workouts.']],
   build:['BODY',[
@@ -5682,8 +5703,11 @@ const TOUR={
   ledger:['LEDGER',[
     'The <b>weekly review</b> is at the top: read it on Sundays and adjust one thing.',
     'Below it: records, <b>Capability</b> (rate yourself honestly), the <b>Capital ladder</b>, net worth and outreach. The long-term arc is folded at the bottom.']],
+  week:['MY WEEK',[
+    'Add classes, work or practice under <b>MY WEEK</b>: FORGE schedules training, meals and reading into the gaps, every day.',
+    'A one-off match, exam or trip goes in <b>ONE-OFF EVENT</b>. Then put the week in your phone calendar so its alerts remind you.']],
   plan:['SETTINGS',[
-    'Pick your <b>program</b>, and add classes, work or practice under <b>MY WEEK</b>: FORGE schedules everything else around them.',
+    'Pick your <b>program</b>, your wake and sleep times, and your body profile. Your week lives behind the calendar icon at the top.',
     'Set your <b>bar and plates</b>, <b>text size</b>, and <b>back up your data</b> here. Your data lives only on this phone, so back up now and then.']],
 };
 const tourAllSeen=()=>Object.fromEntries(Object.keys(TOUR).map(k=>[k,1]));
@@ -5711,6 +5735,7 @@ function Header(){
       <div style="display:flex;align-items:center;gap:14px">
         <div class="streak">${svg('flame',15,st>0?'var(--amber)':'var(--faint)',2.4)}
           <span style="color:${st>0?'var(--text)':'var(--faint)'}">${st}</span></div>
+        <button class="gear" data-act="view" data-v="week" aria-label="Plan my week">${svg('cal',17)}</button>
         <button class="gear" data-act="view" data-v="plan" aria-label="Settings">${svg('gear',17)}</button>
       </div>
     </div>
@@ -5775,7 +5800,8 @@ function DayRail(plan){
   }).join('');
   return `<div class="railwrap"><div class="rail" id="rail" data-wake="${wake}" data-span="${span}" data-px="${px}" style="height:${railBottom}px">
     <div class="rnow" id="rnow"></div>${hours}${blocks}</div></div>
-    <div class="railhint">${svg('rot',11,'var(--faint)')} Drag a block to reschedule it. Locked blocks are fixed commitments.</div>`;
+    <div class="railhint">${svg('rot',11,'var(--faint)')} Drag a block to reschedule it. Locked blocks are fixed commitments.
+      <button class="linkbtn" data-act="reflow" style="margin-left:6px">RESET TIMES</button></div>`;
 }
 
 /* ---------- supplements ---------- */
@@ -5801,11 +5827,47 @@ function SuppSection(d,vd){
 }
 
 const injTag=b=>{ const s=injStatus(b); return s?` <span class="badge" style="margin-left:6px;vertical-align:1px;color:var(--${s==='avoid'?'rust':'amber'});border-color:currentColor">${s==='avoid'?'AVOID':'LIGHT'}</span>`:''; };
-function InjuryPanel(plan){
-  const I=injNow();
-  if (!I){
-    if (!injForm) return '';
-    return `<div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
+function OffPanel(vd,plan){
+  const o=offOf(vd);
+  if (o){ const O=OFFDAY[o];
+    return `<div class="panel acc"><div class="acc-bar" style="background:var(--steel)"></div><div style="padding:13px">
+      <div class="eyebrow">${O.l} DAY · ${esc(plan.def.title.toUpperCase())} SET ASIDE</div>
+      <div style="margin-top:6px;line-height:1.5;color:var(--dim)">No training is scheduled or counted in today's calories, and your streak is paused, not broken.</div></div>
+      <div class="steps" style="border-top:1px solid var(--rule);padding-left:15px">${O.lines.map(r=>`<div class="step"><div class="stepdot"></div><div>${esc(r)}</div></div>`).join('')}</div>
+      <div style="padding:0 13px 13px"><button class="btn ghost" data-act="off-clear">BACK ON IT · RESTORE ${esc(plan.def.title.toUpperCase())}</button></div></div>`;
+  }
+  return '';
+}
+function OffForm(vd){
+  if (offOf(vd)||!offForm) return '';
+  return `<div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
+    <div class="eyebrow">WHY THE DAY OFF?</div>
+    <div class="chips">${Object.entries(OFFDAY).map(([k,v])=>`<button class="chip ${offDraft===k?'on':''}" data-act="off-pick" data-v="${k}" aria-pressed="${offDraft===k}">${v.l}</button>`).join('')}</div>
+    <label class="f"><span>Through (for a few days in a row)</span><input type="date" id="off_to" min="${vd}" max="${addDays(vd,30)}" value="${vd}"></label>
+    <div style="display:flex;gap:8px"><button class="btn" data-act="off-save" style="flex:2">SET ASIDE THE PLAN</button><button class="btn ghost" data-act="off-open" style="flex:1">CANCEL</button></div>
+  </div><div class="note">Your streak pauses instead of breaking, and the day's calories drop the training. Lifts pick up where they left off.</div></div>`;
+}
+function offAct(a,v){
+  switch(a){
+    case 'off-open': offForm=!offForm; return;
+    case 'off-pick': offDraft=v; return;
+    case 'off-save': {
+      const vd=VD(), to=(document.getElementById('off_to')||{}).value||vd;
+      if (to<vd){ toast('Pick a date on or after this day'); return 'norender'; }
+      const n=Math.min(daysBetween(vd,to),30);
+      if (!S.off||typeof S.off!=='object'||Array.isArray(S.off)) S.off={};      // a hand-edited backup can hold anything here
+      for (let i=0;i<=n;i++) S.off[addDays(vd,i)]=offDraft;
+      offForm=false; commit(); toast(n?`${n+1} days set aside`:'Plan set aside for the day'); return;
+    }
+    case 'off-clear': {      // this day and the run of days off after it
+      let k=VD(), i=0; while (offOf(k) && i++<60){ delete S.off[k]; k=addDays(k,1); }
+      commit(); toast('Plan restored'); return;
+    }
+  }
+}
+function InjuryForm(){
+  if (injNow()||!injForm) return '';
+  return `<div class="panel"><div style="padding:13px;display:flex;flex-direction:column;gap:11px">
       <div class="eyebrow">WHAT HURT?</div>
       <div class="chips">${Object.entries(INJURY).map(([k,v])=>`<button class="chip ${injDraft.area===k?'on':''}" data-act="inj-pick" data-v="area" data-v2="${k}" aria-pressed="${injDraft.area===k}">${esc(v.label)}</button>`).join('')}</div>
       <div class="eyebrow">HOW BAD?</div>
@@ -5814,7 +5876,9 @@ function InjuryPanel(plan){
       <label class="f"><span>Injured on</span><input type="date" id="inj_on" max="${T}" value="${esc(injDraft.on||T)}"></label>
       <div style="display:flex;gap:8px"><button class="btn" data-act="inj-save" style="flex:1">START REHAB PLAN</button><button class="btn ghost" data-act="inj-open" style="flex:1">CANCEL</button></div>
     </div><div class="note">General guidance, not medical advice. Anything serious: see a doctor or physio first.</div></div>`;
-  }
+}
+function InjuryPanel(plan){
+  const I=injNow(); if (!I) return '';
   const blocks=plan.def.blocks, st=blocks.map(injStatus), no=st.filter(x=>x==='avoid').length, lt=st.filter(x=>x==='care').length;
   const sum=`${I.st.n} · DAY ${I.days+1}`;
   return foldHead('injury','shield',esc(I.inj.label.toUpperCase()),sum)+(foldOpen('injury')?`<div class="panel">
@@ -5912,10 +5976,10 @@ function ViewToday(){
     <div class="dayhead">
       <div>
         <div class="eyebrow">${vd===T?'TODAY':longDate(vd).toUpperCase()}</div>
-        <div class="disp" style="font-size:21px;margin-top:4px">${esc(trainName)}</div>
+        <div class="disp" style="font-size:21px;margin-top:4px">${esc(offOf(vd)?OFFDAY[offOf(vd)].head:trainName)}</div>
         ${rep?`<div class="eyebrow" style="margin-top:5px;letter-spacing:.12em">INSTEAD OF ${esc(plan.def.title.toUpperCase())}</div>`:''}
       </div>
-      <button class="badge" data-act="swapopen" aria-label="Swap this day's workout" style="border-color:var(--amber);color:var(--amber)">${DTYPE[plan.def.type].label} · SWAP ⇄</button>
+      ${offOf(vd)?'':`<button class="badge" data-act="swapopen" aria-label="Swap this day's workout" style="border-color:var(--amber);color:var(--amber)">${DTYPE[plan.def.type].label} · SWAP ⇄</button>`}
     </div>
     ${vd===T?Tour('today'):''}
     ${vd===T?Briefing():''}
@@ -5954,6 +6018,7 @@ function ViewToday(){
         <button class="chip on" data-act="deloadgo">START DELOAD WEEK</button>
         <button class="chip" data-act="deloadskip">NOT THIS WEEK</button></div></div></div>`:''}
 
+    ${OffPanel(vd,plan)}
     ${InjuryPanel(plan)}
     <div class="panel acc"><div class="acc-bar" style="background:${meta.c}"></div>
       <div class="tl">${plan.entries.map(entryHTML).join('')}</div>
@@ -5961,10 +6026,10 @@ function ViewToday(){
     </div>
     ${WorkoutSection(vd,plan)}
     <div style="display:flex;gap:8px;margin-bottom:4px;margin-top:6px">
-      <button class="btn ghost" data-act="view" data-v="plan">${svg('gear',13)} SETTINGS + WEEK</button>
-      <button class="btn ghost" data-act="reflow">${svg('rot',13)} RESET TIMES</button>
+      ${injNow()?'':`<button class="btn ghost" data-act="inj-open">${svg('shield',13)} HURT?</button>`}
+      ${offOf(vd)?'':`<button class="btn ghost" data-act="off-open">${svg('cal',13)} DAY OFF</button>`}
     </div>
-    ${injNow()?'':`<button class="btn ghost" data-act="inj-open" style="margin-bottom:4px">${svg('shield',13)} HURT? REPORT AN INJURY</button>`}
+    ${InjuryForm()}${OffForm(vd)}
 
     ${dowIdx(T)===6?`<button class="panel banner steel" data-act="view" data-v="ledger" style="width:100%;text-align:left">
       ${svg('trend',14,'var(--steel)')}<div><b>Sunday.</b> Your weekly review is ready at the top of Ledger - two minutes, then plan the week.</div></button>`:''}
@@ -6038,7 +6103,7 @@ function ViewToday(){
 let openBlock2=null;
 
 /* =============================================================== plan ==== */
-function ViewPlan(){
+function ViewWeek(){
   const p=S.profile;
   const list=S.fixed[planDay]||[];
   const PRESETS=[['Work','09:00','17:00','work'],['Class','10:00','11:15','class'],['Practice','16:00','18:00','physical'],['Shift','17:00','22:00','work'],['Custom','12:00','13:00','']];
@@ -6065,21 +6130,10 @@ function ViewPlan(){
       <div class="wnum">${cs.length||''}</div></button>`;}).join('')}</div>`;
 
   return `<div class="view wrap">
-    <div class="dayhead" style="margin-top:14px"><div><div class="eyebrow">SETTINGS</div>
-      <div class="disp" style="font-size:21px;margin-top:4px">Program, week and data</div></div>
+    <div class="dayhead" style="margin-top:14px"><div><div class="eyebrow">MY WEEK</div>
+      <div class="disp" style="font-size:21px;margin-top:4px">Plan the week</div></div>
       <button class="badge" data-act="view" data-v="today">DONE</button></div>
-    ${Tour('plan')}
-    ${sect('dumb','TRAINING PROGRAM')}
-    <div class="panel">
-      ${Object.entries(PROGRAMS).map(([k,pr])=>`
-        <button class="ahead" data-act="setprog" data-v="${k}" aria-pressed="${S.profile.program===k}" style="border-left:3px solid ${S.profile.program===k?'var(--amber)':'var(--rule)'}">
-          <div style="flex:1">
-            <div class="an" style="font-size:var(--fs-form)">${pr.n}${S.profile.program===k?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">ACTIVE</span>':''}</div>
-            <div class="det" style="margin-top:4px">${pr.d}</div>
-          </div>${chk(S.profile.program===k)}</button>`).join('')}
-      <div class="note">Switching applies from today. Lift progressions carry across programs — squat history is squat history regardless of which week structure you run.</div>
-    </div>
-
+    ${Tour('week')}
     ${sect('cal','WEEK AHEAD — LOAD CHECK')}
     <div class="panel"><div class="wload">
       ${[0,1,2,3,4,5,6].map(o=>{ const k=dkey(o); const L=dayLoad(k);
@@ -6138,17 +6192,6 @@ function ViewPlan(){
       </div>`:''}
     </div>
 
-    ${sect('flame','REMINDERS')}
-    <div class="panel">
-      <button class="row" data-act="notif">
-        ${chk(S.notif.on,'var(--amber)')}
-        <div style="flex:1"><div class="lab">Session reminders</div>
-        <div class="det">Pings 15 minutes before each scheduled block, and at start time</div></div></button>
-      <div class="note">Honest limits: these fire while FORGE is open or recently used - a home-screen web app can't wake your phone from fully closed like a native app. Best combo: turn this on, and use the calendar export right below as the backstop that always fires.</div>
-    </div>
-
-    ${CalendarPanel()}
-
     ${sect('plus','ONE-OFF EVENT — A SPECIFIC DATE ONLY')}
     <div class="panel"><div style="padding:13px">
       <div class="hint" style="padding:0 0 10px">A match on Saturday, an exam, a trip day. It affects only that one date — the weekly pattern stays untouched. Tag it Physical, pick the sport, and calories + training adapt for that day automatically.</div>
@@ -6166,6 +6209,38 @@ function ViewPlan(){
       return ups.length?`<div class="foodlist">${ups.map(k=>S.extra[k].map((c,i)=>`
         <div class="cmt"><span style="flex:1"><b>${longDate(k)}</b> · ${s2disp(m2s(c.s))}–${s2disp(m2s(c.e))} ${esc(c.l)}${c.t?` <span class="badge" style="border-color:${TAGCOLOR[c.t]};color:${TAGCOLOR[c.t]}">${c.t}${c.sp?' · '+SPORTLABEL[c.sp]:''}</span>`:''}</span>
         <button class="x" data-act="deloneoff" data-v="${k}" data-v2="${i}" aria-label="Delete ${esc(c.l)} on ${longDate(k)}">${svg('trash',12,'var(--rust)')}</button></div>`).join('')).join('')}</div>`:'';})()}
+    </div>
+
+    ${sect('cal','PUT IT IN YOUR CALENDAR')}
+    ${CalendarPanel()}
+    <button class="btn ghost" data-act="view" data-v="today" style="margin-bottom:18px">DONE - BACK TO TODAY</button>
+  </div>`;
+}
+function ViewPlan(){
+  const p=S.profile;
+  return `<div class="view wrap">
+    <div class="dayhead" style="margin-top:14px"><div><div class="eyebrow">SETTINGS</div>
+      <div class="disp" style="font-size:21px;margin-top:4px">Program, profile and data</div></div>
+      <button class="badge" data-act="view" data-v="today">DONE</button></div>
+    ${Tour('plan')}
+    ${sect('dumb','TRAINING PROGRAM')}
+    <div class="panel">
+      ${Object.entries(PROGRAMS).map(([k,pr])=>`
+        <button class="ahead" data-act="setprog" data-v="${k}" aria-pressed="${S.profile.program===k}" style="border-left:3px solid ${S.profile.program===k?'var(--amber)':'var(--rule)'}">
+          <div style="flex:1">
+            <div class="an" style="font-size:var(--fs-form)">${pr.n}${S.profile.program===k?' <span class="badge" style="border-color:var(--amber);color:var(--amber)">ACTIVE</span>':''}</div>
+            <div class="det" style="margin-top:4px">${pr.d}</div>
+          </div>${chk(S.profile.program===k)}</button>`).join('')}
+      <div class="note">Switching applies from today. Lift progressions carry across programs — squat history is squat history regardless of which week structure you run.</div>
+    </div>
+
+    ${sect('flame','REMINDERS')}
+    <div class="panel">
+      <button class="row" data-act="notif">
+        ${chk(S.notif.on,'var(--amber)')}
+        <div style="flex:1"><div class="lab">Session reminders</div>
+        <div class="det">Pings 15 minutes before each scheduled block, and at start time</div></div></button>
+      <div class="note">Honest limits: these fire while FORGE is open or recently used - a home-screen web app can't wake your phone from fully closed like a native app. Best combo: turn this on, and use the calendar export right below as the backstop that always fires.</div>
     </div>
 
     ${sect('clock','BOUNDARIES')}
@@ -6547,7 +6622,7 @@ function ViewLedger(){
       <div class="stat"><div class="v">${totalSessions()}</div><div class="l">SESSIONS</div></div>
       <div class="stat"><div class="v" style="color:var(--moss)">${Object.keys(S.prs).length}</div><div class="l">LIFTS TRACKED</div></div>
     </div>
-    <button class="logbtn" data-act="view" data-v="wlog" style="margin-top:0">${svg('dumb',12,'var(--faint)')} LIFT RECORDS, WORKOUT LOG + ROUTINES (TRAIN) ${svg('chev',12,'var(--faint)')}</button>
+    <button class="logbtn" data-act="view" data-v="wlog" style="margin-top:0">${svg('dumb',12,'var(--faint)')} LIFT RECORDS, WORKOUT LOG + ROUTINES (TRAINING LOG) ${svg('chev',12,'var(--faint)')}</button>
     ${sect('target','CAPABILITY')}
     <div class="hint">Set your honest current level. Under-rate rather than over-rate - this only works if the numbers are true.</div>
     ${SKILLS.map(s=>{ const cur=S.tiers[s.id]??0; return `
@@ -6693,7 +6768,7 @@ function ArcSection(){
     </div>`:''}`;
 }
 function Nav(){
-  const items=[['today','TODAY','swords'],['wlog','TRAIN','dumb'],['build','BODY','act'],['mind','MIND','brain'],['ledger','LEDGER','coins']];
+  const items=[['today','TODAY','swords'],['wlog','TRAINING LOG','dumb'],['build','BODY','act'],['mind','MIND','brain'],['ledger','LEDGER','coins']];
   return `<nav>${items.map(([k,l,i])=>`
     <button class="${view===k?'on':''}" data-act="view" data-v="${k}">
       <div class="mark"></div>${svg(i,18)}<span class="nl">${l}</span></button>`).join('')}</nav>`;
@@ -6719,7 +6794,7 @@ function render(){
   // so capture where the cursor was, or it would snap back to the end of the text.
   const oldFq=document.getElementById('foodq');
   const fqSel=(oldFq&&document.activeElement===oldFq)?[oldFq.selectionStart,oldFq.selectionEnd]:null;
-  let body=view==='today'?ViewToday():view==='plan'?ViewPlan():(view==='build'||view==='body')?ViewBuild()
+  let body=view==='today'?ViewToday():view==='plan'?ViewPlan():view==='week'?ViewWeek():(view==='build'||view==='body')?ViewBuild()
     :view==='wlog'?ViewWorkoutLog():view==='mind'?ViewMind():ViewLedger();
   /* Every click/keystroke re-renders by replacing the whole #app tree — cheap and simple,
      but it means the .view wrapper is a brand-new DOM node every single time, and a CSS
@@ -6817,7 +6892,7 @@ document.addEventListener('pointercancel', endDrag);
    Not included: deleting 90-day check-ins or past blocks, because their photos are erased from the phone for good. */
 const UNDOABLE = {'w-del':'Set deleted','delset':'Set deleted','delfood':'Food removed','delsupp':'Supplement removed','dellog':'Entry removed','w-discard':'Workout dropped',
   'w-rmex':'Exercise removed','f-del':'Session deleted','wl-delday':'Workout deleted','wl-rtdel':'Routine deleted','deloneoff':'Event removed',
-  'deledit':'Commitment removed','delmyfood':'Removed from My foods','inj-heal':'Marked healed'};
+  'deledit':'Commitment removed','delmyfood':'Removed from My foods','inj-heal':'Marked healed','off-clear':'Plan restored'};
 function doUndo(){
   if (!undoSnap) return;
   try{
@@ -6850,6 +6925,7 @@ function handleClick(e){
   if (/^t-/.test(a)){ if (tAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ob-/.test(a)){ if (obAct(a,v,v2,el)!=='norender') render(); return; }
   if (a==='fold'){ S.ui.fold[v]=!foldOpen(v); commit(); render(); return; }
+  if (/^off-/.test(a)){ if (offAct(a,v)!=='norender') render(); return; }
   if (/^inj-/.test(a)){ if (injAct(a,v,v2)!=='norender') render(); return; }
   if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
