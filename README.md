@@ -187,6 +187,18 @@ pallof, planks, dead hangs, med-ball throws, swings, dips) have a LOG button ins
 weight × reps, reps, hold time or carry distance, plus rest timer and history. Those sets are stored in that day's `S.cust`
 entry (`cw.blk` lists which exercises belong to a block), so they feed history and benchmarks like any other exercise.
 
+### Injuries
+
+**Today → HURT? REPORT AN INJURY**: pick what hurt (ankle, knee, shoulder, lower back), how bad (mild / moderate / severe) and the date. Today then shows the
+rehab for the stage you are in (PROTECT → MOVE → LOAD → RETURN, each with a "move on when" test), what you can still do, when to see a doctor, and
+**USE THE TIME**: the book you are reading (else the next unread), a rotating non-physical skill, and sleep and protein. Every planned block is
+read against the stage and marked **AVOID** or **LIGHT** (half the load, pain under 3/10, no worse the next morning); blocks come back as the
+stages pass. Stage length is days since the injury times a severity factor (`INJ_SEV`: moderate x2, severe x3.5; a mild ankle is back to impact work
+in about 2.5 weeks). **SORE AGAIN** moves the start date forward 3 days; **HEALED** clears it (UNDO works). The day's calorie target costs only
+the share of the planned session that is not AVOID, counting blocks equally (`injFrac`), so you are not told to eat for a squat you skipped.
+The whole table is `INJURY` / `MOVES` in `index.html`: add an area, or change a stage's `avoid` / `care` movement tags, there. It matches a
+block by its label, so custom workouts are not marked. This is general guidance, not medical advice.
+
 ### Briefing, round timer, muscle map, 90-day challenge, fight camp, safety
 
 - **Daily briefing** (top of Today, one collapsed line until you tap it): one line picked by what's happening (first week, PR, comeback after missed days,
