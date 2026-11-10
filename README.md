@@ -78,15 +78,19 @@ fully close the app and reopen, or reopen twice.
 
 - **What the plan shows is what it means.** "Last weight + one step" is shown exactly (deadlift 225 lb -> 235 lb); only a *guessed* weight
   (first session from the Log tab, a reset, a deload, a ramp week) is rounded to the bar (5 lb, 2.5 lb for small dumbbell lifts). Metric
-  users get kilogram steps of 2.5 / 5 / 1.25 kg instead of the pound steps converted (`incFor`, `loadStepKg`).
+  users get kilogram steps of 2.5 / 5 / 1.25 kg instead of the pound steps converted (`incFor`, `loadStepKg`). The deadlift's double
+  step (10 lb / 5 kg) holds only while it moves fast: once any session has missed reps, or the last one hit RPE 9+, it climbs by half
+  (`stepNow`).
+- **The BODY bar** compares your best lifts with the strength standards the active program actually trains (plus any you've logged), so
+  doing exactly the plan can fill it; overhead press and weighted dips only count once you log them.
 - **1RM estimates** use Epley capped at 10 reps, so 135 lb x 30 can't outrank a heavy 225 x 5. More reps at the same weight still ranks higher.
 - **Typos are refused, not recorded** (`LIM` in the script): Plan age 12-90 and height 120-230 cm; Log lifts above 0 and up to 700 kg, waist
   and shoulders 30-250 cm, resting HR 25-220, sleep up to 24 h; sets up to 1,500 kg and 1,000 reps; food amounts up to 5 kg; custom foods
   0-10,000 kcal and 0-1,000 g per macro. Values already saved from before are clamped when targets are worked out.
 - **Import and recovery.** A backup is parsed without `__proto__` keys, unreadable entries are dropped, and every screen is drawn once
   before the import is committed; if any screen would break, nothing changes and you are told why. If the app can't draw its saved data
-  when it opens, it shows a recovery screen (restore the newest snapshot that works, download the raw data, or start fresh) instead of a
-  blank page.
+  when it opens, or the save itself is damaged (not valid JSON), it shows a recovery screen (restore the newest snapshot that works,
+  download the raw data, or start fresh) instead of a blank page, and the damaged save is left untouched until you choose.
 
 ## Customizing
 

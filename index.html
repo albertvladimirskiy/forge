@@ -768,10 +768,15 @@ const KEY = 'forge.v1', OLDKEY = 'protocol.v2';
 const mem = {};
 const Store = {
   async load(){
+    /* a stored value that doesn't parse is damaged, not missing: throw, so boot shows the recovery screen (snapshot restore, raw
+       download) instead of starting blank and overwriting it with the first save */
+    const parse = v => { try{ return JSON.parse(v); }catch(e){ throw new Error('Saved data is damaged (not valid JSON)'); } };
     const tryKey = async k => {
-      try{ if (window.storage){ const r = await window.storage.get(k); if (r&&r.value) return JSON.parse(r.value); } }catch(e){}
-      try{ const v = localStorage.getItem(k); if (v) return JSON.parse(v); }catch(e){}
-      return mem[k] ? JSON.parse(mem[k]) : null;
+      let v=null;
+      try{ if (window.storage){ const r = await window.storage.get(k); if (r&&r.value) v=r.value; } }catch(e){}
+      if (v==null) try{ v = localStorage.getItem(k); }catch(e){}
+      if (v==null) v = mem[k] || null;
+      return v ? parse(v) : null;
     };
     return (await tryKey(KEY)) || (await tryKey(OLDKEY));
   },
@@ -2167,7 +2172,11 @@ function pillars(){
   /* bestLift() so a session logged on Today counts even if the Log tab's
      own squat/bench/etc fields haven't been re-typed since — matches how
      STRENGTH STANDARDS already reads strength. */
-  const lift=(!bw)?0:LIFTS.map(s=>{ const cur=bestLift(s.k); return cur?clamp(cur/(bw*s.m)*100,0,100):0; }).reduce((a,b)=>a+b,0)/LIFTS.length;
+  /* only the standards the active program trains, plus any you have logged: overhead press and weighted dips are in no program,
+     so counting them always capped BODY at 6/8 for someone doing exactly the plan */
+  const inPlan=new Set(WEEK.flatMap(d=>d.blocks.flatMap(b=>BLOCKEX[b.id]||[])));
+  const ls=LIFTS.filter(s=>inPlan.has(s.k)||bestLift(s.k)!=null);
+  const lift=(!bw||!ls.length)?0:ls.map(s=>{ const cur=bestLift(s.k); return cur?clamp(cur/(bw*s.m)*100,0,100):0; }).reduce((a,b)=>a+b,0)/ls.length;
   const read=Object.values(S.books).filter(v=>v===2).length;
   const dl=daysLogged();
   return [
@@ -2298,7 +2307,7 @@ function foodTotals(k){
   // malformed entry — a hand-edited localStorage value, an older backup schema —
   // would otherwise poison the whole day's totals: undefined*q is NaN, and NaN
   // stays NaN through every subsequent addition in the reduce.
-  return f.reduce((a,x)=>({kcal:a.kcal+(x.kcal||0)*x.q,p:a.p+(x.p||0)*x.q,c:a.c+(x.c||0)*x.q,f:a.f+(x.f||0)*x.q}),{kcal:0,p:0,c:0,f:0});
+  return f.reduce((a,x)=>{ const q=x.q>0?x.q:1; return {kcal:a.kcal+(x.kcal||0)*q,p:a.p+(x.p||0)*q,c:a.c+(x.c||0)*q,f:a.f+(x.f||0)*q}; },{kcal:0,p:0,c:0,f:0});
 }
 
 /* ---------- micronutrients ---------- */
@@ -2514,7 +2523,7 @@ function prescribe(ex,before){
          the usual rules, which work from what was actually lifted. */
       if (lastWork.drop && ok && drops<2) rx={mode:'repeat', w:lastWork.p, sets:E.sets, reps:E.reps, miss:0, back:true};
       else if (fails>=3) rx={mode:'reset', w:topW*0.9, sets:E.sets, reps:E.reps};
-      else if (ok)      rx={mode:'progress', w:topW+incFor(ex), sets:E.sets, reps:E.reps};
+      else if (ok)      rx={mode:'progress', w:topW+stepNow(ex,ss), sets:E.sets, reps:E.reps};
       else              rx={mode:'repeat', w:topW, sets:E.sets, reps:E.reps, miss:fails};
     }
   }
@@ -2565,6 +2574,13 @@ function dispExact(kg){
 function incFor(ex){
   const kg=(ex&&EXS[ex]&&EXS[ex].inc)||2.27;
   return S.profile.unit==='imperial' ? kg : Math.max(1.25,Math.round(kg/1.25)*1.25);
+}
+/* A double step (the deadlift's 10 lb / 5 kg) only "while it moves fast": once the lift has missed reps in any session, or the last
+   session hit RPE 9+, it climbs by half the step from then on, as the program text promises. */
+function stepNow(ex,ss){
+  const inc=incFor(ex); if (EXS[ex].inc<4) return inc;
+  const last=ss[ss.length-1], hard=Math.max(0,...liftSets(ex,last).map(x=>x.rpe||0));
+  return hard>=9||ss.some(k=>!sessionWork(ex,k).ok) ? inc/2 : inc;
 }
 /* What a prescribed weight is rounded to for display and for the weight box: the smallest change the bar can make (5 lb, 2.5 lb
    for small dumbbell lifts; 2.5 kg, 1.25 kg), not the lift's whole step. Rounding to the whole step turned a 10 lb deadlift jump from
@@ -2780,7 +2796,7 @@ function dayLoad(k){
 
 
 /* ============================================================== ui state == */
-let view='today', openBlock='train', shiftId=null, openTrack='markets', openPhase=null,
+let view='today', openBlock='train', shiftId=null, openTrack=undefined, openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
     foodQ='', foodG='', foodGU='g', copyMode=false, copySel={}, swapOpen=false, foodOpen=false, injForm=false, injDraft={area:'ankle',sev:'mild'},
     buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='';
@@ -5490,6 +5506,7 @@ function campAct(a,v){
       const g=id=>(document.getElementById(id)||{}).value||'';
       const date=g('cp_date'); if (!date){ toast('Pick the fight date'); return 'norender'; }
       if (date<T){ toast('Fight date is in the past'); return 'norender'; }
+      if (g('cp_wi') && g('cp_wi')>date){ toast('Weigh-in is after the fight date'); return 'norender'; }
       const tw=num(g('cp_tw')), L=latestField('weight');
       const isNew=!c.date;
       Object.assign(c,{name:g('cp_name').trim(),date,weighIn:g('cp_wi')||addDays(date,-1),disc:g('cp_disc')||'boxing',
@@ -5539,7 +5556,7 @@ function PartnersPanel(){
 let obStep=0, obD=null;
 function obInit(){
   const p=S.profile;
-  obD={unit:p.unit,sex:p.sex,age:String(p.age||''),height:'',weight:'',wake:p.wake,sleep:p.sleep,trainPref:p.trainPref,program:p.program,why:S.motiv.why||''};
+  obD={unit:p.unit,sex:p.sex,goal:p.goal||'recomp',activity:String(p.activity||1.3),age:String(p.age||''),height:'',weight:'',wake:p.wake,sleep:p.sleep,trainPref:p.trainPref,program:p.program,why:S.motiv.why||''};
 }
 function Onboarding(){
   if (S.meta.onboarded) return '';
@@ -5561,7 +5578,9 @@ function Onboarding(){
         <label class="f"><span>Age</span><input type="text" inputmode="numeric" data-ob="age" value="${esc(d.age)}" placeholder="22"></label>
         <label class="f"><span>Height (${imp?'in':'cm'})</span><input type="text" inputmode="decimal" data-ob="height" value="${esc(d.height)}" placeholder="${imp?'70':'178'}"></label>
         <label class="f"><span>Weight (${imp?'lb':'kg'})</span><input type="text" inputmode="decimal" data-ob="weight" value="${esc(d.weight)}" placeholder="${imp?'175':'80'}"></label></div>
-      <div class="note" style="padding:10px 0 0;border:none">Weight unlocks Fuel (calories, macros) and Target (your physique numbers). You can change all of this later under the gear icon.</div>`;
+      <div class="obl">Goal</div>${chipRow('goal',[['lean','Cut fat'],['recomp','Recomp'],['gain','Build muscle']])}
+      <div class="obl">Daily life, outside training</div>${chipRow('activity',[['1.3','Mostly seated'],['1.45','On my feet'],['1.6','Physical job']])}
+      <div class="note" style="padding:10px 0 0;border:none">Goal and daily life set your calorie target (cut -15%, build +10%). Weight unlocks Fuel (calories, macros) and Target (your physique numbers). You can change all of this later under the gear icon.</div>`;
   } else if (obStep===2){
     body=`<div class="obh">Your day</div>
       <div class="grid2" style="padding:6px 0 0">
@@ -5614,7 +5633,7 @@ function obAct(a,v,v2){
 }
 function obFinish(){
   const d=obD, p=S.profile, imp=d.unit==='imperial';
-  p.unit=d.unit; p.sex=d.sex; p.wake=d.wake||p.wake; p.sleep=d.sleep||p.sleep; p.trainPref=d.trainPref; p.program=d.program;
+  p.unit=d.unit; p.sex=d.sex; p.goal=d.goal||p.goal; p.activity=+d.activity||p.activity; p.wake=d.wake||p.wake; p.sleep=d.sleep||p.sleep; p.trainPref=d.trainPref; p.program=d.program;
   const age=num(d.age), h=num(d.height), w=num(d.weight);
   if (age!=null) p.age=Math.round(age);
   if (h!=null) p.height=Math.round((imp?h*2.54:h)*10)/10;
@@ -5923,7 +5942,7 @@ function ViewToday(){
         : `${dsw} days since your last weigh-in. Log one so Fuel and Target stay accurate.`;
       return `<button class="banner" data-act="golog" style="width:100%;text-align:left">${svg('trend',14,'var(--amber)')}<div>${msg}</div></button>`; })():''}
 
-    ${(()=>{ const ramp=rampFactor();
+    ${(()=>{ const ramp=plan.def.blocks.some(b=>BLOCKEX[b.id])&&rampFactor();
       return ramp ? `<div class="banner steel">${svg('flame',14,'var(--steel)')}<div>${esc(ramp.label)}</div></div>` : ''; })()}
     ${plan.adapt&&plan.adapt.length?plan.adapt.map(a=>`<div class="banner steel">${svg('target',14,'var(--steel)')}<div>${esc(a)}</div></div>`).join(''):''}
 
@@ -6330,7 +6349,7 @@ function ViewTarget(){
           <span style="font-size:var(--fs-caption);letter-spacing:.1em;color:var(--faint)">AT THIS SETTING</span>
           <span style="font-size:var(--fs-numeral-md);font-weight:700;color:var(--amber)">${N.kcal} kcal/day</span>
         </div>
-        <div style="font-size:var(--fs-detail);color:var(--dim);margin-top:3px">${diff===0?'Right at maintenance':`${diff>0?'+':''}${diff} kcal vs your ${N.tdee} kcal maintenance`} — this is the exact number driving FUEL and every meal template below.</div>
+        <div style="font-size:var(--fs-detail);color:var(--dim);margin-top:3px">${Math.abs(diff)<10?'Right at maintenance':`${diff>0?'+':''}${diff} kcal vs your ${N.tdee} kcal maintenance`} — this is the exact number driving FUEL and every meal template below.</div>
       </div>`;})()}
     ${misaligned?`<button class="banner steel" data-act="setgoal" data-v="${recGoal}" style="width:calc(100% - 26px);margin:0 13px 13px;text-align:left">
       ${svg('target',13,'var(--steel)')}<div>Your goal is set to <b>${S.profile.goal.toUpperCase()}</b> but your current numbers point to <b>${recGoal.toUpperCase()}</b> — that mismatch is why food targets can contradict the plan. Tap to align.</div></button>`:''}
@@ -6489,6 +6508,7 @@ function ViewMind(){
       <div class="stat"><div class="v" style="color:var(--faint)">${BOOKS.length-done}</div><div class="l">REMAINING</div></div></div>
     <div class="hint">Tap a title to cycle: queued → reading → finished.</div>
     ${Object.entries(TRACKS).map(([tk,t])=>{
+      if (openTrack===undefined) openTrack=(BOOKS.find(b=>S.books[b.id]===1)||{}).tr||null;   // first visit: the track you're reading, else all folded
       const list=BOOKS.filter(b=>b.tr===tk).sort((x,y)=>x.p-y.p),dn=list.filter(b=>S.books[b.id]===2).length,open=openTrack===tk;
       return `<div class="acc-group">
         <button class="ahead" data-act="track" data-v="${tk}" aria-expanded="${open}" style="border-left:3px solid ${t.c}">
@@ -7411,14 +7431,12 @@ async function bootApp(){
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
-  const midnight=()=>{
-    const busy=(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Object.values(cdraft).some(d=>Object.values(d).some(x=>x));
-    if (busy) setTimeout(midnight,60000); else location.reload();     // wait out a running round timer or a set that's typed but not logged
-  };
+  const busy=()=>(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Object.values(cdraft).some(d=>Object.values(d).some(x=>x));
+  const midnight=()=>{ if (busy()) setTimeout(midnight,60000); else location.reload(); };     // wait out a running round timer or a set that's typed but not logged
   setTimeout(midnight,Math.max(ms,60000));
   document.addEventListener('visibilitychange', ()=>{
     if (document.visibilityState==='hidden') flushSave();
-    if (document.visibilityState==='visible' && dkey()!==T) location.reload();
+    if (document.visibilityState==='visible' && dkey()!==T && !busy()) location.reload();
   });
   addEventListener('pagehide', flushSave);
 }
