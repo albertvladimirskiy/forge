@@ -43,4 +43,25 @@ module.exports = { name: 'Offline use (service worker)', tests: {
       a.deepEqual(errors, []);
     } finally { await ctx.close(); srv.close(); }
   },
+
+  async 'a host outage (503 on every file) neither breaks the app nor poisons the cache'(page, a){
+    const gate = { down: false }, srv = await serve(gate), url = `http://127.0.0.1:${srv.address().port}/`;
+    const ctx = await page.ctx.browser().newContext({ viewport: { width: 390, height: 900 } });
+    const pg = await ctx.newPage(); const errors = []; pg.on('pageerror', e => errors.push(e.message));
+    const up = () => pg.waitForFunction(() => typeof S !== 'undefined' && typeof FOODS !== 'undefined' && document.getElementById('app').innerHTML.length > 0, null, { timeout: 8000 });
+    try {
+      await pg.goto(url); await up();
+      await pg.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 8000 });
+      await pg.waitForTimeout(300);
+      gate.down = true;                                    // online, but the host answers 503 for everything
+      await pg.reload(); await up().catch(() => { throw new Error('the app did not load from its cache while the host was failing'); });
+      await pg.waitForTimeout(300);
+      const bad = await pg.evaluate(async () => { const c = await caches.open((await caches.keys())[0]), out = [];
+        for (const req of await c.keys()){ const r = await c.match(req); if (!r.ok) out.push(new URL(req.url).pathname + ' ' + r.status); } return out; });
+      a.deepEqual(bad, [], 'a failed response was stored in the cache');
+      await ctx.setOffline(true);
+      await pg.reload(); await up().catch(() => { throw new Error('offline after an outage: the cached app was replaced by the error page'); });
+      a.deepEqual(errors, []);
+    } finally { await ctx.close(); srv.close(); }
+  },
 } };

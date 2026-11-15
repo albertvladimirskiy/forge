@@ -17,8 +17,9 @@ async function launch(){
    localStorage about one reload in seven, which read as the app losing data (it never did) and made reload tests flaky. */
 const ROOT = path.join(__dirname, '..');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
-function serve(){
+function serve(gate){                                     // gate.down = true makes every request fail with a 503, like a host outage
   const srv = http.createServer((req, res) => {
+    if (gate && gate.down){ res.writeHead(503); return res.end('down'); }
     const p = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]).replace(/^\/$/, '/index.html'));
     if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()){ res.writeHead(404); return res.end('nope'); }
     res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(res);
