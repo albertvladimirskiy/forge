@@ -52,7 +52,7 @@ module.exports = { name: 'First-run tour', tests: {
       // a backup without the key restores as "seen"
       const backup = await pg.evaluate(() => { const c = JSON.parse(JSON.stringify(S)); delete c.ui.seen; return JSON.stringify(c); });
       await pg.evaluate(() => { S.ui.seen = {}; view = 'plan'; importOpen = true; render(); });
-      await pg.evaluate(json => { document.getElementById('importtxt').value = json; document.querySelector('[data-act=importgo]').click(); }, backup);
+      await pg.evaluate(json => { document.getElementById('importtxt').value = json; document.querySelectorAll('[data-act=importgo]')[0].click(); document.querySelector('[data-act=importgo]').click(); }, backup);
       a.equal(await pg.evaluate(() => Object.keys(S.ui.seen).length), 7);
     } finally { await pg.ctx.close(); }
   },

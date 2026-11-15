@@ -120,7 +120,7 @@ module.exports = { name: 'Break-it fixes: progression display, 1RM cap, typo lim
     };
     for (const [k, json] of Object.entries(payloads)){
       const pg = await openApp(browser, { state: oldState() });
-      results[k] = await pg.evaluate(async json => { view = 'plan'; importOpen = true; render(); document.getElementById('importtxt').value = json; document.querySelector('[data-act=importgo]').click(); await new Promise(r => setTimeout(r, 400));
+      results[k] = await pg.evaluate(async json => { view = 'plan'; importOpen = true; render(); document.getElementById('importtxt').value = json; document.querySelectorAll('[data-act=importgo]')[0].click(); document.querySelector('[data-act=importgo]').click(); await new Promise(r => setTimeout(r, 400));
         let ok = true; try { for (const v of ['today', 'plan', 'build', 'wlog', 'mind', 'ledger']) { view = v; render(); } } catch (e) { ok = e.message; }
         return { ok, log: S.log.map(e => e.date + ':' + e.weight), protoPolluted: ({}).polluted !== undefined || Object.getPrototypeOf(S) !== Object.prototype, importErr }; }, json);
       a.deepEqual(pg.errors, [], k); await pg.ctx.close();
@@ -133,12 +133,12 @@ module.exports = { name: 'Break-it fixes: progression display, 1RM cap, typo lim
     await page.evaluate(() => { S.log = [{ date: T, weight: 80 }]; commit(); });
     const good = JSON.stringify(oldState());
     const r = await page.evaluate(async json => { const real = ViewMind; ViewMind = function(){ throw new Error('boom: a screen cannot draw'); };
-      view = 'plan'; importOpen = true; render(); document.getElementById('importtxt').value = json; document.querySelector('[data-act=importgo]').click(); await new Promise(r => setTimeout(r, 400));
+      view = 'plan'; importOpen = true; render(); document.getElementById('importtxt').value = json; document.querySelectorAll('[data-act=importgo]')[0].click(); document.querySelector('[data-act=importgo]').click(); await new Promise(r => setTimeout(r, 400));
       ViewMind = real; return { logLen: S.log.length, err: importErr, open: importOpen, view }; }, good);
     a.equal(r.logLen, 1, 'the 20-entry backup was not adopted'); a.match(r.err, /would break the app \(boom: a screen cannot draw\)\. Nothing was changed/); a.equal(r.open, true);
     a.equal(await page.evaluate(() => S.log.length), 1);
     a.equal(await page.evaluate(() => { view = 'today'; try { render(); return true; } catch (e) { return false; } }), true, 'and the app still draws');
-    await page.evaluate(json => { view = 'plan'; importOpen = true; render(); document.getElementById('importtxt').value = json; document.querySelector('[data-act=importgo]').click(); }, good);
+    await page.evaluate(json => { view = 'plan'; importOpen = true; render(); document.getElementById('importtxt').value = json; document.querySelectorAll('[data-act=importgo]')[0].click(); document.querySelector('[data-act=importgo]').click(); }, good);
     await page.waitForTimeout(400);
     a.equal(await page.evaluate(() => S.log.length), 20, 'the same file imports fine once nothing is broken');
   },

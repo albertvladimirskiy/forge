@@ -770,7 +770,11 @@ const Store = {
   async load(){
     /* a stored value that doesn't parse is damaged, not missing: throw, so boot shows the recovery screen (snapshot restore, raw
        download) instead of starting blank and overwriting it with the first save */
-    const parse = v => { try{ return JSON.parse(v); }catch(e){ throw new Error('Saved data is damaged (not valid JSON)'); } };
+    const parse = v => { let o; try{ o=JSON.parse(v); }catch(e){ throw new Error('Saved data is damaged (not valid JSON)'); }
+      /* valid JSON that isn't an object (5, [1,2], "x") is damaged too: starting blank would overwrite it with the first save */
+      if (o!==null && (typeof o!=='object' || Array.isArray(o))) throw new Error('Saved data is damaged (not a FORGE save)');
+      if (o) Store.raw=v;                                 // the exact string that was loaded: what snapshots and the pre-migration backup keep
+      return o; };
     const tryKey = async k => {
       let v=null;
       try{ if (window.storage){ const r = await window.storage.get(k); if (r&&r.value) v=r.value; } }catch(e){}
@@ -778,14 +782,22 @@ const Store = {
       if (v==null) v = mem[k] || null;
       return v ? parse(v) : null;
     };
+    try{ Store.last=localStorage.getItem(KEY)||''; }catch(e){ Store.last=''; }      // what this copy last saw in storage
     return (await tryKey(KEY)) || (await tryKey(OLDKEY));
   },
   async save(data){
+    if (Store.stale) return true;                          // another copy of the app has saved since: this one must not write over it
     const s = JSON.stringify(data); mem[KEY]=s;
     try{ if (window.storage){ await window.storage.set(KEY, s); return true; } }catch(e){}
-    try{ localStorage.setItem(KEY, s); return true; }catch(e){ return false; }
-  }
+    try{ localStorage.setItem(KEY, s); Store.last=s; return true; }catch(e){ return false; }
+  },
+  /* Two copies of the app (two tabs, or the installed app and a browser tab) each hold the whole state and save all of it, so the
+     older one would silently erase what the newer one logged. A copy that sees the save change underneath it stops saving and
+     reloads to pick up the newer data. */
+  changedElsewhere(){ let v=null; try{ v=localStorage.getItem(KEY); }catch(e){} return (v||'')!==(Store.last||''); },
+  yield(){ if (Store.stale) return; Store.stale=true; location.reload(); }
 };
+addEventListener('storage', e=>{ if (e.key===KEY && Store.changedElsewhere()) Store.yield(); });
 
 /* ---------------------------------------------------------------- data -- */
 const PHASES = [
@@ -1817,7 +1829,7 @@ const SPORTMET = Object.fromEntries(SPORTS.map(([k,,met])=>[k,met]));
 const SPORTLABEL = Object.fromEntries(SPORTS.map(([k,l])=>[k,l]));
 
 /* ============================================== physique archetype ======== */
-/* The Nolan-Batman build, expressed as measurable targets rather than vibes.
+/* The target build, expressed as measurable targets rather than vibes.
    FFMI = fat-free mass index. Untrained men sit ~19, well-trained ~21-22,
    the natural ceiling is ~24-25. 22.5 is "visibly built, still an athlete."   */
 const ARCH = {
@@ -2322,7 +2334,7 @@ function nutrition(k){
     act:A.items,extra:Math.round(A.kcal),extraMin:A.min,sweat:A.sweat,loss,ea};
 }
 function foodTotals(k){
-  const f=day(k).food;
+  const f=foodOf(k);          // read-only: day(k) would create (and later save) an empty record for every date a screen looks at
   // Both real add-paths (addfood, addcustomfood) always supply p/c/f, but one
   // malformed entry — a hand-edited localStorage value, an older backup schema —
   // would otherwise poison the whole day's totals: undefined*q is NaN, and NaN
@@ -2819,7 +2831,7 @@ function dayLoad(k){
 let view='today', openBlock='train', shiftId=null, openTrack=undefined, openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
     foodQ='', foodG='', foodGU='g', copyMode=false, copySel={}, swapOpen=false, foodOpen=false, injForm=false, injDraft={area:'ankle',sev:'mild'}, offForm=false, offDraft='sick',
-    buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='';
+    buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='', importArm=false;
 const T = dkey();
 let viewOff = 0;
 const VD = () => dkey(viewOff);
@@ -3330,15 +3342,14 @@ function normalizeCustom(){
 const DRY_SCREENS=[['today',''],['plan',''],['week',''],['build','target'],['build','fuel'],['build','log'],['build','ch90'],['mind',''],['ledger',''],
   ['wlog','workouts'],['wlog','body'],['wlog','lifts'],['wlog','fights']];
 function adoptState(parsed){
-  const prev={S,WEEK,view,buildSub,wlSub};
+  const prev={S,WEEK};
   try{
     S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
     if (!(parsed.ui&&parsed.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});         // restoring a backup is never a first run
     S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;
-    normalizeCustom(); WEEK=WEEKS[S.profile.program]||WEEK_STD;
-    for (const [v,sub] of DRY_SCREENS){ view=v; if (v==='build') buildSub=sub; if (v==='wlog') wlSub=sub; render(); }
+    WEEK=WEEKS[S.profile&&S.profile.program]||WEEK_STD; normalizeCustom(); migrate();            // an old backup is brought up to date here, not on the next reload
+    dryRender();
   }catch(err){ S=prev.S; WEEK=prev.WEEK; throw err; }
-  finally{ view=prev.view; buildSub=prev.buildSub; wlSub=prev.wlSub; }
 }
 /* parse a backup, dropping any "__proto__" key (it would swap the prototype of the object it is merged into) */
 const parseBackup=txt=>JSON.parse(txt,(k,v)=>k==='__proto__'?undefined:v);
@@ -5237,14 +5248,15 @@ function snapKeys(){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.t
 function snapGet(key){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.transaction('s').objectStore('s').get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); }
 function snapDelete(key){ return idb().then(db=>new Promise(res=>{ const tx=db.transaction('s','readwrite'); tx.objectStore('s').delete(key); tx.oncomplete=res; tx.onerror=res; })); }
 /* one snapshot per day, taken the first time the app opens that day (before anything changes) */
-async function snapDaily(){
+async function snapDaily(raw){      // raw: the exact string loaded at boot, so the day's snapshot is the data as it was before this session touched it
   try{
     const keys=await snapKeys();
-    if (!keys.includes(T)) await snapPut(T,JSON.stringify(S));
-    const all=await snapKeys(), days=all.filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)), undos=all.filter(k=>k.startsWith('undo-'));
+    if (!keys.includes(T)) await snapPut(T,raw||JSON.stringify(S));
+    const all=await snapKeys(), days=all.filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)), undos=all.filter(k=>k.startsWith('undo-')), pres=all.filter(k=>k.startsWith('pre-'));
     for (const k of days.slice(SNAP_KEEP)) await snapDelete(k);
     for (const k of undos.slice(3)) await snapDelete(k);          // the three most recent undo points are kept
-    snapList=undos.slice(0,3).concat(days.slice(0,SNAP_KEEP));
+    for (const k of pres.slice(2)) await snapDelete(k);           // and the two most recent pre-migration copies
+    snapList=undos.slice(0,3).concat(pres.slice(0,2),days.slice(0,SNAP_KEEP));
   }catch(e){ snapList=[]; }
 }
 function backupAge(){ const b=S.meta.lastBackup; return b?daysBetween(b,T):null; }
@@ -5282,7 +5294,7 @@ function SnapshotPanel(){
   const a=backupAge();
   return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Photos from the 90-day challenge aren't in the file; use SAVE PHOTOS there.</div>
     ${list.length?`<div class="eyebrow" style="padding:4px 13px 6px">AUTOMATIC SNAPSHOTS ON THIS PHONE</div>
-    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')?`<b>Undo a restore</b> <span style="color:var(--faint)">(your state at ${esc(new Date(+k.slice(5)).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
+    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')||k.startsWith('pre-')?`<b>${k.startsWith('pre-')?'Before a data-format update':'Undo a restore'}</b> <span style="color:var(--faint)">(your state at ${esc(new Date(+k.split('-').pop()).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
       <button class="chip" data-act="s-restore" data-v="${k}">${snapArm===k?'TAP TO CONFIRM':'RESTORE'}</button></div>`).join('')}
     <div class="note">One snapshot a day, the last ${SNAP_KEEP} kept, taken when you first open the app. Restoring replaces everything with that day's state (today's state is snapshotted first, so you can undo).</div>`:''}`;
 }
@@ -5291,7 +5303,7 @@ async function snapRestore(k){
     const json=await snapGet(k); if (!json){ toast('Snapshot not found'); return; }
     if (!k.startsWith('undo-')) await snapPut('undo-'+Date.now(),JSON.stringify(S)).catch(()=>{});   // a new key each time: restoring twice must not erase the first undo point
     adoptState(parseBackup(json));
-    snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
+    snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':k.startsWith('pre-')?'Restored the pre-update copy':`Restored ${shortDate(k)}`);
   }catch(e){ toast('Could not restore that snapshot'); }
 }
 
@@ -5420,7 +5432,8 @@ function sAct(a,v){
 document.addEventListener('change', e=>{
   const inp=e.target; if (inp.id!=='importfile' || !inp.files || !inp.files[0]) return;
   const r=new FileReader();
-  r.onload=()=>{ importOpen=true; render(); const ta=document.getElementById('importtxt'); if (ta){ ta.value=String(r.result||''); } toast('Backup loaded — check it, then RESTORE'); };
+  r.onload=()=>{ importOpen=true; importErr=''; importArm=false; render(); const ta=document.getElementById('importtxt'), pv=document.getElementById('importprev');
+    if (ta){ ta.value=String(r.result||''); if (pv) pv.innerHTML=importPreviewHTML(ta.value); } toast('Backup loaded — check the preview, then REPLACE or MERGE'); };
   r.onerror=()=>toast('Could not read that file');
   r.readAsText(inp.files[0]);
 });
@@ -6671,6 +6684,67 @@ function ViewLedger(){
 }
 
 /* ================================================================= codex == */
+/* ---------- restore: check, preview, merge ---------- */
+/* Parse and shape-check a backup before S is touched, so a bad paste can never corrupt what is saved. */
+function importCheck(txt){
+  if (!txt||!txt.trim()) return {err:'Paste the backup JSON first.'};
+  let parsed;
+  try{ parsed=parseBackup(txt); }catch(e){ return {err:"That didn't parse as valid backup JSON — check nothing got cut off in the paste."}; }
+  const ok = parsed && typeof parsed==='object' && !Array.isArray(parsed)
+    && parsed.profile && typeof parsed.profile==='object' && typeof parsed.profile.height!=='undefined'
+    && parsed.days && typeof parsed.days==='object' && !Array.isArray(parsed.days)
+    && Array.isArray(parsed.log);
+  if (!ok) return {err:"That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."};
+  if (schemaOf(parsed)>SCHEMA) return {err:`That backup was made by a newer FORGE (data v${schemaOf(parsed)}). Update this copy of the app first; nothing was changed.`};
+  return {parsed};
+}
+/* what a saved state holds, for the before/after preview and the real-data check (tests/realdata.js) */
+function backupCounts(o){
+  const map=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{}, arr=x=>Array.isArray(x)?x:[], isD=k=>/^\d{4}-\d\d-\d\d$/.test(k);
+  const days=map(o.days), gym=map(o.gym), cust=map(o.cust), fights=map(o.fights);
+  const sets=Object.values(gym).reduce((a,g)=>a+Object.values(map(g)).reduce((b,l)=>b+arr(l).length,0),0)
+    +Object.values(cust).reduce((a,c)=>a+Object.values(map(c&&c.sets)).reduce((b,l)=>b+arr(l).length,0),0);
+  const dates=[...Object.keys(days).filter(k=>arr(days[k]&&days[k].food).length),...Object.keys(gym),...Object.keys(cust),...arr(o.log).map(e=>e&&e.date)].filter(isD).sort();
+  return {foodDays:Object.keys(days).filter(k=>arr(days[k]&&days[k].food).length).length,
+    foods:Object.values(days).reduce((a,d)=>a+arr(d&&d.food).length,0),
+    liftDays:Object.keys(gym).filter(k=>Object.values(map(gym[k])).some(l=>arr(l).length)).length,
+    workouts:Object.keys(cust).filter(k=>arr(cust[k]&&cust[k].items).length).length,
+    sets, fights:Object.values(fights).reduce((a,f)=>a+arr(f).length,0), log:arr(o.log).length,
+    checkins:arr(map(o.ch90).checkins).length, from:dates[0]||null, to:dates[dates.length-1]||null};
+}
+const COUNT_LABELS=[['foodDays','Days with food logged'],['foods','Food entries'],['liftDays','Program lift days'],['workouts','Own workouts'],['sets','Sets logged'],
+  ['fights','Fight sessions'],['log','Weigh-ins + measurements'],['checkins','90-day check-ins']];
+function importPreviewHTML(txt){
+  if (!txt||!txt.trim()) return '';
+  const c=importCheck(txt); if (c.err) return `<div class="note" style="color:var(--rust);border-top:none;padding:8px 0 0">${esc(c.err)}</div>`;
+  const f=backupCounts(c.parsed), m=backupCounts(S), span=x=>x.from?`${esc(shortDate(x.from))} ${x.from.slice(0,4)} – ${esc(shortDate(x.to))} ${x.to.slice(0,4)}`:'nothing dated';
+  return `<div class="eyebrow" style="margin:12px 0 6px">WHAT IS IN THIS FILE</div>
+    <div class="tbl"><div class="tr th" style="grid-template-columns:1.9fr 1fr 1fr"><span></span><span>File</span><span>This phone</span></div>
+    ${COUNT_LABELS.map(([k,l])=>`<div class="tr" style="grid-template-columns:1.9fr 1fr 1fr"><span style="text-align:left">${l}</span><span>${f[k].toLocaleString()}</span><span>${m[k].toLocaleString()}</span></div>`).join('')}</div>
+    <div class="note" style="border-top:none;padding:8px 0 0">File covers ${span(f)}. This phone: ${span(m)}.</div>`;
+}
+/* MERGE: this phone wins. Only what it is missing is taken from the file: whole dates it has nothing logged for (food and ticks,
+   program sets, own workouts, fights, events), measurements for dates it has none, and saved foods / routines / exercises /
+   records it doesn't have. Settings, the 90-day challenge (its photos live on the other phone) and anything already here stay. */
+function mergeState(cur,inc){
+  const out=JSON.parse(JSON.stringify(cur)), map=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{}, arr=x=>Array.isArray(x)?x:[];
+  const any=o=>Object.values(map(o)).some(Boolean);
+  const filled={
+    days:d=>!!d&&(any(d.blocks)||any(d.habits)||any(d.rv)||!!d.mind||!!d.news||arr(d.food).length>0||d.water>0||arr(d.supps).length>0),
+    gym:g=>Object.values(map(g)).some(l=>arr(l).length>0), cust:c=>!!c&&arr(c.items).length>0,
+    fights:f=>arr(f).length>0, extra:f=>arr(f).length>0 };
+  for (const f of ['days','gym','cust','fights','extra','off','reach','swap','books','bookDates','tiers','capital','prs','flags','exreg']){
+    const has=filled[f]||(x=>x!=null), src=map(inc[f]); out[f]=map(out[f]);
+    for (const k of Object.keys(src)) if (!has(out[f][k]) && has(src[k])) out[f][k]=src[k];
+  }
+  for (const f of ['log','nw']){ const seen=new Set(arr(out[f]).map(e=>e.date));
+    out[f]=arr(out[f]).concat(arr(inc[f]).filter(e=>e&&!seen.has(e.date))).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); }
+  const add=(f,key)=>{ out[f]=arr(out[f]); const seen=new Set(out[f].map(key)); for (const x of arr(inc[f])) if (x&&!seen.has(key(x))){ seen.add(key(x)); out[f].push(x); } };
+  add('myfoods',x=>String(x.n).toLowerCase()); add('routines',x=>x.id); add('myex',x=>x.id); add('mysupps',x=>x.k+'|'+x.a);
+  if (inc.meta&&inc.meta.start&&(!out.meta.start||inc.meta.start<out.meta.start)) out.meta.start=inc.meta.start;
+  return out;
+}
+
 /* backup, restore, CSV export and the automatic snapshots (lives in Settings) */
 function DataPanel(){
   return `
@@ -6681,12 +6755,15 @@ function DataPanel(){
       <p class="t">Back up weekly (FORGE reminds you) and before changing phones. BACK UP NOW opens the share sheet: pick Save to Files or iCloud Drive.</p>
     </div>
     ${importOpen?`<div style="padding:0 13px 13px">
-      <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what EXPORT BACKUP gave you, then RESTORE."></textarea></label>
+      <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what BACK UP NOW gave you. A preview appears before anything changes."></textarea></label>
+      <div id="importprev">${importPreviewHTML((document.getElementById('importtxt')||{}).value)}</div>
       ${importErr?`<div class="note" style="color:var(--rust);border-top:none;padding:8px 0 0">${esc(importErr)}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:9px">
-        <button class="btn" data-act="importgo">RESTORE — REPLACES EVERYTHING STORED</button>
-        <button class="btn ghost" data-act="importcancel" style="max-width:90px">CANCEL</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px">
+        <button class="btn" data-act="importgo">${importArm?'TAP AGAIN: REPLACE EVERYTHING':'REPLACE EVERYTHING'}</button>
+        <button class="btn ghost" data-act="importmerge">MERGE INTO THIS PHONE</button>
       </div>
+      <div class="note" style="border-top:none;padding:8px 0 0"><b style="color:var(--text)">Replace</b> makes this phone identical to the file. <b style="color:var(--text)">Merge</b> keeps everything here and adds only what this phone is missing: days it has nothing logged for, measurements for dates it has none, saved foods, routines and exercises. Either way the current state is snapshotted first (Undo a restore, below).</div>
+      <button class="btn ghost" data-act="importcancel" style="margin-top:9px">CANCEL</button>
     </div>`:`<div style="padding:0 13px 13px;display:flex;gap:8px">
       <button class="btn ghost" data-act="s-backup">BACK UP NOW</button>
       <button class="btn ghost" data-act="s-importfile">RESTORE FILE</button>
@@ -6780,7 +6857,7 @@ let lastRenderedView=null;
    is lost unless render() carries it across: the exercise sheet's scroll position, the muscle/equipment chip
    rows' horizontal scroll, and half-typed fields in the custom-food, body-log and program-lift set forms. */
 let scrollReset=false, lastRenderedDay=null;                               // set by actions that change what the sheet lists (muscle/equipment filter)
-const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_|sp_a$)/;            // f_date is left out on purpose: after saving, the date goes back to today
+const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_|sp_a$|importtxt$)/;            // f_date is left out on purpose: after saving, the date goes back to today
 function render(){
   _memo=null;
   document.documentElement.dataset.text=(S.ui&&S.ui.text)||'';
@@ -6957,7 +7034,7 @@ function handleClick(e){
       if (S.extra[v]){ S.extra[v].splice(+v2,1); if(!S.extra[v].length) delete S.extra[v]; }
       commit(); break;
     }
-    case 'view': view=v; briefEdit=false; briefBrowse=false; editSet=null; gymEdit=null; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; briefEdit=false; briefBrowse=false; editSet=null; gymEdit=null; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; importArm=false; render(); window.scrollTo(0,0); return;
     case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
@@ -7303,27 +7380,22 @@ function handleClick(e){
     /* in-app textarea instead of prompt() — multi-line paste into prompt()
        is unreliable on iOS Safari / home-screen PWAs, the app's primary
        target per the README, and a backup blob is well past one line. */
-    case 'import': importOpen=true; importErr=''; break;
-    case 'importcancel': importOpen=false; importErr=''; break;
-    case 'importgo': {
-      const txt=(document.getElementById('importtxt')||{}).value;
-      if(!txt||!txt.trim()){ importErr='Paste the backup JSON first.'; break; }
-      let parsed;
-      try{ parsed=parseBackup(txt); }
-      catch(err){ importErr="That didn't parse as valid backup JSON — check nothing got cut off in the paste."; break; }
-      // Valid JSON isn't the same as a valid backup: check the shape everything
-      // else in the app depends on before overwriting live data with it. This
-      // runs before S is touched, so a bad paste can never corrupt what's
-      // already saved — only a shape check that passes gets to that line.
-      const shapeOk = parsed && typeof parsed==='object' && !Array.isArray(parsed)
-        && parsed.profile && typeof parsed.profile==='object' && typeof parsed.profile.height!=='undefined'
-        && parsed.days && typeof parsed.days==='object' && !Array.isArray(parsed.days)
-        && Array.isArray(parsed.log);
-      if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
-      snapPut('undo-'+Date.now(),JSON.stringify(S)).then(snapDaily).catch(()=>{});   // today's state stays recoverable under "Undo a restore"
-      try{ adoptState(parsed); }
-      catch(err){ importErr=`That file reads as a backup but something in it would break the app (${String(err.message).slice(0,70)}). Nothing was changed; your current data is untouched.`; break; }
-      importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
+    case 'import': importOpen=true; importErr=''; importArm=false; break;
+    case 'importcancel': importOpen=false; importErr=''; importArm=false; break;
+    case 'importgo': case 'importmerge': {
+      const c=importCheck((document.getElementById('importtxt')||{}).value);
+      if (c.err){ importErr=c.err; importArm=false; break; }
+      if (a==='importgo' && !importArm){ importArm=true; importErr=''; break; }     // replacing everything takes a second tap
+      importArm=false;
+      const cur=S, curWeek=WEEK, was=backupCounts(S);
+      snapPut('undo-'+Date.now(),JSON.stringify(S)).then(()=>snapDaily()).catch(()=>{});   // today's state stays recoverable under "Undo a restore"
+      /* adoptState brings the file up to date (migrations), repairs it and draws every screen with it; a merge then does the same
+         again with the combined data. If either throws, the live data is put back untouched. */
+      try{ adoptState(c.parsed); if (a==='importmerge'){ const merged=mergeState(cur,S); S=cur; WEEK=curWeek; adoptState(merged); } }
+      catch(err){ S=cur; WEEK=curWeek; importErr=`That file reads as a backup but something in it would break the app (${String(err.message).slice(0,70)}). Nothing was changed; your current data is untouched.`; break; }
+      importOpen=false; importErr=''; commit(); render();
+      const now=backupCounts(S), added=['foodDays','liftDays','workouts','log','fights'].reduce((n,k)=>n+now[k]-was[k],0);
+      toast(a==='importmerge'?(added>0?`Merged: ${added} days and entries added from the file`:'Merged: this phone already had everything in that file'):'Backup restored',false,4000); return;
     }
   }
   render();
@@ -7355,7 +7427,8 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commitSoon(); } return; }
   if (t.id==='swq'){ gSwapQ=t.value; const r=document.getElementById('swres'); if (r&&gSwap) r.innerHTML=swapRowsHTML(gSwap); return; }   // swap picker search: swap only the list
   if (t.id==='foodq'){ foodQ=t.value; const r=document.getElementById('foodres'); if (r) r.innerHTML=foodResultsHTML(); return; }   // filter live, swap only the list
-  if (t.id==='foodg'){ foodG=t.value; return; }                              // amount box: remember, no re-render
+  if (t.id==='foodg'){ foodG=t.value; return; }
+  if (t.id==='importtxt'){ importArm=false; const pv=document.getElementById('importprev'); if (pv) pv.innerHTML=importPreviewHTML(t.value); return; }                              // amount box: remember, no re-render
   const el=t.closest('[data-in]'); if(!el) return;
   const path=el.dataset.in, val=el.value;
   if (path.startsWith('rv.')){ day(VD()).rv[path.slice(3)]=val; commitSoon(); return; }
@@ -7395,7 +7468,8 @@ document.addEventListener('change', e => {
 
 
 /* ========================================================= notifications == */
-let tickerId=null; const fired={};
+let tickerId=null, lastTouch=0; const fired={};
+['pointerdown','input'].forEach(t=>document.addEventListener(t,()=>{ lastTouch=Date.now(); },true));
 function notify(title,body){
   try{
     if (navigator.serviceWorker&&navigator.serviceWorker.getRegistration){
@@ -7427,6 +7501,40 @@ function checkNotif(){
 }
 function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(checkNotif,45000); }
 
+/* ============================================================ migrations == */
+/* S.schemaVersion says which shape the saved data is in. MIGRATIONS[n] takes it from version n to n+1 and must be safe to run on
+   empty data. Never edit one that has shipped: add the next and raise SCHEMA. Boot and every import run this, and nothing is
+   saved until the migrated data has drawn every screen (see bootApp / adoptState). Data from a NEWER build than this one (an old
+   cached copy of the app can load it) is refused rather than rewritten. */
+const SCHEMA=1;
+const MIGRATIONS=[
+  function v0to1(){
+    /* S.swap used to store a position in the active WEEK array, so a swap could resolve to a different workout after switching
+       programs. Convert leftover numbers to the stable day id. */
+    for (const k in S.swap){ const v=S.swap[k]; if (typeof v==='number'){ const d=WEEK[v]; if (d) S.swap[k]=d.id; else delete S.swap[k]; } }
+    /* Friday's "Row 4x10" block used to log under the same key as Wednesday's 3x8 ('row'). It has its own key now (rowvol): move
+       anything logged under 'row' on a Friday across. Once only (meta.rowSplit): 'row' can now legitimately land on a Friday. */
+    if (!S.meta.rowSplit){
+      for (const k in S.gym) if (S.gym[k]&&S.gym[k].row&&dowIdx(k)===4){ S.gym[k].rowvol=(S.gym[k].rowvol||[]).concat(S.gym[k].row); delete S.gym[k].row; }
+      if (S.prs.row && dowIdx(S.prs.row.date)===4 && (!S.prs.rowvol || S.prs.row.e1rm>S.prs.rowvol.e1rm)){ S.prs.rowvol=S.prs.row; delete S.prs.row; }
+      S.meta.rowSplit=true;
+    }
+  },
+];
+const schemaOf=o=>{ const v=+(o&&o.schemaVersion); return v>0?Math.floor(v):0; };
+function migrate(){
+  const from=schemaOf(S);
+  if (from>SCHEMA) throw new Error(`This data was saved by a newer FORGE (data v${from}, this copy reads v${SCHEMA}). Reload to update the app.`);
+  for (let v=from; v<SCHEMA; v++) MIGRATIONS[v]();
+  S.schemaVersion=SCHEMA;
+  return from<SCHEMA;
+}
+function dryRender(){
+  const prev={view,buildSub,wlSub};
+  try{ for (const [v,sub] of DRY_SCREENS){ view=v; if (v==='build') buildSub=sub; if (v==='wlog') wlSub=sub; render(); } }
+  finally{ view=prev.view; buildSub=prev.buildSub; wlSub=prev.wlSub; }
+}
+
 /* ================================================================== boot == */
 /* Shown when the app can't draw what is saved (a damaged backup, an edited file). Settings can't render either then, so the way back
    lives here: the newest automatic snapshot that does draw, a raw download of what is stored, or a fresh start. */
@@ -7434,10 +7542,12 @@ function recoveryScreen(err){
   const app=document.getElementById('app'); if (!app) return;
   app.innerHTML=`<div class="wrap" style="padding:28px 18px"><div class="eyebrow" style="color:var(--rust)">FORGE COULDN'T DRAW YOUR SAVED DATA</div>
     <p class="t" style="margin:12px 0">Nothing has been deleted. The problem: <b>${esc(String(err&&err.message||err).slice(0,120))}</b></p>
-    <button class="btn" id="rc_snap" style="width:100%;margin-top:10px">RESTORE THE NEWEST WORKING SNAPSHOT</button>
+    <button class="btn" id="rc_reload" style="width:100%;margin-top:10px">RELOAD THE APP</button>
+    <button class="btn ghost" id="rc_snap" style="width:100%;margin-top:10px">RESTORE THE NEWEST WORKING SNAPSHOT</button>
     <button class="btn ghost" id="rc_dl" style="width:100%;margin-top:10px">DOWNLOAD MY RAW DATA</button>
     <button class="btn ghost" id="rc_reset" style="width:100%;margin-top:10px">START FRESH</button><div class="note" id="rc_msg" style="border:none"></div></div>`;
   const msg=t=>{ const m=document.getElementById('rc_msg'); if (m) m.textContent=t; };
+  document.getElementById('rc_reload').onclick=()=>location.reload();
   document.getElementById('rc_dl').onclick=()=>{ let raw=null; try{ raw=localStorage.getItem(KEY)||localStorage.getItem(OLDKEY); }catch(e){}
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([raw||'{}'],{type:'application/json'})); a.download=`forge-raw-${dkey()}.json`; a.click(); };
   document.getElementById('rc_snap').onclick=async()=>{
@@ -7451,6 +7561,8 @@ function recoveryScreen(err){
   try{ await bootApp(); }catch(err){ recoveryScreen(err); }
 })();
 async function bootApp(){
+  /* Nothing is written to storage in here until render() has succeeded: if the saved data can't be drawn, the recovery screen
+     opens with the original untouched. */
   const saved=await Store.load();
   if (saved){
     S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),saved);
@@ -7458,61 +7570,43 @@ async function bootApp(){
     S.profile=Object.assign({},DEFAULTS.profile,saved.profile||{});
     S.fixed=Object.assign({},DEFAULTS.fixed,saved.fixed||{});
     S.meta=Object.assign({},DEFAULTS.meta,saved.meta||{});
-    Store.save(S);                                      // migrate old key forward
   }
   WEEK = WEEKS[S.profile.program] || WEEK_STD;
+  const from=schemaOf(S);
+  if (from>SCHEMA) migrate();                              // throws: newer data than this copy understands is never normalised or saved
   normalizeCustom();
-  { /* one-time migration: S.swap used to store a position in the active WEEK array,
-       which meant a swap could silently resolve to a different workout after switching
-       programs. Convert any leftover numeric values to the stable day id instead. */
-    let migrated=false;
-    for (const k in S.swap){ const v=S.swap[k];
-      if (typeof v==='number'){ const d=WEEK[v]; S.swap[k]=d?d.id:undefined; if(!d) delete S.swap[k]; migrated=true; } }
-    if (migrated) commit();
-  }
-  { /* one-time migration: Friday's "Barbell row — 4x10" block used to log under the
-       same key as Wednesday's "Barbell row — 3x8" ('row'), on the premise they'd
-       share one progression number — which showed Wednesday's 3x8 target on Friday's
-       4x10 block. Now split into its own key (rowvol). Move anything already logged
-       under 'row' on a Friday (the only weekday d8c can appear on) over to rowvol so
-       it doesn't just vanish from the page it was actually logged on. */
-    let rowMigrated=false;
-    if (!S.meta.rowSplit) for (const k in S.gym){
-      if (S.gym[k]&&S.gym[k].row&&dowIdx(k)===4){
-        S.gym[k].rowvol=(S.gym[k].rowvol||[]).concat(S.gym[k].row);
-        delete S.gym[k].row;
-        rowMigrated=true;
-      }
-    }
-    if (!S.meta.rowSplit && S.prs.row && dowIdx(S.prs.row.date)===4 &&
-        (!S.prs.rowvol || S.prs.row.e1rm>S.prs.rowvol.e1rm)){
-      S.prs.rowvol=S.prs.row; delete S.prs.row; rowMigrated=true;
-    }
-    /* run once only: the row exercise can now legitimately be logged on a Friday
-       (swapped days, other programs), and re-running would keep moving it. */
-    if (!S.meta.rowSplit){ S.meta.rowSplit=true; rowMigrated=true; }
-    if (rowMigrated) commit();
-  }
-  if (S.meta.onboarded==null){
+  /* about to change the shape of real data: keep the exact original first (the two newest are kept, see snapDaily) */
+  if (saved && from<SCHEMA && Store.raw) await snapPut(`pre-v${from}-${Date.now()}`,Store.raw).catch(()=>{});
+  const migrated=migrate();
+  if (S.meta.onboarded==null)
     S.meta.onboarded = !!saved && (S.log.length>0 || Object.keys(S.gym).length>0 || Object.keys(S.cust).length>0 || daysLogged()>0);
-    commit();
-  }
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
     S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely
-    commit();
   }
+  if (saved && migrated) dryRender();                      // migrated data has to draw every screen before it may replace the original
   render();
-  snapDaily().then(()=>{ if (view==='plan') render(); });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  commit();                                               // first write (also carries an old key forward)
+  try{ if (navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}    // ask the browser not to evict the data under storage pressure
+  snapDaily(Store.raw).then(()=>{ if (view==='plan') render(); });
+  if ('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    /* the worker says a newer copy of the app arrived after this page had already started from the old one. Never reload by itself: a set may be half-typed. */
+    navigator.serviceWorker.addEventListener('message',e=>{ if (e.data==='forge-update') toast('Update downloaded. Close and reopen FORGE to use it.',false,8000); });
+  }
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
-  const busy=()=>(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Object.values(cdraft).some(d=>Object.values(d).some(x=>x));
-  const midnight=()=>{ if (busy()) setTimeout(midnight,60000); else location.reload(); };     // wait out a running round timer or a set that's typed but not logged
+  /* "Today" is fixed when the page loads, so the page reloads when the date changes. It waits out a running round timer and anyone
+     using the app right now, but not a half-typed set from hours ago: that used to block the reload for good, leaving Today on
+     yesterday (and the weigh-in form dated yesterday) until the app was force-closed. */
+  const busy=()=>(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Date.now()-lastTouch<120000;
+  const midnight=()=>{ if (busy()) setTimeout(midnight,60000); else location.reload(); };
   setTimeout(midnight,Math.max(ms,60000));
   document.addEventListener('visibilitychange', ()=>{
     if (document.visibilityState==='hidden') flushSave();
-    if (document.visibilityState==='visible' && dkey()!==T && !busy()) location.reload();
+    if (document.visibilityState!=='visible') return;
+    if (Store.changedElsewhere()) return Store.yield();     // another copy saved while this one was in the background
+    if (dkey()!==T && !busy()) location.reload();
   });
   addEventListener('pagehide', flushSave);
 }
