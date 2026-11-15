@@ -71,8 +71,20 @@ two-week weight trend and adjust *Daily life* or the goal.
 Insurance: **Settings (gear) → Data + backup → Back up now** (saves a JSON file; the clipboard copy only happens if the share sheet isn't available),
 **Import** to restore. Do it monthly.
 
-One wrinkle after updates: the service worker caches hard. If new code doesn't appear,
-fully close the app and reopen, or reopen twice.
+Restoring shows a **preview** first (what is in the file against what is on this phone), then **REPLACE EVERYTHING** (two taps) or **MERGE INTO THIS
+PHONE**, which keeps everything here and only adds what this phone is missing. Both take an undo snapshot first.
+
+**Updates.** The app asks the network first and falls back to its saved copy after 2.5 s (or offline), so new code normally shows the next
+time you open it with signal. If the saved copy was used and a newer one arrived in the background, a line says "Update downloaded. Close and
+reopen FORGE to use it." It never reloads by itself.
+
+**Data format.** The saved data carries a `schemaVersion`. A format change is a numbered step in `MIGRATIONS` (`index.html`); before one runs,
+the exact original is kept as a snapshot ("Before a data-format update" under Settings → snapshots), every screen is drawn with the migrated
+data, and only then is it saved. Data written by a newer build than the one that is running is refused, not rewritten. With the app open in two
+places, the copy that didn't make the latest save reloads instead of overwriting it.
+
+**Check a real backup** (nothing on the phone is touched): save a backup file to `tests/real/backup.json` (that folder is git-ignored) and run
+`node tests/realdata.js`. It prints counts before and after, draws every screen and every logged day, and checks back up → wipe → restore is identical.
 
 ### Safety limits, progression steps and recovery
 
