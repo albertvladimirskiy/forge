@@ -16,8 +16,8 @@ module.exports = { name: 'Bodyweight trend and next-weight hint', tests: {
     a.equal(await page.evaluate(() => nutrition(T).kcal), await kcalFor(t.kg), 'targets should follow the average, not the salty spike');
     await page.evaluate(() => { S.log = [{ date: dkey(-30), weight: 70 }, { date: dkey(-1), weight: 80 }, { date: T, weight: 82 }]; });
     a.equal(await page.evaluate(() => trendWeight().kg), 81, 'a 30-day-old weigh-in leaked into the window');
-    a.deepEqual(await page.evaluate(() => { S.log = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => ({ date: dkey(-8 + i), weight: 80 + i })); return weightTrendSeries().map(v => +v.toFixed(2)); }),
-      [80, 80.5, 81, 81.5, 82, 82.5, 83, 84, 85]);
+    a.deepEqual(await page.evaluate(() => { S.log = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => ({ date: dkey(-8 + i), weight: 80 + i })); _memo = null; return weightTrend().map(p => +p.trend.toFixed(2)); }),
+      [80, 80.1, 80.29, 80.56, 80.9, 81.31, 81.78, 82.3, 82.87], 'the chart line is the smoothed trend: each day it moves 10% of the way to the reading');
   },
 
   async 'weight chart shows the dashed average and the note; other charts and single weigh-ins do not'(page, a){

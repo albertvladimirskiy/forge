@@ -107,13 +107,60 @@ module.exports = { name: 'Insights: tonnage, load ratio, e1RM, PRs, plateau, wei
     const r = await page.evaluate(BP => {
       S.meta.start = dkey(-60); S.log = [{ date: dkey(-20), weight: 80 }];
       const wk = addDays(weekOf(T), -7);
-      S.cust[addDays(wk, -7)] = Object.assign(newCW('with'), { items: [BP], sets: { [BP]: [{ w: 100, r: 5 }] } });
+      for (const back of [-14, -7]) S.cust[addDays(wk, back)] = Object.assign(newCW('with'), { items: [BP], sets: { [BP]: [{ w: 100, r: 5 }] } });   // 'best lift' needs two earlier sessions
       S.cust[addDays(wk, 1)] = Object.assign(newCW('with'), { items: [BP], sets: { [BP]: [{ w: 105, r: 5 }, { w: 105, r: 5 }] } });
       const c = reportCard(wk);
-      return { tonnage: c.tonnage, prev: c.prevTonnage, prs: c.prs.map(p => p.type).sort(), best: c.best && [c.best.id, Math.round(c.best.gain * 1000)], fix: c.fix.k, planned: c.planned, done: c.done }; }, BP);
+      return { tonnage: c.tonnage, prev: c.prevTonnage, prs: c.prs.map(p => p.type).sort(), best: c.best && [c.best.id, Math.round(c.best.gain * 1000)], prLifts: c.prLifts, fix: c.fix.k, planned: c.planned, done: c.done }; }, BP);
     a.deepEqual([r.tonnage, r.prev], [1050, 500]);
-    a.deepEqual(r.prs, ['e1rm', 'volume', 'weight']); a.deepEqual(r.best, [BP, 50]);
+    a.deepEqual(r.prs, ['e1rm', 'volume', 'weight']); a.deepEqual(r.best, [BP, 50]); a.deepEqual(r.prLifts, [BP]);
     a.ok(r.planned - r.done >= 2); a.equal(r.fix, 'sessions');
+  },
+
+  async 'screens: each panel draws in its tab with data and with none, and its controls work'(page, a){
+    const show = (v, sub) => page.evaluate(([v, sub]) => { view = v; if (v === 'wlog') wlSub = sub; if (v === 'build') buildSub = sub; render(); return document.getElementById('app').textContent.replace(/\s+/g, ' '); }, [v, sub]);
+    a.match(await show('wlog', 'lifts'), /STRENGTH TREND.*Log the same weighted lift in two sessions/);
+    a.match(await show('wlog', 'body'), /TRAINING LOAD.*Log weighted sets/);
+    a.match(await show('build', 'fuel'), /^(?!.*FOOD AGAINST RESULTS)|FOOD AGAINST RESULTS.*Once a full week/);
+    a.match(await show('ledger'), /REPORT CARD.*FIX (THIS|NEXT) WEEK/);
+    a.match(await show('today'), /READINESS log sleep to start/);
+    await page.evaluate(([SQ, BP]) => {
+      S.log = [{ date: dkey(-40), weight: 80 }, { date: dkey(-1), weight: 81 }];
+      for (let i = 0; i < 8; i++){ const k = dkey(-i * 5);
+        S.cust[k] = Object.assign(newCW('with'), { items: [BP, SQ], sets: { [BP]: [{ w: 60 + i, r: 5 }], [SQ]: [{ w: 100, r: 5 }] } }); }
+      for (let i = 7; i < 35; i++) day(dkey(-i)).food = [{ n: 'x', kcal: 2500, p: 150, c: 0, f: 0, q: 1 }];
+      view = 'wlog'; wlSub = 'lifts'; render(); }, [SQ, BP]);
+    const lifts = await show('wlog', 'lifts');
+    a.match(lifts, /estimated 1RM/); a.match(lifts, /Status\s*(Moving|Stalled)/); a.doesNotMatch(lifts, /NaN|undefined|Infinity/);
+    const before = await page.evaluate(() => document.querySelector('.hero b').textContent);
+    await page.click(`[data-act=ins-lift][data-v="${BP}"]`); await page.click(`[data-act=ins-lift][data-v="${SQ}"]`);
+    a.equal(await page.evaluate(() => document.querySelector('.hero b').textContent), String(Math.round(100 * (1 + 5 / 30) * 2.20462)));
+    a.ok(before);
+    for (const [v, sub, rx] of [['wlog', 'body', /lifted this week.*Load ratio.*THIS WEEK BY MUSCLE|lifted this week.*Load ratio/], ['build', 'fuel', /FOOD AGAINST RESULTS.*Week of.*needs 8 comparable weeks/], ['ledger', '', /REPORT CARD.*LIFT RECORDS.*Best lift/]]){
+      const t = await show(v, sub); a.match(t, rx, `${v}/${sub}`); a.doesNotMatch(t, /NaN|undefined|Infinity/, `${v}/${sub}`);
+    }
+    await show('today');
+    await page.fill('#rd_sleep', '6'); await page.click('[data-act=rd-sleep]');
+    a.equal(await page.evaluate(() => S.log.find(e => e.date === T).sleep), 6);
+    a.match(await show('today'), /READINESS \d+ · model.*Sleep\s*6 h of 7.5 h/);
+    a.equal(await page.evaluate(() => !!document.getElementById('rd_sleep')), false, 'the sleep box should go once sleep is logged');
+    await page.click('[data-act=rc-week][data-v="0"]', { trial: true }).catch(() => {});
+  },
+
+  async 'a backup file carries the progress photos and a restore puts them back'(page, a){
+    const n = await page.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = c.height = 8; c.getContext('2d').fillRect(0, 0, 8, 8);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg'));
+      await photoPut('ph_test_front', blob);
+      S.log.push({ date: T, weight: 80 }); S.ch90 = { start: T, goal: '', checkins: [{ week: 0, date: T, photos: { front: 'ph_test_front' } }], past: [] };
+      window.__backup = await backupText(); const o = JSON.parse(window.__backup);
+      await photoDel('ph_test_front'); await idbDo('readwrite', st => st.delete('ph_test_front'));
+      return [Object.keys(o.photos), o.photos.ph_test_front.slice(0, 15), !!(await photoGet('ph_test_front'))]; });
+    a.deepEqual(n, [['ph_test_front'], 'data:image/jpeg', false]);
+    await page.evaluate(() => { view = 'plan'; importOpen = true; render(); const ta = document.getElementById('importtxt'); ta.value = window.__backup; ta.dispatchEvent(new Event('input', { bubbles: true })); });
+    a.match(await page.evaluate(() => document.getElementById('importprev').textContent), /carries 1 progress photos/);
+    await page.evaluate(() => { document.querySelector('[data-act=importgo]').click(); document.querySelector('[data-act=importgo]').click(); });
+    await page.waitForFunction(async () => !!(await photoGet('ph_test_front')), null, { timeout: 5000 });
+    a.equal(await page.evaluate(() => 'photos' in S || /"photos":\{"ph_/.test(localStorage.getItem('forge.v1'))), false, 'photo data leaked into the saved state');
   },
 
   async 'the whole layer runs on old saved data and on an empty app without errors'(page, a){

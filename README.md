@@ -1,11 +1,11 @@
 # FORGE — deploy + data guide
 
-Nine files, no build step. `index.html` is the app; `foods-db.js` is the big food library, `exercises-db.js` the exercise library, `micros-db.js` the USDA micronutrient table and `quotes-db.js` the athlete quote library it loads.
+Ten files plus a font, no build step. `index.html` is the app; `foods-db.js` is the big food library, `exercises-db.js` the exercise library, `micros-db.js` the USDA micronutrient table and `quotes-db.js` the athlete quote library it loads.
 
 ## Deploy (GitHub Pages, ~4 min)
 
 1. New public repo, e.g. `forge`.
-2. Upload all nine files to the root.
+2. Upload everything (including the `fonts/` folder) to the root.
 3. Settings → Pages → Deploy from a branch → `main` / `(root)` → Save.
 4. Open `https://<username>.github.io/forge/` on your phone.
 
@@ -236,7 +236,7 @@ block by its label, so custom workouts are not marked. This is general guidance,
 - **Muscle map** (Training log → MUSCLES, or MUSCLE MAP on Today): weekly sets per muscle from custom workouts and program lifts,
   with half-set credit to helper muscles on compound lifts. Targets in `MM_REG`, helper rules in `MM_SEC`.
 - **90-day challenge** (Body → 90 DAY): day counter + grid, weekly check-ins with front/side/back photos and
-  measurements, side-by-side compare. Photos stay in IndexedDB on the device (not in the JSON backup): use SAVE PHOTOS.
+  measurements, side-by-side compare. Photos stay in IndexedDB on the device and are included in the backup file (BACK UP NOW); SAVE PHOTOS sends them to the camera roll.
 - **Fight camp** (Training log → FIGHTS): fight date, weigh-in and target weight drive a countdown, phase plan and a
   weight-cut tracker that flags unsafe paces. Sessions can record sparring partners.
 - **Safety**: daily automatic snapshots (last 14, with undo) in IndexedDB, a weekly backup nudge that saves through the share
@@ -264,6 +264,17 @@ days a line fits (lift day, fight day, comeback, deload and so on).
 through Mill, Kant, Camus and Nietzsche; phase 1 is short and readable). Each track is sorted by
 phase (1 = start here). The MIND score counts finished books against a fixed goal of 48 (`BOOK_GOAL`), so a bigger library never lowers it.
 Add your own as one line in `BOOKS`: `{id,tr,p,t,a,w}`.
+
+### Insights
+
+Computed on the phone from what you log, each with a "how this is calculated" note: **strength trend** (Training log → LIFTS: estimated 1RM per
+session, plateau check, records, relative strength), **training load** (MUSCLES: weekly tonnage, acute:chronic load ratio, per-muscle volume and
+frequency), **food against results** (Body → FUEL: weekly protein and calorie adherence against the smoothed weight trend, with a correlation that
+is withheld under 8 weeks), the **report card** (top of Ledger: the week in numbers and one thing to fix) and **readiness** (Today: a model from
+sleep, load and yesterday's training, labelled as a model). The formulas live in the `insights` section of `index.html`; `tests/insights.test.js`
+checks each against a hand-worked value.
+
+The typeface is Inter, shipped in `fonts/` under the SIL Open Font License (ten files with it).
 
 ## Tests
 

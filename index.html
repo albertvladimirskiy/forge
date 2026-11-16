@@ -719,6 +719,17 @@ body.lock{overflow:hidden}
 .repnote b{color:var(--text)}
 .linkbtn{display:block;margin-top:7px;font-size:var(--fs-caption);letter-spacing:.05em;color:var(--amber);text-decoration:underline}
 
+/* ---------- insights ---------- */
+.hero{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px;padding:15px 13px 0}
+.hero b{font-size:42px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.hero span{font-size:var(--fs-detail);color:var(--faint)}
+.herosub{padding:6px 13px 12px;font-size:var(--fs-detail);color:var(--dim)}
+.how{border-top:1px solid var(--rule);padding:0 13px}
+.how summary{padding:13px 0;min-height:40px;font-size:var(--fs-label);letter-spacing:.08em;color:var(--faint);font-weight:700;cursor:pointer}
+.how div{padding:0 0 13px;font-size:var(--fs-detail);color:var(--dim);line-height:1.6}
+.how b{color:var(--text);font-weight:600}
+.fixline{margin:4px 13px 13px;padding:11px 12px;border:1px solid var(--banner-amber-border);border-left:3px solid var(--amber);background:var(--banner-amber-bg);font-size:var(--fs-body);line-height:1.5;color:var(--text)}
+.fixline .eyebrow{margin-bottom:5px}
 /* tap targets: the controls used one-handed between sets were 26-35px tall. 40px minimum (the steppers are 44 wide, see .stp). */
 .xtools button,.seg2 button,.rpe button,.rpe.c8 button,.chip,.badge[data-act]{min-height:40px}
 .chip,.badge[data-act]{display:inline-flex;align-items:center;justify-content:center}
@@ -2198,12 +2209,6 @@ function trendWeight(){
   if (win.length<2) return {kg:L.weight,n:1,raw:L.weight,date:L.date,smoothed:false};
   return {kg:win.reduce((a,e)=>a+e.weight,0)/win.length,n:win.length,raw:L.weight,date:L.date,smoothed:true};
 }
-/* rolling 7-day average at each weigh-in, for the chart */
-function weightTrendSeries(){
-  const ws=S.log.filter(e=>e.weight!=null);
-  return ws.map(e=>{ const from=addDays(e.date,-6), win=ws.filter(x=>x.date>=from && x.date<=e.date);
-    return win.reduce((a,x)=>a+x.weight,0)/win.length; });
-}
 /* days since the most recent LOGGED WEIGHT specifically (not just any log entry —
    a bodyweight-free entry like a squat PR shouldn't reset this) */
 function daysSinceWeight(){
@@ -2866,7 +2871,7 @@ function sparkline(vals,color,h=110,trend){
     <path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"${td?' opacity=".55"':''}/>
     ${td?`<path d="${td}" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>`:''}</svg>
   <div style="display:flex;justify-content:space-between;padding:0 13px 12px;font-size:var(--fs-caption);color:var(--faint)">
-    <span>low ${Math.round(min*10)/10}</span><span>${pts.length} entries${td?' · dashed = 7-day average':''}</span><span>high ${Math.round(max*10)/10}</span></div>`;
+    <span>low ${Math.round(min*10)/10}</span><span>${pts.length} entries${td?' · dashed = smoothed trend':''}</span><span>high ${Math.round(max*10)/10}</span></div>`;
 }
 const sect=(ico,t)=>`<div class="sect">${svg(ico,13,'var(--amber)')}<h2>${t}</h2><div class="line"></div></div>`;
 const chk=(on,c)=>`<div class="box" style="${on?`background:${c||'var(--amber)'};border-color:${c||'var(--amber)'}`:''}">${on?svg('check',12,'var(--ink)',3):''}</div>`;
@@ -3912,8 +3917,8 @@ function ViewWorkoutLog(){
   const tabs=[['workouts','WORKOUTS'],['body','MUSCLES'],['lifts','LIFTS'],['fights','FIGHTS'],['routines','ROUTINES']];
   let body='';
   if (wlSub==='workouts') body=wlWorkouts();
-  else if (wlSub==='body') body=MuscleMap();
-  else if (wlSub==='lifts') body=wlLifts();
+  else if (wlSub==='body') body=MuscleMap()+LoadPanel();
+  else if (wlSub==='lifts') body=StrengthPanel()+wlLifts();
   else if (wlSub==='fights') body=wlFights();
   else body=wlRoutines();
   return `<div class="view wrap">
@@ -5289,8 +5294,23 @@ function BackupBanner(){
     <div style="flex:1;min-width:0"><b>${a==null?'No backup yet.':`Backup ${a}d old.`}</b> Data lives only on this phone.</div>
     <button class="chip on" data-act="s-backup" style="padding:5px 9px">BACK UP</button><button class="chip" data-act="s-snooze" style="padding:5px 9px">LATER</button></div>`;
 }
+/* The backup file is the whole state plus every progress photo (they live in IndexedDB, not in S) as data URLs under "photos".
+   Restoring puts them back. Snapshots and the clipboard copy stay photo-free: they would be megabytes. */
+const blobToURL=b=>new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(b); });
+function photoIds(o){ const c=(o&&o.ch90)||{};
+  return [...(c.checkins||[]),...(c.past||[]).flatMap(b=>(b&&b.checkins)||[])].flatMap(k=>Object.values((k&&k.photos)||{})).filter(id=>typeof id==='string'); }
+async function backupText(){
+  const photos={};
+  for (const id of photoIds(S)){ const b=await photoGet(id).catch(()=>null), u=b&&await blobToURL(b).catch(()=>null); if (u) photos[id]=u; }
+  return JSON.stringify(Object.keys(photos).length?{...S,photos}:S);
+}
+function restorePhotos(photos){
+  for (const [id,url] of Object.entries(photos&&typeof photos==='object'?photos:{}))
+    if (/^ph_[\w-]+$/.test(id) && typeof url==='string' && url.startsWith('data:image/'))
+      fetch(url).then(r=>r.blob()).then(b=>photoPut(id,b)).then(()=>{ delete photoURL[id]; hydratePhotos(); }).catch(()=>{});
+}
 async function doBackup(){
-  const txt=JSON.stringify(S), name=`forge-backup-${T}.json`;
+  const txt=await backupText(), name=`forge-backup-${T}.json`, small=txt.length<2e6;
   let how='downloaded';
   try{
     const file=new File([txt],name,{type:'application/json'});
@@ -5299,15 +5319,15 @@ async function doBackup(){
   }catch(e){
     if (e && e.name==='AbortError'){ toast('Backup cancelled'); return; }
     try{ const url=URL.createObjectURL(new Blob([txt],{type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500); }catch(err){}
-    if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});     // the toast below says so; the share-sheet route never touches the clipboard
+    if (navigator.clipboard && small) navigator.clipboard.writeText(txt).catch(()=>{});     // the toast below says so; the share-sheet route never touches the clipboard
   }
   S.meta.lastBackup=T; delete S.meta.backupSnooze; commit(); render();
-  toast(how==='shared'?'Backup saved — keep it somewhere off this phone':'Backup downloaded (also copied to clipboard)');
+  toast(how==='shared'?'Backup saved — keep it somewhere off this phone':small?'Backup downloaded (also copied to clipboard)':'Backup downloaded, photos included');
 }
 function SnapshotPanel(){
   const list=snapList||[];
   const a=backupAge();
-  return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Photos from the 90-day challenge aren't in the file; use SAVE PHOTOS there.</div>
+  return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Progress photos are included in the file.</div>
     ${list.length?`<div class="eyebrow" style="padding:4px 13px 6px">AUTOMATIC SNAPSHOTS ON THIS PHONE</div>
     ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')||k.startsWith('pre-')?`<b>${k.startsWith('pre-')?'Before a data-format update':'Undo a restore'}</b> <span style="color:var(--faint)">(your state at ${esc(new Date(+k.split('-').pop()).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
       <button class="chip" data-act="s-restore" data-v="${k}">${snapArm===k?'TAP TO CONFIRM':'RESTORE'}</button></div>`).join('')}
@@ -5698,7 +5718,7 @@ function obFinish(){
 /* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
    is remembered. After-action opens by itself in the evening (or once you've written in it). */
 const FOLD_DEF = {
-  rail:()=>false, arc:()=>false, injury:()=>true, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
+  rail:()=>false, arc:()=>false, injury:()=>true, ready:()=>true, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
   review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
 };
 function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
@@ -6011,6 +6031,7 @@ function ViewToday(){
     </div>
     ${vd===T?Tour('today'):''}
     ${vd===T?Briefing():''}
+    ${vd===T?ReadinessCard():''}
     ${vd===T?BackupBanner():''}
     ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
       ${svg('rot',13,'var(--steel)')}<div>Viewing another day — everything you tick here saves to <b>${longDate(vd)}</b>. Tap to return to today.</div></button>`:''}
@@ -6375,7 +6396,7 @@ function ViewLog(){
     ${S.log.length?`${sect('trend','TREND')}
     <div class="panel">
       <div class="chips">${Object.keys(chartMap).map(k=>`<button class="chip ${chartKey===k?'on':''}" data-act="chart" data-v="${k}">${k==='bf'?'Body fat':k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
-      ${sparkline(seriesFor(ck),cc,110,ck==='weight'?weightTrendSeries().map(v=>Math.round(conv(v)*10)/10):undefined)}
+      ${sparkline(seriesFor(ck),cc,110,ck==='weight'?weightTrend().map(p=>Math.round(conv(p.trend)*10)/10):undefined)}
       ${ck==='weight'&&trendWeight()&&trendWeight().smoothed?`<div class="note">7-day average <b style="color:var(--text)">${conv(trendWeight().kg)} ${wu}</b> from ${trendWeight().n} weigh-ins · latest ${conv(trendWeight().raw)} ${wu}. Calorie and strength targets use the average.</div>`:''}
     </div>`:''}
 
@@ -6573,7 +6594,7 @@ function ViewFuel(){
       <p class="t">Judge by the two-week weight average, never a single morning.</p>
       <p class="t" style="color:var(--faint)">These targets are population-average estimates from your height, weight, age and training load — a starting point to adjust from over weeks. They are not a clinical prescription. Talk to a doctor or a registered dietitian before making significant dietary changes, particularly with any medical condition or a complicated history with food.</p>
     </div></div>
-`;
+${NutritionResults()}`;
 }
 
 /* =============================================================== build === */
@@ -6643,6 +6664,7 @@ function ViewLedger(){
   const nwVals=S.nw.map(x=>x.v);
   return `<div class="view wrap">
     ${Tour('ledger')}
+    ${ReportCard()}
     ${WeekReview()}
     ${sect('award','RECORDS')}
     <div class="stats">
@@ -6711,7 +6733,8 @@ function importCheck(txt){
     && Array.isArray(parsed.log);
   if (!ok) return {err:"That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."};
   if (schemaOf(parsed)>SCHEMA) return {err:`That backup was made by a newer FORGE (data v${schemaOf(parsed)}). Update this copy of the app first; nothing was changed.`};
-  return {parsed};
+  const photos=parsed.photos; delete parsed.photos;          // photos go back to IndexedDB after the restore, never into the saved state
+  return {parsed,photos};
 }
 /* what a saved state holds, for the before/after preview and the real-data check (tests/realdata.js) */
 function backupCounts(o){
@@ -6736,7 +6759,7 @@ function importPreviewHTML(txt){
   return `<div class="eyebrow" style="margin:12px 0 6px">WHAT IS IN THIS FILE</div>
     <div class="tbl"><div class="tr th" style="grid-template-columns:1.9fr 1fr 1fr"><span></span><span>File</span><span>This phone</span></div>
     ${COUNT_LABELS.map(([k,l])=>`<div class="tr" style="grid-template-columns:1.9fr 1fr 1fr"><span style="text-align:left">${l}</span><span>${f[k].toLocaleString()}</span><span>${m[k].toLocaleString()}</span></div>`).join('')}</div>
-    <div class="note" style="border-top:none;padding:8px 0 0">File covers ${span(f)}. This phone: ${span(m)}.</div>`;
+    <div class="note" style="border-top:none;padding:8px 0 0">File covers ${span(f)}. This phone: ${span(m)}.${c.photos?` The file carries ${Object.keys(c.photos).length} progress photos.`:''}</div>`;
 }
 /* MERGE: this phone wins. Only what it is missing is taken from the file: whole dates it has nothing logged for (food and ticks,
    program sets, own workouts, fights, events), measurements for dates it has none, and saved foods / routines / exercises /
@@ -7022,6 +7045,14 @@ function handleClick(e){
   if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
+  if (a==='ins-lift'){ insLift=v; render(); return; }
+  if (a==='rc-week'){ rcPrev=v==='1'; render(); return; }
+  if (a==='rd-sleep'){
+    const x=num((document.getElementById('rd_sleep')||{}).value);
+    if (!(x>0&&x<=24)){ toast('Enter hours slept, up to 24'); return; }
+    S.log=[...S.log.filter(e=>e.date!==T),{...(S.log.find(e=>e.date===T)||{}),date:T,sleep:x}].sort((p,q)=>p.date>q.date?1:-1);
+    commit(); render(); toast('Sleep logged'); return;
+  }
   if (a==='mm-sel'){ mmSel=mmSel===v?null:v; render(); return; }
   if (a==='mm-win'){ mmWin=+v||0; render(); return; }
   if (a==='mm-open'){ view='wlog'; wlSub='body'; mmSel=null; render(); window.scrollTo(0,0); return; }
@@ -7409,7 +7440,7 @@ function handleClick(e){
          again with the combined data. If either throws, the live data is put back untouched. */
       try{ adoptState(c.parsed); if (a==='importmerge'){ const merged=mergeState(cur,S); S=cur; WEEK=curWeek; adoptState(merged); } }
       catch(err){ S=cur; WEEK=curWeek; importErr=`That file reads as a backup but something in it would break the app (${String(err.message).slice(0,70)}). Nothing was changed; your current data is untouched.`; break; }
-      importOpen=false; importErr=''; commit(); render();
+      importOpen=false; importErr=''; commit(); restorePhotos(c.photos); render();
       const now=backupCounts(S), added=['foodDays','liftDays','workouts','log','fights'].reduce((n,k)=>n+now[k]-was[k],0);
       toast(a==='importmerge'?(added>0?`Merged: ${added} days and entries added from the file`:'Merged: this phone already had everything in that file'):'Backup restored',false,4000); return;
     }
@@ -7556,11 +7587,11 @@ const dayTonnage=k=>(tonnageIndex()[k]||{total:0,sets:0,byLift:{},byMuscle:{}});
 function weeklyLoad(n=12,end=T){
   const out=[];
   for (let i=n-1;i>=0;i--){
-    const week=addDays(weekOf(end),-7*i), w={week,tonnage:0,sets:0,days:0,byLift:{},byMuscle:{}};
+    const week=addDays(weekOf(end),-7*i), w={week,tonnage:0,sets:0,days:0,byLift:{},byMuscle:{},freq:{}};      // freq: days that week each muscle was loaded
     for (let d=0;d<7;d++){ const t=tonnageIndex()[addDays(week,d)]; if (!t) continue;
       w.tonnage+=t.total; w.sets+=t.sets; w.days++;
       for (const id in t.byLift) w.byLift[id]=(w.byLift[id]||0)+t.byLift[id];
-      for (const m in t.byMuscle) w.byMuscle[m]=(w.byMuscle[m]||0)+t.byMuscle[m]; }
+      for (const m in t.byMuscle){ w.byMuscle[m]=(w.byMuscle[m]||0)+t.byMuscle[m]; w.freq[m]=(w.freq[m]||0)+1; } }
     out.push(w);
   }
   return out;
@@ -7688,7 +7719,7 @@ function reportCard(week=weekOf(T)){
   for (const id of Object.keys(histIndexAll())){
     for (const p of liftPRs(id)) if (p.date>=week&&p.date<=end) prs.push(Object.assign({id},p));
     const sr=e1rmSeries(id), wk=sr.filter(x=>x.date>=week&&x.date<=end), old=sr.filter(x=>x.date<week);
-    if (wk.length&&old.length){ const g=Math.max(...wk.map(x=>x.e1))/Math.max(...old.map(x=>x.e1))-1; if (!best||g>best.gain) best={id,gain:g,e1:Math.max(...wk.map(x=>x.e1))}; }
+    if (wk.length&&old.length>=2){ const g=Math.max(...wk.map(x=>x.e1))/Math.max(...old.map(x=>x.e1))-1; if (!best||g>best.gain) best={id,gain:g,e1:Math.max(...wk.map(x=>x.e1))}; }
   }
   const w0=trendAt(addDays(week,-1)), w1=trendAt(end), a=acwr(days[days.length-1]);
   const stalled=insightLifts(5).filter(id=>{ const p=plateau(id); return p&&p.stalled; });
@@ -7701,6 +7732,7 @@ function reportCard(week=weekOf(T)){
     : w1==null||!S.log.some(e=>e.weight>0&&e.date>=week&&e.date<=end) ? {k:'weighin',t:'No weigh-in this week. One morning reading is enough to keep the trend honest.'}
     : {k:'hold',t:'Nothing is slipping. Repeat the week.'};
   return {week,end,planned,done,tonnage:cur.tonnage,prevTonnage:prev.tonnage,sets:cur.sets,liftDays:cur.days,prs,best,nutrition:nw,
+    prLifts:[...new Set(prs.filter(x=>x.type==='e1rm').map(x=>x.id))],                    // lifts that beat their best estimated 1RM this week
     weightChange:w0!=null&&w1!=null?w1-w0:null,acwr:a,stalled,fix};
 }
 
@@ -7722,6 +7754,91 @@ function readiness(k=T){
   if (!parts.length) return null;
   const tw=parts.reduce((s,p)=>s+p.w,0);
   return {score:Math.round(parts.reduce((s,p)=>s+p.v*p.w,0)/tw*100),parts,missing:['sleep','load','fresh'].filter(x=>!parts.some(p=>p.k===x))};
+}
+
+/* ---------- insights: screens ---------- */
+/* These live inside the tabs that already exist: strength under Training log > LIFTS, load under MUSCLES, nutrition against
+   results under Body > FUEL, the report card at the top of Ledger, readiness on Today. Every panel ends with how its numbers are
+   calculated (a native <details>, closed by default). */
+let insLift=null, rcPrev=null;
+const how=t=>`<details class="how"><summary>HOW THIS IS CALCULATED</summary><div>${t}</div></details>`;
+const uW=kg=>Math.round(isImp()?kg*2.20462:kg), uW1=kg=>(Math.round((isImp()?kg*2.20462:kg)*10)/10).toFixed(1);
+const signed=(n,d=0)=>(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(d);
+function StrengthPanel(){
+  const ids=insightLifts(2).slice(0,8);
+  if (!ids.length) return sect('trend','STRENGTH TREND')+`<div class="panel"><div class="empty">Log the same weighted lift in two sessions and its estimated 1RM line, records and plateau check appear here.</div></div>`;
+  const id=ids.includes(insLift)?insLift:ids[0], sr=e1rmSeries(id), cur=sr[sr.length-1], first=sr[0], p=plateau(id), rel=relStrength(id), prs=liftPRs(id).slice(-4).reverse();
+  const prTxt=x=>x.type==='weight'?`Heaviest weight: ${fmtW(x.v)}`:x.type==='e1rm'?`Best estimated 1RM: ${uW(x.v)} ${wUnit()}`:x.type==='reps'?`Most reps at ${fmtW(x.w)}: ${x.v}`:`Most volume in a session: ${fmtVol(x.v)}`;
+  return sect('trend','STRENGTH TREND')+`<div class="panel">
+    <div class="chips" style="padding-bottom:10px">${ids.map(x=>`<button class="chip ${x===id?'on':''}" data-act="ins-lift" data-v="${x}">${esc(exInfo(x).n.replace(/^(Barbell|Dumbbell) /,''))}</button>`).join('')}</div>
+    <div class="hero"><b>${uW(cur.e1)}</b><span>${wUnit()} estimated 1RM · ${esc(fmtW(cur.w))} × ${cur.r} on ${esc(shortDate(cur.date))}</span></div>
+    <div class="herosub">${signed(uW(cur.e1)-uW(first.e1))} ${wUnit()} since ${esc(shortDate(first.date))} · ${sr.length} sessions${rel.length?` · ${rel[rel.length-1].rel.toFixed(2)} × bodyweight`:''}</div>
+    ${sparkline(sr.map(x=>uW(x.e1)),'#E0A03A',96)}
+    <div class="histrow" style="padding:10px 13px"><span>Status</span><span style="color:${p&&p.stalled?'var(--rust)':'var(--text)'}">${!p?`Plateau check needs 5 sessions (${sr.length} so far)`:p.stalled?`Stalled: no gain over 1% in ${p.sessions} sessions (${p.days} days)`:'Moving'}</span></div>
+    ${prs.length?`<div class="eyebrow" style="padding:10px 13px 2px">LATEST RECORDS</div>${prs.map(x=>`<div class="histrow" style="padding:8px 13px"><span>${esc(shortDate(x.date))}</span><span>${esc(prTxt(x))}</span></div>`).join('')}`:''}
+    ${how(`Estimated 1RM uses the Epley formula, <b>weight × (1 + reps ÷ 30)</b>, with reps capped at 10 and a single counted as the weight itself. Each point is the best working set of one session (warm-ups never count). A lift is <b>stalled</b> when the best of its last 4 sessions is no more than 1% above the best before them and those sessions span 3 weeks or more. Relative strength divides by your bodyweight trend on that date. Records: heaviest weight, best estimated 1RM, most reps at a weight at least that heavy, most volume (weight × reps) in one session.`)}
+  </div>`;
+}
+function LoadPanel(){
+  const wl=weeklyLoad(8), cur=wl[7], prev=wl[6], a=acwr(), max=Math.max(...wl.map(w=>w.tonnage),1);
+  if (!wl.some(w=>w.tonnage>0)) return sect('act','TRAINING LOAD')+`<div class="panel"><div class="empty">Log weighted sets and weekly tonnage, load ratio and per-muscle volume appear here.</div></div>`;
+  const band=!a?null:a.ratio<0.8?['Easing off','var(--steel)']:a.ratio<=1.3?['Steady build','var(--moss)']:a.ratio<=1.5?['Pushing','var(--amber)']:['Spike','var(--rust)'];
+  const mus=Object.entries(cur.byMuscle).sort((x,y)=>y[1]-x[1]).slice(0,8);
+  return sect('act','TRAINING LOAD')+`<div class="panel">
+    <div class="hero"><b>${uW(cur.tonnage).toLocaleString()}</b><span>${wUnit()} lifted this week · ${cur.sets} sets · ${cur.days} day${cur.days===1?'':'s'}</span></div>
+    <div class="herosub">${prev.tonnage?`${signed(Math.round((cur.tonnage/prev.tonnage-1)*100))}% against last week (${uW(prev.tonnage).toLocaleString()} ${wUnit()})`:'No lifting logged last week'}</div>
+    <div class="wload">${wl.map((w,i)=>`<div class="wlcol"><div class="wlbar"><div class="wlfill" style="height:${w.tonnage/max*100}%;background:${i===7?'var(--amber)':'var(--steel)'}"></div></div><div class="wllab">${esc(shortDate(w.week).replace(/^\D+/,''))}</div></div>`).join('')}</div>
+    <div class="note" style="border-top:none;padding-top:0">Weekly tonnage, last 8 weeks (week starting, Monday).</div>
+    <div class="histrow" style="padding:10px 13px;border-top:1px solid var(--rule)"><span>Load ratio</span><span>${a?`<b style="color:${band[1]}">${a.ratio.toFixed(2)}</b> · ${band[0]}`:'Needs 28 days of lifting history'}</span></div>
+    ${mus.length?`<div class="eyebrow" style="padding:10px 13px 2px">THIS WEEK BY MUSCLE</div>${mus.map(([m,t])=>`<div class="histrow" style="padding:8px 13px"><span>${esc((MM_RL[m]||[0,m])[1])}</span><span>${uW(t).toLocaleString()} ${wUnit()} · ${cur.freq[m]}× this week</span></div>`).join('')}`:''}
+    ${how(`<b>Tonnage</b> = sets × reps × weight, working sets only. Bodyweight reps count only their added weight, and timed, cardio and carry sets are not included, so it understates that work. A lift credits its main muscle in full and helper muscles at half, the same rule as the muscle map above. <b>Load ratio</b> = tonnage of the last 7 days ÷ the average week of the last 28. Roughly 0.8 to 1.3 is a steady build; above 1.5 is a jump your recent training has not prepared you for. Lifting only: fights and cardio have no tonnage.`)}
+  </div>`;
+}
+function NutritionResults(){
+  const nv=nutritionVsResults(), rows=nv.rows.slice(-6).reverse();
+  if (!rows.length) return sect('trend','FOOD AGAINST RESULTS')+`<div class="panel"><div class="empty">Once a full week has food logged on 4 or more days, it is lined up here against your weight trend and strength.</div></div>`;
+  const line=(c,what)=>!c.enough?`<p class="t"><b>${what}:</b> needs ${MIN_WEEKS} comparable weeks to say anything (${c.n} so far).</p>`
+    :c.r==null?`<p class="t"><b>${what}:</b> no variation to compare yet.</p>`
+    :`<p class="t"><b>${what}:</b> r = ${c.r.toFixed(2)} over ${c.n} weeks. ${Math.abs(c.r)<0.3?'No clear link in your data yet.':Math.abs(c.r)<0.6?`A moderate ${c.r>0?'positive':'negative'} link.`:`A strong ${c.r>0?'positive':'negative'} link.`}</p>`;
+  return sect('trend','FOOD AGAINST RESULTS')+`<div class="panel"><div class="tbl">
+    <div class="tr th" style="grid-template-columns:1.1fr 1fr 1.2fr 1.1fr"><span>Week of</span><span>Protein</span><span>Kcal / day</span><span>Weight trend</span></div>
+    ${rows.map(r=>{ const nw=nutritionWeek(r.week); return `<div class="tr" style="grid-template-columns:1.1fr 1fr 1.2fr 1.1fr"><span>${esc(shortDate(r.week))}</span><span>${nw.proteinDays}/${nw.logged} days</span><span>${signed(Math.round(r.balance))}</span><span>${r.dW==null?'·':signed(isImp()?r.dW*2.20462:r.dW,1)+' '+wUnit()}</span></div>`; }).join('')}</div>
+    <div style="padding:12px 13px 2px">${line(nv.weight,'Calories over or under target against weight trend change')}${line(nv.strength,'Protein per kg against strength change')}
+      <p class="t" style="color:var(--faint)">A correlation in ${Math.max(nv.weight.n,nv.strength.n)} weeks of one person's logs is a hint, not proof. Sleep, stress, the programme and water move both sides.</p></div>
+    ${how(`Only completed weeks with food logged on 4 or more days count. <b>Protein</b>: days at 90% of target or more, out of days logged. <b>Kcal / day</b>: average intake minus average target on logged days. <b>Weight trend</b>: change in your smoothed bodyweight over the week (each day the trend moves 10% of the way to a new reading, so one heavy morning barely moves it). <b>Strength</b>: the change in a strength index, the mean across lifts with 3+ sessions of best estimated 1RM so far ÷ first. <b>r</b> is the Pearson correlation, from −1 to 1. Targets use today's bodyweight for every week.`)}
+  </div>`;
+}
+function ReportCard(){
+  const late=dowIdx(T)>=5, prev=rcPrev==null?!late:rcPrev, week=addDays(weekOf(T),prev?-7:0), c=reportCard(week), nw=c.nutrition;
+  const dT=c.prevTonnage?Math.round((c.tonnage/c.prevTonnage-1)*100):null, col=(v,good,ok)=>v>=good?'var(--moss)':v>=ok?'var(--amber)':'var(--rust)';
+  return sect('award','REPORT CARD')+`
+    <div class="seg" style="margin-bottom:10px"><button class="segbtn ${prev?'on':''}" data-act="rc-week" data-v="1">LAST WEEK</button><button class="segbtn ${prev?'':'on'}" data-act="rc-week" data-v="0">THIS WEEK SO FAR</button></div>
+    <div class="stats">
+      <div class="stat"><div class="v" style="color:${col(c.planned?c.done/c.planned:1,0.85,0.6)}">${c.done}<span style="font-size:var(--fs-form);color:var(--faint)">/${c.planned}</span></div><div class="l">SESSIONS</div></div>
+      <div class="stat"><div class="v">${dT==null?'—':signed(dT)+'%'}</div><div class="l">TONNAGE</div></div>
+      <div class="stat"><div class="v" style="color:${c.prLifts.length?'var(--amber)':'var(--faint)'}">${c.prLifts.length}</div><div class="l">LIFT RECORDS</div></div>
+      <div class="stat"><div class="v" style="color:${nw.logged?col(nw.proteinDays/nw.logged,0.85,0.6):'var(--faint)'}">${nw.logged?nw.proteinDays:'—'}<span style="font-size:var(--fs-form);color:var(--faint)">${nw.logged?'/'+nw.logged:''}</span></div><div class="l">PROTEIN DAYS</div></div>
+    </div>
+    <div class="panel">
+      <div class="histrow" style="padding:10px 13px"><span>Lifted</span><span>${uW(c.tonnage).toLocaleString()} ${wUnit()} · ${c.sets} sets · ${c.liftDays} days</span></div>
+      <div class="histrow" style="padding:10px 13px"><span>Best lift</span><span>${c.best&&c.best.gain>0?`${esc(exInfo(c.best.id).n)} ${uW(c.best.e1)} ${wUnit()} est. 1RM (+${(c.best.gain*100).toFixed(1)}%)`:'No lift beat its previous best'}</span></div>
+      <div class="histrow" style="padding:10px 13px"><span>Food</span><span>${nw.logged?`${Math.round(nw.avgKcal).toLocaleString()} kcal, ${Math.round(nw.avgP)} g protein a day · ${signed(Math.round(nw.balance))} against target`:'Nothing logged'}</span></div>
+      <div class="histrow" style="padding:10px 13px"><span>Weight trend</span><span>${c.weightChange==null?'Not enough weigh-ins':signed(isImp()?c.weightChange*2.20462:c.weightChange,1)+' '+wUnit()}</span></div>
+      <div class="fixline"><div class="eyebrow" style="color:var(--amber)">FIX ${prev?'THIS':'NEXT'} WEEK</div>${esc(c.fix.t)}</div>
+      ${how(`<b>Sessions</b>: days where 60% or more of the planned session (or an equivalent workout of your own) was done, out of days that had a training session planned and were not marked off. <b>Tonnage</b>: this week against the week before. <b>Lift records</b>: lifts that beat their best estimated 1RM that week. <b>Protein days</b>: days at 90% of target or more, out of days with food logged. <b>Best lift</b>: the largest gain in estimated 1RM over that lift's previous best (it needs two earlier sessions to count). <b>The one thing to fix</b> is the first of these that is true: 2 or more planned sessions missed; food logged on fewer than 5 days; protein missed on 2 or more logged days; load ratio above 1.5; a stalled lift; no weigh-in.`)}
+    </div>`;
+}
+function ReadinessCard(){
+  const r=readiness(), e=S.log.find(x=>x.date===T), slept=e&&e.sleep>0;
+  const L={sleep:'Sleep',load:'Load ratio',fresh:'Yesterday'};
+  return foldHead('ready','act','READINESS',r?`${r.score} · model`:'log sleep to start')+(foldOpen('ready')?`<div class="panel">
+    ${r?`<div class="hero"><b style="color:${r.score>=75?'var(--moss)':r.score>=50?'var(--amber)':'var(--rust)'}">${r.score}</b><span>of 100 · a model from your logs, not a measurement</span></div>
+      ${r.parts.map(x=>`<div class="histrow" style="padding:8px 13px"><span>${L[x.k]}</span><span>${esc(x.d)} · ${Math.round(x.v*100)}</span></div>`).join('')}
+      ${r.missing.length?`<div class="note" style="border-top:none">Left out today (not logged): ${r.missing.map(k=>L[k].toLowerCase()).join(', ')}.</div>`:''}`
+    :`<div class="empty">Needs last night's sleep, or about four weeks of lifting history.</div>`}
+    ${slept?'':`<div class="gramrow" style="border-top:1px solid var(--rule);border-bottom:none"><span>Sleep last night (hours)</span><input type="number" id="rd_sleep" inputmode="decimal" step="0.25" placeholder="${SLEEP_TARGET}" aria-label="Hours slept last night"><button class="chip on" data-act="rd-sleep">SAVE</button></div>`}
+    ${how(`A 0 to 100 estimate of how ready you are to train hard, built only from what you logged. It cannot see heart-rate variability, illness or stress. <b>Sleep</b> (weight 40%): last night's hours ÷ ${SLEEP_TARGET}, capped at 100. <b>Load ratio</b> (35%): 100 while your 7-day lifting load is at most 1.1× your 4-week average, falling to 0 at 1.8×. <b>Yesterday</b> (25%): 100 after a day without lifting, 60 after a typical lifting day, down to 20 after a day twice as heavy. A part with no data is left out and the others are scaled up, so nothing is invented.`)}
+  </div>`:'');
 }
 
 /* ============================================================ migrations == */

@@ -80,7 +80,7 @@ dead code on GitHub Pages. Left alone.
 | `p` | `ph_<time>_<pose>` | JPEG `Blob`, downscaled to 1080 px | 90-day check-in photo picker | `hydratePhotos`, SAVE PHOTOS |
 | `s` | `YYYY-MM-DD`, `undo-<ms>`, `pre-v<n>-<ms>` (new) | JSON string of the state | `snapDaily` (first open each day), restore/import (undo point), migration runner (new) | Settings snapshot list, recovery screen |
 
-Photos are **not** in the JSON backup today. That is called out in the app and is the one real gap in export (planned for Phase 4).
+Photos are included in the backup file (as data URLs under `photos`) and restored from it; they are never part of the saved state.
 
 ### Cache Storage
 
@@ -195,7 +195,6 @@ goal adjustment. Defaults for age 22 and height 178 cm exist but onboarding over
 
 ### Quick wins (not yet done, small)
 
-- Include progress photos in the backup file (Phase 4 needs it anyway).
 - A source comment names the film franchise the physique target came from; nothing user-visible, removed in this branch.
 - Move `ARCH`, protein g/kg and goal adjustments into `profile` so a second user can change them without editing code.
 
@@ -224,6 +223,39 @@ See the commits. Summary is kept current at the end of each phase.
 - Tap targets, focus ring, persistent-storage request.
 - `tests/realdata.js`: run a real backup through boot, every screen, and export → wipe → import, with before/after counts.
 - New tests: `tests/safety-net.test.js` (12) and an outage test in `tests/offline.test.js`. Suite: 210 passing (197 before this branch).
+
+### Phase 3: typography (done)
+
+Decision: keep the original colours, take the type from direction A.
+
+- Inter replaces the monospace face everywhere. It ships in `fonts/` (48 KB, SIL Open Font License, licence included) and is precached by
+  the service worker (`forge-v33`), so there is still no CDN and no network dependency. The system font is the fallback.
+- Type scale: smallest text 7.5 px → 10 px, body 11 → 13.5 px; LARGE and EXTRA LARGE scale from there. Tracking halved app-wide.
+- Numbers: weight and reps inputs 26 px bold, logged sets 18 px, tabular figures throughout. The set log uses the full card width.
+- Motion: a logged set drops into place under a flash of the accent; a record holds it longer. `prefers-reduced-motion` turns it off.
+- Tokens: `--font`, `--ease` added to the existing colour and type tokens. No radius or spacing tokens were added: nothing would use them.
+- Not done: the five domain colours and the layout are unchanged, by request.
+
+### Phase 4: insights (done)
+
+Calculation layer (`insights` section of `index.html`) and five panels inside the existing tabs. Every panel ends with "how this is calculated".
+
+| Where | Panel | What it shows |
+|---|---|---|
+| Training log → LIFTS | Strength trend | e1RM per session (Epley, reps capped at 10), change since the first session, relative strength, plateau status, latest records |
+| Training log → MUSCLES | Training load | weekly tonnage (8 weeks), change on last week, acute:chronic load ratio, tonnage and frequency per muscle |
+| Body → FUEL | Food against results | per week: protein days, kcal against target, weight-trend change; Pearson r with n, withheld under 8 weeks |
+| Ledger (top) | Report card | sessions, tonnage change, lift records, protein days, best lift, weight trend, and one rule-ordered thing to fix |
+| Today | Readiness | a labelled model from sleep, load ratio and yesterday's load; missing inputs are left out, not invented; sleep can be logged in place |
+| Body → LOG | Weight chart | the dashed line is now a gap-aware EWMA (alpha 0.1) instead of a 7-day mean |
+
+- Progress photos are now included in the backup file and restored from it (they never enter the saved state or the snapshots).
+- Calorie and macro **targets still use the 7-day mean weight**, not the EWMA: changing that would move every target, which is a separate decision.
+- **Skipped:** an optional session-effort rating. Load is tonnage only, so fights and cardio are not in the load ratio. Add it if that gap matters in practice.
+- **Skipped:** a standalone photo timeline. The 90-day challenge already holds weekly front/side/back photos with side-by-side compare.
+- Checked against the real backup (79 food days, 610 sets): all panels draw, 21 ms for the whole layer.
+
+Suite: 223 passing.
 
 ### Deliberately skipped
 
