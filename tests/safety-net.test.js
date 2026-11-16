@@ -124,8 +124,10 @@ module.exports = { name: 'Safety net: schema version, boot order, two copies, re
   },
 
   async 'looking at totals does not create empty day records'(page, a){
-    const n = await page.evaluate(() => { const b = Object.keys(S.days).length; for (let i = 1; i < 30; i++) foodTotals(dkey(-i)); view = 'ledger'; render(); return [b, Object.keys(S.days).length]; });
-    a.equal(n[1], n[0]);
+    const n = await page.evaluate(() => { S.log.push({ date: T, weight: 80 }); const b = Object.keys(S.days).length;
+      for (let i = 1; i < 30; i++){ foodTotals(dkey(-i)); nutrition(dkey(-i)); buildDay(dkey(-i)); dayWon(dkey(-i)); }      // targets, the scheduler and the streak all read past days
+      rankState(); callout(); reportCard(); view = 'ledger'; render(); return [b, Object.keys(S.days).length]; });
+    a.equal(n[1], n[0], 'a calculation created day records just by reading');
   },
 
   async 'dates and the streak are right across both daylight-saving changes'(page, a){
@@ -134,7 +136,7 @@ module.exports = { name: 'Safety net: schema version, boot order, two copies, re
       try {
         await pg.clock.setFixedTime(new Date(noon)); await pg.reload(); await ready(pg);
         const r = await pg.evaluate(() => { const keys = Array.from({ length: 9 }, (_, i) => dkey(-i));
-          keys.slice(0, 6).forEach(k => { day(k).blocks.x = true; });
+          keys.slice(0, 6).forEach(k => { day(k).habits = { h1: true, h2: true, h3: true }; });
           return { keys, back: keys.map((k, i) => addDays(T, -i)), gaps: keys.slice(1).map((k, i) => daysBetween(k, keys[i])), dows: keys.map(dowIdx), streak: streak(), monday: dowIdx(mondayOf(0)), T }; });
         a.equal(new Set(r.keys).size, 9, `${zone}: a date repeated or was skipped: ${r.keys}`);
         a.deepEqual(r.back, r.keys, `${zone}: addDays and dkey disagree`);

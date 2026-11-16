@@ -274,6 +274,21 @@ is withheld under 8 weeks), the **report card** (top of Ledger: the week in numb
 sleep, load and yesterday's training, labelled as a model). The formulas live in the `insights` section of `index.html`; `tests/insights.test.js`
 checks each against a hand-worked value.
 
+### Rank, missions, streak
+
+**Streak.** A day counts when the session was done (60% of the plan, your own workout of 3+ exercises, or a 30-minute fight), or protein reached
+90% of target, or three habits were ticked (`dayWon`). Days off pause it.
+
+**Rank** (top of Ledger, and the line under FORGE): RAW, IRON, STEEL, TEMPERED, HARDENED, DAMASCUS. Each needs a strength score (best estimated 1RM
+on squat, bench, deadlift and press against 2×, 1.5×, 2.5× and 1× bodyweight), a discipline record over completed weeks, and marks, all at once
+(`RANKS`). A rank is never taken away; a "slipping" note shows when recent weeks fall under its floor.
+
+**Missions** (Today): three a week and one a month, generated from your own recent weeks, each with BASE / HARD / MAX bars. The bar you reach decides
+the marks (1 / 2 / 3 weekly, 3 / 5 / 8 monthly, +1 when all three reach HARD); progress is read from the logs. Marks also come from main-lift
+records, never from opening the app. Rules live in `MISSION`, `genWeek`, `genMonth` and `weakPoint`.
+
+**Callouts.** At most one line a day at the top of the briefing (`callout`), silent when you are on plan, followed by a proof line from your own lifts.
+
 The typeface is Inter, shipped in `fonts/` under the SIL Open Font License (ten files with it).
 
 ## Tests

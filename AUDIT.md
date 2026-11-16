@@ -255,7 +255,55 @@ Calculation layer (`insights` section of `index.html`) and five panels inside th
 - **Skipped:** a standalone photo timeline. The 90-day challenge already holds weekly front/side/back photos with side-by-side compare.
 - Checked against the real backup (79 food days, 610 sets): all panels draw, 21 ms for the whole layer.
 
-Suite: 223 passing.
+### Phase 5: motivation (done)
+
+Decisions: forge-metal rank names, no demotion, a streak rule between "one tick" and "a whole week", missions with difficulty tiers.
+
+- **Streak**: a day counts when the session was done (60% of the plan, an own workout of 3+ exercises, or a 30-minute fight), or
+  protein reached 90% of target, or three habits were ticked. One ticked meal no longer counts. On four months of real logs the old
+  rule counted 77 days of 98; this one counts 54 (best run 20 → 9).
+- **Ranks** (RAW, IRON, STEEL, TEMPERED, HARDENED, DAMASCUS): each needs a strength score, a discipline record over completed weeks
+  and a number of marks, all at once. The highest rank reached is stored and never removed; a "slipping" note shows instead.
+- **Missions**: three a week (sessions, protein, one weak point) and one a month, each with BASE / HARD / MAX bars. There is no
+  difficulty to pick: the bar reached decides the marks (1 / 2 / 3 weekly, 3 / 5 / 8 monthly, +1 when all three reach HARD), so
+  falling short of MAX still pays more than clearing BASE. Generated once from the weeks before, then only read from the logs. One
+  swap a week on the weak-point mission. With an injury logged, stall, muscle and tonnage missions are not offered.
+- **Marks** also come from main-lift estimated-1RM records (1 per lift per week). Nothing is earned by opening the app or logging.
+- **Callouts**: at most one line a day in the briefing, by priority (rank earned, record, streak about to end, days out, sessions
+  missed, protein short three days, a stalled main lift, no weigh-in). On plan, it says nothing. A proof line quotes a real lift's
+  estimated 1RM then and now. Quotes were already chosen by context; the callout now leads them.
+- The header's phase line is replaced by rank, progress to the next rank and marks. The arc itself is unchanged in Ledger.
+- New saved fields: `missions` and `rank` (additive, defaulted; no migration needed).
+
+Bugs found and fixed while building this:
+
+- `trainRatio()` returned 0 for a date with a workout but no day record, so such a session did not count toward sessions, the
+  streak or deload logic.
+- The scheduler (`buildDay`) created an empty day record for every date a calculation looked at, which made two open copies
+  disagree about what to save. It reads without creating now, and every save first checks that no other copy has saved since.
+- The LOG SET button was 43 px tall; primary buttons are 48 px.
+
+### Phase 6: verification (done in headless Chromium)
+
+| Check | Result |
+|---|---|
+| Every self-check | 232 passing (197 before this branch) |
+| Four usage moments, phone viewport, service worker on, network off | `tests/moments.test.js`: log a set, check in, log food twice, read the week; data survives an offline reload; no console errors |
+| Real backup through boot and migration | counts identical before and after (79 food days, 1,136 foods, 610 sets, 23 measurements) |
+| Export → wipe → import | identical, on the real backup and on the old-build fixture |
+| Console errors | none in the click-through |
+| Install checklist | manifest fields, 192 and 512 icons at their stated sizes, active service worker, start page cached, zoom not disabled |
+
+**Not verified:** anything on a physical iPhone or Android phone (install prompt, safe areas, keyboard, share sheet, haptics), and
+how the set-logged animation feels at real speed. Lighthouse was not run; the install checklist above covers its PWA requirements by hand.
+
+### What I would do next
+
+1. Use it for two weeks on the phone, then tune the numbers that are judgement calls: the streak rule, mission bars, rank thresholds, readiness weights.
+2. Decide whether calorie targets should follow the EWMA trend instead of the 7-day mean.
+3. Add the optional session-effort rating if fights and cardio need to count in the load ratio.
+4. Move `ARCH`, protein g/kg and the goal adjustments into `profile` before anyone else uses the app.
+5. Rewrite the first-run tour text to mention ranks, missions and insights.
 
 ### Deliberately skipped
 

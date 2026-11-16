@@ -206,7 +206,7 @@ textarea{resize:vertical;min-height:54px;line-height:1.5;font-size:16px}
 select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
   background-position:calc(100% - 14px) 18px,calc(100% - 9px) 18px;background-size:5px 5px;background-repeat:no-repeat}
 input[type=date],input[type=time]{min-height:40px}
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;padding:14px;
   background:var(--amber);color:var(--ink);font-size:var(--fs-detail);font-weight:700;letter-spacing:.07em}
 .btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--rule)}
 .btn.ghost:active{background:var(--panel2)}
@@ -730,6 +730,19 @@ body.lock{overflow:hidden}
 .how b{color:var(--text);font-weight:600}
 .fixline{margin:4px 13px 13px;padding:11px 12px;border:1px solid var(--banner-amber-border);border-left:3px solid var(--amber);background:var(--banner-amber-bg);font-size:var(--fs-body);line-height:1.5;color:var(--text)}
 .fixline .eyebrow{margin-bottom:5px}
+/* ---------- missions + callout ---------- */
+.reqrow{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-bottom:1px solid #14181D;font-size:var(--fs-detail);line-height:1.45}
+.reqrow svg{margin-top:2px} .reqrow b{display:block;font-weight:600;color:var(--text)} .reqrow span{display:block}
+.mis{padding:13px 13px 12px;border-bottom:1px solid var(--rule)}
+.mist{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:var(--fs-title)}
+.mist b{font-weight:600} .mism{font-size:var(--fs-caption);font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.misbar{position:relative;height:8px;margin:11px 0 8px;background:var(--sunk);border:1px solid var(--rule)}
+.misfill{height:100%;background:var(--amber)}
+.misbar i{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--rule2)} .misbar i.on{background:var(--text)}
+.misl{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:var(--fs-caption);color:var(--faint)} .misl b,.misl .on{color:var(--text);font-weight:600}
+.misw{margin-top:6px;font-size:var(--fs-caption);color:var(--faint);line-height:1.5}
+.brcall{margin:11px 0 0;font-weight:800;font-size:19px;line-height:1.3;letter-spacing:-.01em;color:var(--text)}
+.brproof{display:flex;gap:7px;align-items:flex-start;margin-top:11px;font-size:var(--fs-detail);color:var(--text);line-height:1.45}
 /* tap targets: the controls used one-handed between sets were 26-35px tall. 40px minimum (the steppers are 44 wide, see .stp). */
 .xtools button,.seg2 button,.rpe button,.rpe.c8 button,.chip,.badge[data-act]{min-height:40px}
 .chip,.badge[data-act]{display:inline-flex;align-items:center;justify-content:center}
@@ -812,6 +825,8 @@ const Store = {
   },
   async save(data){
     if (Store.stale) return true;                          // another copy of the app has saved since: this one must not write over it
+    /* ...and one that saved without this copy hearing about it (during boot, or a missed storage event) is caught here, before the write */
+    if (Store.last!==undefined && Store.changedElsewhere()){ Store.yield(); return true; }
     const s = JSON.stringify(data); mem[KEY]=s;
     try{ if (window.storage){ await window.storage.set(KEY, s); return true; } }catch(e){}
     try{ localStorage.setItem(KEY, s); Store.last=s; return true; }catch(e){ return false; }
@@ -2012,6 +2027,8 @@ const DEFAULTS = {
   off:{},                                  // days off: { 'YYYY-MM-DD': 'sick'|'travel'|'rest' }
   injury:null,                             // { area: key of INJURY, sev: 'mild'|'mod'|'severe', on: 'YYYY-MM-DD' }
   ui:{ fold:{}, seen:{} },                 // which Today sections you've folded/unfolded; which tour cards you've dismissed
+  missions:{ w:{}, m:{}, swap:{} },        // missions as generated: w[monday] = [three], m['YYYY-MM'] = one, swap[monday] = true once used. Progress is always worked out from the logs.
+  rank:{ i:0, at:{} },                     // highest rank earned (index into RANKS) and the date each was earned. Never goes down.
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null, toastUndo = false, undoSnap = null;
@@ -2031,7 +2048,7 @@ function commitSoon(){ _memo=null; clearTimeout(saveTimer); saveTimer=setTimeout
 function flushSave(){ if (saveTimer){ clearTimeout(saveTimer); commit(); } }
 function commit(){
   _memo=null; clearTimeout(saveTimer); saveTimer=null;
-  syncPRs();
+  syncPRs(); ensureMissions(); syncRank();
   Store.save(S).then(ok=>{
     if (ok!==false || Date.now()-saveWarnAt<60000) return;
     saveWarnAt=Date.now();
@@ -2110,7 +2127,7 @@ function buildDay(key){
   const buf=+p.commute||0;
   for (const c of fixed) free=subtract(free,c.s-buf,c.e+buf);
 
-  const out=[...fixed], missed=[], adapt=[], nudge=day(key).nudge;
+  const out=[...fixed], missed=[], adapt=[], nudge=(S.days[key]&&S.days[key].nudge)||{};      // read-only: day(key) would create a record for every date a calculation looks at
   const physMin = fixed.filter(c=>c.t==='physical').reduce((a,c)=>a+(c.e-c.s),0);
 
   const add=(id,label,sub,dur,anchor,win,kind)=>{
@@ -2183,10 +2200,21 @@ function dayScore(k){
   const x=(d.mind?1:0)+(d.news?1:0)+(d.rv&&d.rv.win?1:0);
   return clamp((b*1.1+h*0.7+x*1.1)/9,0,1);
 }
+/* A streak day has to be WON, not touched. Any one of: the session got done (60% of the plan, an own workout of 3+ exercises or
+   a 30-minute fight: trainRatio); protein reached 90% of the day's target; three habits were ticked. Ticking one meal block no
+   longer counts. Calibrated on four months of real logs: the old rule counted 77 days of 98, this one 54, session-only about 35. */
+function dayWon(k){
+  return memo('won:'+k,()=>{
+    if (trainRatio(k)>=0.6) return true;
+    const d=S.days[k]; if (!d) return false;
+    if (Object.values(d.habits||{}).filter(Boolean).length>=3) return true;
+    const N=nutrition(k); return !!N&&foodTotals(k).p>=N.protein*0.9;
+  });
+}
 function streak(){
   let n=0;
-  for(let i=0;i<1200;i++){ const s=dayScore(dkey(-i));
-    if(s>0.08)n++; else if(i===0||offOf(dkey(-i)))continue; else break; }      // a day off pauses the streak, it doesn't break it
+  for(let i=0;i<1200;i++){ const k=dkey(-i);
+    if(dayWon(k))n++; else if(i===0||offOf(k))continue; else break; }      // a day off pauses the streak, it doesn't break it
   return n;
 }
 /* the most recent log entry that actually HAS this field — not just the most
@@ -2605,7 +2633,7 @@ function rebuildPR(ex){
 function syncPRs(){ if (!S.prs||typeof S.prs!=='object'||Array.isArray(S.prs)) S.prs={}; for (const ex in EXS) if (gymSessions(ex).length) rebuildPR(ex); }
 function bestStreakEver(){
   let max=0,cur=0;
-  for (let i=1100;i>=0;i--){ const k=dkey(-i), s=dayScore(k); if(s>0.08){ cur++; if(cur>max)max=cur; } else if (!offOf(k)) cur=0; }
+  for (let i=1100;i>=0;i--){ const k=dkey(-i); if(dayWon(k)){ cur++; if(cur>max)max=cur; } else if (!offOf(k)) cur=0; }
   return Math.max(max,streak());
 }
 function totalSessions(){ return Object.keys(S.days).filter(k=>{ const d=S.days[k];
@@ -2658,10 +2686,9 @@ function inLoad(v){ const n=num(v); if(n==null) return null;
 
 /* ============================================================== deload === */
 function trainRatio(k){
-  const d=S.days[k]; if(!d||!d.blocks) return 0;
-  const wi=dowIdx(k);
-  const def=S.swap[k]!=null?(ALLDAYS[S.swap[k]]||WEEK[wi]):WEEK[wi];
-  const done=def.blocks.filter(b=>d.blocks[b.id]).length;
+  const d=S.days[k], def=dayDef(k);
+  /* no day record is not "no training": a workout or fight logged on a date nothing else was ticked on still counts (it used to be 0) */
+  const done=d&&d.blocks?def.blocks.filter(b=>d.blocks[b.id]).length:0;
   /* a custom workout or a logged fight counts toward a hard day the same way a planned session does */
   return Math.max(done/def.blocks.length, custRatio(k));
 }
@@ -3334,6 +3361,11 @@ function normalizeCustom(){
   S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
   if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
   if (!S.ui.seen||typeof S.ui.seen!=='object'||Array.isArray(S.ui.seen)) S.ui.seen={};
+  const plain=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
+  if (!plain(S.missions)) S.missions={}; for (const k of ['w','m','swap']) if (!plain(S.missions[k])) S.missions[k]={};
+  for (const k of Object.keys(S.missions.w)) if (!Array.isArray(S.missions.w[k])||S.missions.w[k].some(m=>!plain(m)||!Array.isArray(m.tiers))) delete S.missions.w[k];
+  for (const k of Object.keys(S.missions.m)) if (!plain(S.missions.m[k])||!Array.isArray(S.missions.m[k].tiers)) delete S.missions.m[k];
+  if (!plain(S.rank)||!(S.rank.i>=0)) S.rank={i:0,at:{}}; if (!plain(S.rank.at)) S.rank.at={};
   /* A backup that was hand-edited or damaged can hold entries of the wrong type. Drop those (and unreadable numbers) here so one bad
      entry can't make every screen throw. The import also draws every screen before it commits (adoptState). */
   const isObj=x=>!!x&&typeof x==='object'&&!Array.isArray(x), isDate=x=>typeof x==='string'&&/^\d{4}-\d\d-\d\d$/.test(x);
@@ -4526,9 +4558,9 @@ function briefTag(){
   const plan=buildDay(T), type=plan.def.type, st=streak(), nowH=new Date().getHours();
   if (typeof campDaysOut==='function'){ const d=campDaysOut(); if (d!=null && d>=0 && d<=56) return 'camp'; }
   if (recentPR()) return 'pr';
-  if ([7,14,21,30,50,60,75,100,150,200,365].includes(st) && dayScore(T)>0.08) return 'milestone';
+  if ([7,14,21,30,50,60,75,100,150,200,365].includes(st) && dayWon(T)) return 'milestone';
   if (offOf(T)) return 'general';
-  if (st>0 && nowH>=18 && dayScore(T)<=0.08) return 'streakRisk';
+  if (st>0 && nowH>=18 && !dayWon(T)) return 'streakRisk';
   if (daysSinceStart()>=2 && dayScore(dkey(-1))<=0.08 && dayScore(dkey(-2))<=0.08 && daysLogged()>0) return 'comeback';
   if (deloadActive()) return 'deload';
   if (daysLogged()<7 && daysSinceStart()<10) return 'firstWeek';
@@ -4578,7 +4610,7 @@ function briefLine(tag){
   return pool[(strHash(T+tag)+shift)%pool.length];
 }
 function Briefing(){
-  const d=day(T), tag=briefTag(), line=briefLine(tag), st=streak();
+  const d=day(T), tag=briefTag(), line=briefLine(tag), st=streak(), co=callout(), proof=proofLine();
   const nowH=new Date().getHours();
   const head=nowH<12?'MORNING BRIEF':nowH<18?'AFTERNOON CHECK':'EVENING CHECK';
   const dl=daysLogged(), next=MILESTONES.find(m=>dl<m.d);
@@ -4589,17 +4621,19 @@ function Briefing(){
   if (typeof chBriefStat==='function'){ const c=chBriefStat(); if (c) extra.push(c); }
   if (d.bCol!==false){          // one line until you open it, so today's workout is on the first screen
     return `<button class="brief col" data-act="b-col" aria-expanded="false">
-      <span class="brtag">${esc(BRIEF_TAG_LABEL[tag])}</span><span class="brmini">${esc(line.t)}</span>${svg('chevD',13,'var(--faint)')}</button>`;
+      <span class="brtag">${esc(BRIEF_TAG_LABEL[tag])}</span><span class="brmini"${co?' style="color:var(--text)"':''}>${esc(co?co.t:line.t)}</span>${svg('chevD',13,'var(--faint)')}</button>`;
   }
   if (briefEdit) return BriefEditor();
   return `<div class="brief">
     <div class="brhead"><span class="brtag">${head} · ${esc(BRIEF_TAG_LABEL[tag])}</span>
       <button class="brx" data-act="b-col" aria-label="Collapse the briefing for today">${svg('chevD',14,'var(--faint)').replace('<svg','<svg style="transform:rotate(180deg)"')}</button></div>
-    <div class="brline">${esc(line.t)}</div>
+    ${co?`<div class="brcall">${esc(co.t)}</div>`:''}
+    <div class="brline"${co?' style="font-size:var(--fs-title);font-weight:600;color:var(--dim)"':''}>${esc(line.t)}</div>
     ${line.mine?'<div class="brsrc">— from your list</div>':''}
     ${line.quote?`<div class="brsrc"><b style="color:var(--text)">— ${esc(line.quote.who)}</b><span style="color:var(--faint)"> · ${esc(line.quote.desc)}</span> <span class="qtier" style="color:${QUOTE_TIER[line.quote.t][1]};border-color:${QUOTE_TIER[line.quote.t][1]}">${QUOTE_TIER[line.quote.t][0]}</span><br>${esc(line.quote.src)}</div>`:''}
     ${why?`<button class="brwhy" data-act="b-edit"><i>YOUR WHY</i>${esc(why)}</button>`
          :`<button class="brwhy empty" data-act="b-edit"><i>YOUR WHY</i>Write the one sentence you'd want to read on your worst morning. ${svg('edit',11,'var(--amber)')}</button>`}
+    ${proof?`<div class="brproof">${svg('trend',11,'var(--amber)')} ${esc(proof)}</div>`:''}
     <div class="brstats">
       <span>${svg('flame',11,st>0?'var(--amber)':'var(--faint)')} ${st} day streak</span>
       ${next?`<span>${next.d-dl} to ${esc(next.l)}</span>`:''}
@@ -5718,7 +5752,7 @@ function obFinish(){
 /* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
    is remembered. After-action opens by itself in the evening (or once you've written in it). */
 const FOLD_DEF = {
-  rail:()=>false, arc:()=>false, injury:()=>true, ready:()=>true, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
+  rail:()=>false, arc:()=>false, injury:()=>true, ready:()=>true, missions:()=>true, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
   review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
 };
 function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
@@ -5772,14 +5806,14 @@ const VITAL_HELP={
   BODY:'BODY: your lifts against bodyweight targets (60%) and your Engine tier (40%). Log sets on Today; set Engine in Ledger → Capability.',
   COMBAT:'COMBAT: the average of your Striking and Grappling tiers. Set them in Ledger → Capability.',
   MIND:'MIND: half from books finished (goal 48), half from your Capital markets, Economics and Language tiers.',
-  WILL:'WILL: pure consistency. Your current streak plus the total days you have logged.',
+  WILL:'WILL: pure consistency. Your current streak plus the total days you have logged. A streak day is a session done (60% of the plan or your own workout), your protein target hit, or three habits ticked. One ticked meal does not count.',
   CAPITAL:'CAPITAL: the share of the Capital Ladder you have cleared in Ledger.'};
 function Header(){
-  const P=pillars(),st=streak(),ph=PHASES[phaseIdx()];
+  const P=pillars(),st=streak(),rk=rankState();
   return `<header>
     <div class="hrow">
       <div><div class="brand">FORGE</div>
-        <div class="subline"><span style="color:var(--amber)">${ph.n}</span> / ${ph.name.toUpperCase()} · ${ph.span}</div></div>
+        <div class="subline"><span style="color:var(--amber)">${rk.rank.n}</span>${rk.next?` · ${rk.met}/3 TO ${rk.next.n}`:''} · ${rk.marks.total} MARKS</div></div>
       <div style="display:flex;align-items:center;gap:14px">
         <div class="streak">${svg('flame',15,st>0?'var(--amber)':'var(--faint)',2.4)}
           <span style="color:${st>0?'var(--text)':'var(--faint)'}">${st}</span></div>
@@ -6031,6 +6065,7 @@ function ViewToday(){
     </div>
     ${vd===T?Tour('today'):''}
     ${vd===T?Briefing():''}
+    ${vd===T?MissionsCard():''}
     ${vd===T?ReadinessCard():''}
     ${vd===T?BackupBanner():''}
     ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
@@ -6664,6 +6699,7 @@ function ViewLedger(){
   const nwVals=S.nw.map(x=>x.v);
   return `<div class="view wrap">
     ${Tour('ledger')}
+    ${RankPanel()}
     ${ReportCard()}
     ${WeekReview()}
     ${sect('award','RECORDS')}
@@ -7045,6 +7081,8 @@ function handleClick(e){
   if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
+  if (a==='mis-swap'){ const wk=weekOf(T), W=S.missions.w[wk]; if (!W||S.missions.swap[wk]) return;
+    W[2]=weakPoint(wk,1); S.missions.swap[wk]=true; commit(); render(); toast('Swapped. That was this week\'s one swap.',false,3000); return; }
   if (a==='ins-lift'){ insLift=v; render(); return; }
   if (a==='rc-week'){ rcPrev=v==='1'; render(); return; }
   if (a==='rd-sleep'){
@@ -7841,6 +7879,194 @@ function ReadinessCard(){
   </div>`:'');
 }
 
+/* ============================================================ motivation == */
+/* Earned, not cheered. Rank comes from strength, weeks of showing up and marks; marks come from missions and records, never from
+   opening the app. Everything except what was generated (the missions themselves) and the highest rank reached is worked out
+   from the logs each time, so editing a set or a food entry moves it honestly. */
+
+/* ---------- weeks ---------- */
+/* completed weeks, newest first: sessions done, sessions planned (days not marked off whose plan is not recovery), protein days */
+function pastWeeks(n){
+  return memo('pw:'+n,()=>Array.from({length:n},(_,i)=>{ const week=addDays(weekOf(T),-7*(i+1)); let done=0, planned=0;
+    for (let d=0;d<7;d++){ const k=addDays(week,d); if (!offOf(k)&&dayDef(k).type!=='recover') planned++; if (trainRatio(k)>=0.6) done++; }
+    return {week,done,planned}; }));
+}
+const weeksWith=(n,f)=>pastWeeks(n).filter(f).length;
+const proteinWeeks=n=>memo('prw:'+n,()=>Array.from({length:n},(_,i)=>nutritionWeek(addDays(weekOf(T),-7*(i+1))).proteinDays));
+
+/* ---------- ranks ---------- */
+/* What a forge does to metal. A rank needs all three at once: strength (s), discipline (d) and marks. STRENGTH SCORE = the mean over
+   squat, bench, deadlift and overhead press of best estimated 1RM / (bodyweight x the standard in LIFTS), each capped at 1. */
+const RANKS=[
+  {n:'RAW',s:0,marks:0,dl:'Where everyone starts',d:()=>true},
+  {n:'IRON',s:0.40,marks:10,dl:'3+ sessions a week, 4 weeks straight',d:()=>weeksWith(4,w=>w.done>=3)===4},
+  {n:'STEEL',s:0.55,marks:40,dl:'4+ sessions in 8 of the last 10 weeks, and protein 5+ days in 6 of the last 8',d:()=>weeksWith(10,w=>w.done>=4)>=8&&proteinWeeks(8).filter(p=>p>=5).length>=6},
+  {n:'TEMPERED',s:0.70,marks:100,dl:'12 straight weeks within one session of the plan',d:()=>weeksWith(12,w=>w.planned>0&&w.done>=w.planned-1)===12},
+  {n:'HARDENED',s:0.85,marks:220,dl:'4+ sessions in 22 of the last 26 weeks',d:()=>weeksWith(26,w=>w.done>=4)>=22},
+  {n:'DAMASCUS',s:1,marks:450,dl:'4+ sessions in 48 of the last 52 weeks',d:()=>weeksWith(52,w=>w.done>=4)>=48},
+];
+const RANK_LIFTS=['squat','bench','dead','ohp'];
+function strengthScore(){
+  return memo('sscore',()=>{ const tw=trendWeight(), bw=tw&&tw.kg;
+    const lifts=RANK_LIFTS.map(k=>{ const L=LIFTS.find(x=>x.k===k), best=Math.max(bestLift(k)||0,...e1rmSeries(EXLINK_ID[k]).map(x=>x.e1));
+      return {k,l:L.l,best,std:L.m,ratio:bw?best/bw:0,pct:bw?clamp(best/(bw*L.m),0,1):0}; });
+    return {score:lifts.reduce((a,x)=>a+x.pct,0)/lifts.length,lifts,bw}; });
+}
+/* where you stand against the next rank. Promotion is recorded (S.rank) so it can never be lost; "slipping" is shown instead when
+   two or more of the last four weeks fell under the held rank's weekly floor (3 sessions for IRON, 4 above it). */
+function rankState(){
+  return memo('rank',()=>{ const i=clamp(S.rank.i|0,0,RANKS.length-1), next=RANKS[i+1]||null, ss=strengthScore(), marks=marksTotal();
+    const req=next?[{k:'strength',ok:ss.score>=next.s-1e-9,t:`Strength score ${Math.round(next.s*100)}%`,now:`${Math.round(ss.score*100)}%`},
+      {k:'discipline',ok:next.d(),t:next.dl,now:`last 4 weeks: ${pastWeeks(4).map(w=>w.done).reverse().join(', ')} sessions`},
+      {k:'marks',ok:marks.total>=next.marks,t:`${next.marks} marks`,now:`${marks.total}`}]:[];
+    const floor=i>=2?4:3, slipping=i>=1&&weeksWith(4,w=>w.done<floor)>=2;
+    return {i,rank:RANKS[i],next,req,met:req.filter(r=>r.ok).length,marks,strength:ss,slipping,floor}; });
+}
+function syncRank(){
+  if (!S.rank) return;
+  for (let guard=0;guard<RANKS.length;guard++){ _memo=null; const r=rankState(); if (!r.next||r.met<3) break; S.rank.i=r.i+1; S.rank.at[S.rank.i]=T; }
+  _memo=null;
+}
+
+/* ---------- missions ---------- */
+/* Three a week (training, fuel, a weak point), one a month. Each has THREE bars: BASE, HARD and MAX. There is nothing to choose:
+   you aim at MAX, and how far you got decides the marks (1 / 2 / 3 for a weekly mission, 3 / 5 / 8 for the monthly one), so
+   falling just short of a high bar still pays more than clearing a low one. Reaching HARD or better on all three in a week adds 1.
+   A mission is generated once, from the weeks before it, and then only read: v(m, from, to) works its progress out of the logs. */
+const TIER_NAMES=['BASE','HARD','MAX'], WEEK_MARKS=[0,1,2,3], MONTH_MARKS=[0,3,5,8];
+const bestE1=(id,from,to)=>Math.max(0,...e1rmSeries(id).filter(x=>x.date>=from&&x.date<=to).map(x=>x.e1));
+const eachDay=(from,to,f)=>{ let n=0; for (let k=from;k<=to;k=addDays(k,1)) if (f(k)) n++; return n; };
+const MISSION={
+  sessions:{t:m=>'Sessions done',v:(m,a,b)=>eachDay(a,b,k=>trainRatio(k)>=0.6),u:'sessions',why:'60% of the planned session, your own workout of 3+ exercises, or a 30-minute fight.'},
+  protein:{t:m=>'Days at protein target',v:(m,a,b)=>eachDay(a,b,k=>{ const N=nutrition(k); return !!N&&foodTotals(k).p>=N.protein*PROTEIN_HIT; }),u:'days',why:'A day counts at 90% of the protein target or more.'},
+  stall:{t:m=>`Break the stall: ${exInfo(m.id).n}`,v:(m,a,b)=>bestE1(m.id,a,b),w:1,u:'est. 1RM',why:'Best estimated 1RM this week. BASE matches your best, HARD beats it by 1%, MAX by 2.5%.'},
+  muscle:{t:m=>`${(MM_RL[m.mu]||[0,m.mu])[1]}: working sets`,v:(m,a,b)=>{ const t=mmTally(daysBetween(T,a),Math.min(0,daysBetween(T,b))).tot[m.mu]||0; return Math.round(t*10)/10; },u:'sets',why:'Working sets this week, helper muscles at half credit. It was under its range last week.'},
+  weigh:{t:m=>'Morning weigh-ins',v:(m,a,b)=>S.log.filter(e=>e.weight>0&&e.date>=a&&e.date<=b).length,u:'weigh-ins',why:'One reading a week leaves the trend guessing.'},
+  sleep:{t:m=>'Nights of 7+ hours',v:(m,a,b)=>S.log.filter(e=>e.sleep>=7&&e.date>=a&&e.date<=b).length,u:'nights',why:'Logged on Today under Readiness, or in the body log.'},
+  tonnage:{t:m=>'Total weight lifted',v:(m,a,b)=>{ let t=0; for (let k=a;k<=b;k=addDays(k,1)) t+=dayTonnage(k).total; return t; },w:1,u:'',why:'This week against last: match it, +5%, +10%.'},
+  e1rm:{t:m=>`${exInfo(m.id).n}: estimated 1RM`,v:(m,a,b)=>bestE1(m.id,a,b),w:1,u:'est. 1RM',why:'Your main lift furthest below its standard. One, two or three loadable steps over where the month started.'},
+  msessions:{t:m=>'Sessions this month',v:(m,a,b)=>eachDay(a,b,k=>trainRatio(k)>=0.6),u:'sessions',why:'Every session counts the same way the weekly mission counts it.'},
+};
+const missionVal=(m,a,b)=>MISSION[m.t]?MISSION[m.t].v(m,a,b>T?T:b):0;
+const missionTier=(m,v)=>m.tiers.filter(x=>v>=x-1e-6).length;
+const missionFmt=(m,x)=>MISSION[m.t].w?(m.t==='tonnage'?uW(x).toLocaleString():String(uW(x)))+' '+wUnit():String(Math.round(x*10)/10);
+const monthSpan=ym=>{ const [y,mo]=ym.split('-').map(Number); return [ym+'-01',`${ym}-${pad(new Date(y,mo,0).getDate())}`]; };
+/* the weak-point candidates, most pressing first; `skip` steps past the first ones (the one swap a week) */
+function weakPoint(week,skip=0){
+  const prev=addDays(week,-7), out=[], hurt=!!injNow();
+  if (!hurt){
+    const st=insightLifts(5).filter(id=>{ const p=plateau(id), sr=e1rmSeries(id); return p&&p.stalled&&daysBetween(sr[sr.length-1].date,week)<=21; })[0];
+    if (st){ const b=Math.max(...e1rmSeries(st).map(x=>x.e1)); out.push({t:'stall',id:st,tiers:[b,b*1.01,b*1.025]}); }
+    const tally=mmTally(daysBetween(T,prev),daysBetween(T,addDays(prev,6))).tot;
+    const low=MM_REG.filter(r=>r[2]>=6&&(tally[r[0]]||0)<r[2]).sort((x,y)=>(tally[x[0]]||0)/x[2]-(tally[y[0]]||0)/y[2])[0];
+    if (low) out.push({t:'muscle',mu:low[0],tiers:[low[2],Math.round((low[2]+low[3])/2),low[3]]});
+  }
+  if (S.log.filter(e=>e.weight>0&&e.date>=prev&&e.date<week).length<3) out.push({t:'weigh',tiers:[3,5,7]});
+  out.push({t:'sleep',tiers:[4,5,6]});
+  if (!hurt){ const base=weeklyLoad(1,prev)[0].tonnage; if (base>0) out.push({t:'tonnage',tiers:[base,base*1.05,base*1.10]}); }
+  return out[skip%out.length];
+}
+function genWeek(week){
+  let planned=0; for (let d=0;d<7;d++){ const k=addDays(week,d); if (!offOf(k)&&dayDef(k).type!=='recover') planned++; }
+  planned=Math.max(3,planned);
+  const lastP=nutritionWeek(addDays(week,-7)).proteinDays;
+  return [{t:'sessions',tiers:[planned-2,planned-1,planned]},{t:'protein',tiers:lastP<=3?[4,6,7]:[5,6,7]},weakPoint(week)];
+}
+function genMonth(ym){
+  const from=ym+'-01', ss=strengthScore();
+  const c=injNow()?null:ss.lifts.map(x=>({x,id:EXLINK_ID[x.k],sr:e1rmSeries(EXLINK_ID[x.k])}))
+    .filter(o=>o.sr.length>=3&&daysBetween(o.sr[o.sr.length-1].date,from)<=28).sort((a,b)=>a.x.pct-b.x.pct)[0];
+  if (!c) return {t:'msessions',tiers:[14,16,18]};
+  const base=Math.max(...c.sr.map(x=>x.e1)), step=isImp()?5/2.20462:2.5;
+  return {t:'e1rm',id:c.id,tiers:[base+step,base+2*step,base+3*step]};
+}
+/* generate this week's and this month's missions once there is real training to build them from */
+function ensureMissions(){
+  if (!S.missions||!hasRealData()) return;
+  const wk=weekOf(T), ym=T.slice(0,7);
+  if (!S.missions.w[wk]) S.missions.w[wk]=genWeek(wk);
+  if (!S.missions.m[ym]) S.missions.m[ym]=genMonth(ym);
+}
+/* MARKS = mission tiers reached (every week and month on record) + 1 for each week a main lift set an estimated-1RM record */
+function marksTotal(){
+  return memo('marks',()=>{ let weekly=0, monthly=0, sweeps=0, prs=0;
+    for (const wk in S.missions.w){ const tiers=S.missions.w[wk].map(m=>missionTier(m,missionVal(m,wk,addDays(wk,6))));
+      weekly+=tiers.reduce((a,t)=>a+WEEK_MARKS[t],0); if (tiers.length===3&&tiers.every(t=>t>=2)) sweeps++; }
+    for (const ym in S.missions.m){ const m=S.missions.m[ym], [a,b]=monthSpan(ym); monthly+=MONTH_MARKS[missionTier(m,missionVal(m,a,b))]; }
+    const seen=new Set();
+    for (const L of LIFTS){ const id=EXLINK_ID[L.k]; if (id) for (const p of liftPRs(id)) if (p.type==='e1rm') seen.add(id+'|'+weekOf(p.date)); }
+    prs=seen.size;
+    return {total:weekly+monthly+sweeps+prs,weekly,monthly,sweeps,prs}; });
+}
+
+/* ---------- accountability: one line, when it is earned ---------- */
+/* At most one callout a day, the first of these that is true. On plan, it says nothing. */
+function callout(){
+  const nowH=new Date().getHours(), y=dkey(-1), planned=k=>!offOf(k)&&dayDef(k).type!=='recover'&&k>=(S.meta.start||T);
+  if (S.rank.at[S.rank.i]===T&&S.rank.i>0) return {k:'rank',t:`Rank earned: ${RANKS[S.rank.i].n}.`};
+  let pr=null; for (const L of LIFTS){ const id=EXLINK_ID[L.k]; if (id) for (const p of liftPRs(id)) if (p.type==='e1rm'&&p.date>=y&&(!pr||p.date>=pr.date)) pr=p; }
+  if (pr) return {k:'pr',t:`${uW(pr.v)}. That's the new floor.`};
+  if (offOf(T)||!hasRealData()) return null;
+  if (streak()>0&&nowH>=18&&!dayWon(T)) return {k:'streak',t:'Nothing counted today. The streak ends at midnight.'};
+  let out=0; while (out<30&&trainRatio(dkey(-1-out))<0.6&&!offOf(dkey(-1-out))) out++;
+  if (out>=3&&out<30&&trainRatio(T)<0.6) return {k:'gap',t:`${out} days out. Start with the first set.`};
+  const missed=eachDay(weekOf(T),y,k=>planned(k)&&trainRatio(k)<0.6);
+  if (missed>=2) return {k:'missed2',t:`${missed} sessions missed this week. The plan only works if you show up.`};
+  if (planned(y)&&trainRatio(y)<0.6) return {k:'missed',t:"Yesterday's session didn't happen. Today's does."};
+  const fed=[]; for (let i=1;i<=7&&fed.length<3;i++){ const k=dkey(-i), N=nutrition(k), ft=foodTotals(k); if (N&&ft.kcal>0) fed.push(ft.p<N.protein*PROTEIN_HIT); }
+  if (fed.length===3&&fed.every(Boolean)) return {k:'protein',t:"Protein short three days running. You're training for muscle you aren't feeding."};
+  const st=insightLifts(5).find(id=>{ const p=plateau(id); return p&&p.stalled&&RANK_LIFTS.some(k=>EXLINK_ID[k]===id); });
+  if (st) return {k:'stall',t:`${exInfo(st).n.replace(/^Barbell /,'')} hasn't moved in ${plateau(st).sessions} sessions. Same weight, same result.`};
+  const dsw=daysSinceWeight(); if (dsw!=null&&dsw>=10) return {k:'weigh',t:`No weigh-in in ${dsw} days. You're steering blind.`};
+  return null;
+}
+/* proof of progress: your own receipt, a different one each day among the lifts that have moved most */
+function proofLine(){
+  const main=new Set(LIFTS.map(L=>EXLINK_ID[L.k]));                 // the main lifts speak first; accessories only if none of them has moved
+  let c=insightLifts(3).map(id=>{ const sr=e1rmSeries(id); return {id,a:sr[0],b:Math.max(...sr.map(x=>x.e1))}; }).filter(o=>uW(o.b)-uW(o.a.e1)>=5);
+  if (c.some(o=>main.has(o.id))) c=c.filter(o=>main.has(o.id));
+  c=c.sort((x,y)=>(y.b-y.a.e1)-(x.b-x.a.e1)).slice(0,3);
+  if (!c.length) return '';
+  const o=c[strHash(T)%c.length];
+  return `${exInfo(o.id).n.replace(/^Barbell /,'')}: ${uW(o.a.e1)} → ${uW(o.b)} ${wUnit()} estimated 1RM since ${shortDate(o.a.date)}.`;
+}
+
+/* ---------- screens ---------- */
+function missionRow(m,a,b,marks,canSwap){
+  const D=MISSION[m.t]; if (!D) return '';
+  const v=missionVal(m,a,b), tier=missionTier(m,v), max=m.tiers[2], lo=D.w?m.tiers[0]*0.9:0, pos=x=>clamp((x-lo)/(max-lo||1)*100,0,100);
+  return `<div class="mis">
+    <div class="mist"><b>${esc(D.t(m))}</b><span class="mism" style="color:${tier?'var(--amber)':'var(--faint)'}">${tier?`${TIER_NAMES[tier-1]} · +${marks[tier]}`:'—'}</span></div>
+    <div class="misbar"><div class="misfill" style="width:${v>0?pos(v):0}%"></div>${m.tiers.map((x,i)=>`<i class="${v>=x-1e-6?'on':''}" style="left:${pos(x)}%"></i>`).join('')}</div>
+    <div class="misl"><span>Now <b>${v>0||!D.w?missionFmt(m,v):'not trained yet'}</b></span>${m.tiers.map((x,i)=>`<span class="${v>=x-1e-6?'on':''}">${TIER_NAMES[i]} ${missionFmt(m,x)}</span>`).join('')}</div>
+    <div class="misw">${esc(D.why)}${canSwap?` <button class="linkbtn" data-act="mis-swap" style="display:inline;margin:0">SWAP THIS ONE</button>`:''}</div></div>`;
+}
+function MissionsCard(){
+  const wk=weekOf(T), ym=T.slice(0,7), W=S.missions.w[wk], M=S.missions.m[ym];
+  if (!W&&!M) return '';
+  const tiers=(W||[]).map(m=>missionTier(m,missionVal(m,wk,addDays(wk,6)))), got=tiers.reduce((a,t)=>a+WEEK_MARKS[t],0)+(tiers.length===3&&tiers.every(t=>t>=2)?1:0);
+  const left=daysBetween(T,addDays(wk,6)), [ma,mb]=monthSpan(ym);
+  return foldHead('missions','target','MISSIONS',`${got} of 10 marks · ${left===0?'ends tonight':left+'d left'}`)+(foldOpen('missions')?`<div class="panel">
+    ${(W||[]).map((m,i)=>missionRow(m,wk,addDays(wk,6),WEEK_MARKS,i===2&&!S.missions.swap[wk])).join('')}
+    ${M?`<div class="eyebrow" style="padding:12px 13px 0">THIS MONTH · ${daysBetween(T,mb)}D LEFT</div>${missionRow(M,ma,mb,MONTH_MARKS,false)}`:''}
+    <div class="note">Aim at MAX. Each mission pays for how far you got: 1, 2 or 3 marks a week (3, 5 or 8 for the month), plus 1 when all three reach HARD. Progress is read from your logs; there is nothing to tick.</div>
+  </div>`:'');
+}
+function RankPanel(){
+  const r=rankState(), ss=r.strength;
+  return sect('shield','RANK')+`<div class="panel">
+    <div class="hero"><b>${r.rank.n}</b><span>${r.next?`${r.met} of 3 requirements met for ${r.next.n}`:'the top of the ladder'} · ${r.marks.total} marks</span></div>
+    ${r.slipping?`<div class="fixline" style="margin-top:12px"><div class="eyebrow" style="color:var(--amber)">SLIPPING</div>Two or more of your last four weeks were under ${r.floor} sessions. The rank is yours to keep; this is what holding it looks like.</div>`:'<div style="height:12px"></div>'}
+    ${r.req.map(q=>`<div class="reqrow">${q.ok?svg('check',14,'var(--moss)',3):svg('x',14,'var(--faint)')}<div><b>${esc(q.t)}</b><span style="color:${q.ok?'var(--moss)':'var(--dim)'}">Now: ${esc(q.now)}</span></div></div>`).join('')}
+    <div class="eyebrow" style="padding:12px 13px 2px">STRENGTH SCORE · ${Math.round(ss.score*100)}%</div>
+    ${ss.lifts.map(x=>`<div class="histrow" style="padding:8px 13px"><span>${esc(x.l)}</span><span>${x.best?`${uW(x.best)} ${wUnit()} · ${x.ratio.toFixed(2)}× of ${x.std}× bodyweight`:'not logged'}</span></div>`).join('')}
+    <div class="eyebrow" style="padding:12px 13px 2px">THE LADDER</div>
+    ${RANKS.map((k,i)=>`<div class="histrow" style="padding:8px 13px;${i===r.i?'background:var(--panel2)':''}"><span style="color:${i<=r.i?'var(--text)':'var(--faint)'}"><b>${k.n}</b>${S.rank.at[i]?` · ${esc(shortDate(S.rank.at[i]))}`:''}</span><span style="color:var(--faint)">${i?`${Math.round(k.s*100)}% · ${k.marks} marks`:''}</span></div>${i&&i===r.i+1?`<div class="note" style="border-top:none;padding-top:0">${esc(k.dl)}</div>`:''}`).join('')}
+    <div class="histrow" style="padding:10px 13px;border-top:1px solid var(--rule)"><span>Marks</span><span>${r.marks.weekly} weekly · ${r.marks.monthly} monthly · ${r.marks.sweeps} sweeps · ${r.marks.prs} records</span></div>
+    ${how(`A rank needs three things at once. <b>Strength score</b>: the average over squat, bench, deadlift and overhead press of your best estimated 1RM ÷ (bodyweight × its standard: 2×, 1.5×, 2.5×, 1×), each capped at 100%. A lift you have never logged counts as zero. <b>Discipline</b>: completed weeks only; a session is 60% of the planned session, your own workout of 3 or more exercises, or a 30-minute fight. <b>Marks</b>: 1, 2 or 3 for each weekly mission by the bar you reached (BASE, HARD, MAX), 3, 5 or 8 for the monthly one, 1 for a week where all three reached HARD, and 1 for each week a main lift set a new estimated-1RM record. Nothing is earned by opening the app. A rank, once earned, is never taken away.`)}
+  </div>`;
+}
+
 /* ============================================================ migrations == */
 /* S.schemaVersion says which shape the saved data is in. MIGRATIONS[n] takes it from version n to n+1 and must be safe to run on
    empty data. Never edit one that has shipped: add the next and raise SCHEMA. Boot and every import run this, and nothing is
@@ -7924,6 +8150,7 @@ async function bootApp(){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
     S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely
   }
+  ensureMissions(); syncRank();
   if (saved && migrated) dryRender();                      // migrated data has to draw every screen before it may replace the original
   render();
   commit();                                               // first write (also carries an old key forward)
