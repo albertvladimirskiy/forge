@@ -101,7 +101,7 @@ module.exports = { name: 'Fixes from the first audit pass', tests: {
     const undos = () => page.evaluate(async () => (await snapKeys()).filter(k => k.startsWith('undo-')).length);
     const before = await undos();
     await page.evaluate(() => { const clean = JSON.parse(JSON.stringify(DEFAULTS)); clean.profile.height = 170; view = 'plan'; importOpen = true; render();
-      importtxt.value = JSON.stringify(clean); document.querySelector('[data-act=importgo]').click(); });
+      importtxt.value = JSON.stringify(clean); document.querySelectorAll('[data-act=importgo]')[0].click(); document.querySelector('[data-act=importgo]').click(); });
     await page.waitForTimeout(400);
     a.equal(await undos(), before + 1);
     a.equal(await page.evaluate(() => S.log.length), 0);

@@ -35,7 +35,7 @@ module.exports = { name: 'Days off and My Week', tests: {
 
   async 'days off pause the streak instead of breaking it, and stay out of the slipping pattern'(page, a){
     const st = () => page.evaluate(() => streak());
-    await page.evaluate(() => { S.days = {}; for (const i of [1, 2, 5, 6]) S.days[dkey(-i)] = { blocks: { x: true, y: true, z: true }, habits: {}, rv: {}, nudge: {}, food: [] }; });
+    await page.evaluate(() => { S.days = {}; for (const i of [1, 2, 5, 6]) S.days[dkey(-i)] = { blocks: {}, habits: { h1: true, h2: true, h3: true }, rv: {}, nudge: {}, food: [] }; });   // three habits win a day
     a.equal(await st(), 2, 'a gap breaks it');
     await page.evaluate(() => { S.off[dkey(-3)] = 'sick'; S.off[dkey(-4)] = 'sick'; });
     a.equal(await st(), 4, 'two sick days bridge it, without counting themselves');

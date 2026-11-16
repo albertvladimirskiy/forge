@@ -13,13 +13,16 @@
 <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAACnklEQVR4nO3cIU4dURiA0XmkqhBsk4p2AWULmBqWwA6KQTXg26oKEgyWdAngWERtuwAMCZY01XgMyXwvMwzvHD/3jvjyJ+/evFlt7+wOMNbW3C/AsgmIREAkAiIREImASAREIiASAZEIiERAJAIiERCJgEgERCIgEgGRCIhEQCQCIhEQiYBIBEQiIBIBkQiIREAkAiIREImASAREIiASAZEIiERAJAIiERCJgEjeTL/l34u96TfdEJ+O/0y8owlEsvKhcQoTiERAJAIiERCJgEgERCIgkhlOot+OPXn6/+9hLes8WeqlrVOWerLOBEwgEgGRCIhEQCQCIhEQiYBIBEQiIBIBkQiIREAkAiIREImASAREIiASAZEIiERAJAIiERCJgEgERCIgkhn+mfpa/f75YfSz03/bcF1MIBIBkQiIREAkAiIREImASAREIiASAZEIiERAJAu+TP21P/7y8vBmqZeXL40JRCIgEgGRCIhEQCQCIhEQyYLPgV6xox+fxz14/vV6rS/yPBOIREAkAiIREImASAREMsPP+IOTs3EPXn37st43oTOBSAREIiASAZEIiERAJG7jh9PDkccKwzB8v9z0kwUTiERAJAIiERCJgEgERCIgEgGRCIhEQCQCIhEQiYBIBEQiIBIBkQiIREAkAiIREImASAREIiASAZEIiERAJAIiERCJgEgERCIgEgGRrLZ3dud+BxbMBCIREImASAREIiASAZEIiGSGD42/e/9x+k03xP3d7cQ7mkAkTqJJTCASAZEIiERAJAIiERCJgEgERCIgEgGRCIhEQCQCIhEQiYBIBEQiIBIBkQiIREAkAiIREImASAREIiASAZEIiERAJAIiERCJgEgERCIgEgGRCIhEQCQCIhEQySN7qyVto3wigAAAAABJRU5ErkJggg==">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
+@font-face{font-family:'Inter';src:url(fonts/inter-latin-wght-normal.woff2) format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 :root{
   --ink:#0B0C0E; --panel:#131519; --panel2:#181B20; --sunk:#0E1114;
   --rule:#22262D; --rule2:#2C323A;
   --text:#DDE3EA; --dim:#8A929C; --faint:#737C86;
   --amber:#E0A03A; --steel:#5C8CA8; --moss:#7C9A5E; --rust:#B4553A; --plum:#8A6FA8;
-  --mono:'JetBrains Mono','SF Mono',ui-monospace,'Roboto Mono',Menlo,'Courier New',monospace;
-  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  /* one typeface: Inter, shipped with the app (fonts/, 48 KB, SIL Open Font License) so it looks the same on every phone and works
+     offline. The system font is the fallback while it loads. Numbers are tabular everywhere (see html,body). */
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1);
   --pad:14px;
   /* type scale — 11 deliberate roles replacing ~20 ad hoc pixel values that
      had drifted into near-duplicate pairs (e.g. 10px next to 10.5px for the
@@ -27,17 +30,17 @@
      used exactly once (16/17/19/21px — a macro numeral, a hero-card title, a
      phase name, a day title) stays a literal, since tokenizing a one-off
      value adds indirection without a shared role to document. */
-  --fs-nano:7.5px;     /* micro-caption beside a bigger sibling: vitals label, nav label, rail sub-label */
-  --fs-label:8.5px;    /* uppercase structural signage: eyebrows, field labels, badges, table headers */
-  --fs-caption:9px;    /* small secondary tag/count/readout */
-  --fs-detail:10.5px;  /* secondary/hint/detail body text — the most common small role */
-  --fs-body:11px;      /* paragraph/prose body copy */
-  --fs-title:12.5px;   /* row/entry/form title */
-  --fs-form:13px;      /* the vitals numeral, accordion titles, stat-suffix text — NOT actual <input>/<select>/<textarea> elements, which are hardcoded to 16px to stop iOS's auto-zoom-on-focus (see the input rule below) */
-  --fs-headline:14px;  /* accordion/section headers */
-  --fs-numeral-md:15px;/* medium-emphasis numeral: streak, kcal/day, day-progress */
-  --fs-display:23px;   /* the brand mark */
-  --fs-numeral-lg:25px;/* the largest numeral: stat tiles */
+  --fs-nano:10px;      /* micro-caption beside a bigger sibling: vitals label, rail sub-label */
+  --fs-label:10.5px;   /* uppercase structural signage: eyebrows, field labels, badges, table headers */
+  --fs-caption:11.5px; /* small secondary tag/count/readout */
+  --fs-detail:12.5px;  /* secondary/hint/detail body text — the most common small role */
+  --fs-body:13.5px;    /* paragraph/prose body copy */
+  --fs-title:15px;     /* row/entry/form title */
+  --fs-form:15px;      /* accordion titles, stat-suffix text — NOT actual <input>/<select>/<textarea> elements, which are 16px or more to stop iOS's auto-zoom-on-focus (see the input rule below) */
+  --fs-headline:15px;  /* accordion/section headers */
+  --fs-numeral-md:17px;/* medium-emphasis numeral: streak, kcal/day, day-progress */
+  --fs-display:22px;   /* the brand mark */
+  --fs-numeral-lg:28px;/* the largest numeral: stat tiles */
   /* machined-edge material pair: a hairline-thin highlight/shadow straddling a
      surface's top/bottom border, standing in for a bevel with zero elevation —
      border-color only, no box-shadow, so surfaces read as machined metal
@@ -58,8 +61,8 @@
 .tour ul{margin:10px 0 12px;padding-left:16px;font-size:var(--fs-body);color:var(--dim);line-height:1.6}
 .tour li{margin-bottom:6px}
 .tour b{color:var(--text)}
-html[data-text=large]{--fs-nano:9.5px;--fs-label:10.5px;--fs-caption:11px;--fs-detail:12.5px;--fs-body:13px;--fs-title:14.5px;--fs-form:15px;--fs-headline:16px}
-html[data-text=xl]{--fs-nano:11px;--fs-label:12px;--fs-caption:12.5px;--fs-detail:14px;--fs-body:15px;--fs-title:16px;--fs-form:16.5px;--fs-headline:17.5px}
+html[data-text=large]{--fs-nano:11px;--fs-label:11.5px;--fs-caption:12.5px;--fs-detail:13.5px;--fs-body:14.5px;--fs-title:16px;--fs-form:16px;--fs-headline:16.5px}
+html[data-text=xl]{--fs-nano:12px;--fs-label:12.5px;--fs-caption:13.5px;--fs-detail:15px;--fs-body:16px;--fs-title:17.5px;--fs-form:17.5px;--fs-headline:18px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* Kills the double-tap-to-zoom gesture (and the ~300ms tap delay with it)
    while explicitly leaving pinch-zoom alone — "manipulation" means exactly
@@ -67,22 +70,23 @@ html[data-text=xl]{--fs-nano:11px;--fs-label:12px;--fs-caption:12.5px;--fs-detai
    still overrides this for its own element. */
 html{touch-action:manipulation}
 html,body{margin:0;padding:0;background:var(--ink);color:var(--text);
-  font-family:var(--mono);font-size:14px;overscroll-behavior-y:none;}
+  font-family:var(--font);font-size:15px;overscroll-behavior-y:none;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 body{padding-bottom:env(safe-area-inset-bottom)}
 /* faint machined-steel grain — a fixed, ultra-low-opacity noise layer over the
    whole app. Material presence, not decoration: invisible until you look for it. */
 body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
   opacity:.035;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
-button,input,select,textarea{font-family:inherit;color:inherit}
+button,input,select,textarea{font-family:inherit;color:inherit;font-variant-numeric:inherit}
 button{background:none;border:none;padding:0;cursor:pointer}
 button:active{transform:scale(.99)}
-:focus-visible{outline:1px solid var(--amber);outline-offset:2px}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 ::-webkit-scrollbar{width:0;height:0}
 
 /* ---------- type ---------- */
-.disp{font-family:var(--sans);font-weight:800;letter-spacing:.02em;text-transform:uppercase}
-.eyebrow{font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+.disp{font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+.eyebrow{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
 
 /* ---------- shell ---------- */
 #app{min-height:100vh;min-height:100dvh}
@@ -95,20 +99,20 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--
   padding:calc(12px + env(safe-area-inset-top)) var(--pad) 0;border-bottom:2px solid var(--edge-lo);
   backdrop-filter:blur(8px)}
 .hrow{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.brand{font-family:var(--sans);font-weight:800;font-size:var(--fs-display);letter-spacing:.22em;line-height:1}
-.subline{font-size:var(--fs-caption);letter-spacing:.12em;color:var(--dim);margin-top:6px}
+.brand{font-weight:800;font-size:var(--fs-display);letter-spacing:.2em;line-height:1}
+.subline{font-size:var(--fs-caption);letter-spacing:.06em;color:var(--dim);margin-top:6px}
 .streak{display:flex;align-items:center;gap:6px;font-size:var(--fs-numeral-md);font-weight:700;padding-top:2px}
-.gear{padding:6px;margin:-6px -4px -6px 0;color:var(--faint)}
+.gear{padding:12px;margin:-12px -8px -12px -4px;color:var(--faint)}
 
 /* vitals — signature element */
 .vitals{display:flex;gap:5px;margin-top:13px;padding-bottom:11px}
 .vital{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
-.vval{font-family:var(--sans);font-weight:800;font-size:var(--fs-form);line-height:1}
+.vval{font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1}
 .vtrack{width:100%;height:34px;background:#15181C;border:1px solid var(--rule);
   border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);
   display:flex;align-items:flex-end;overflow:hidden}
 .vfill{width:100%;transition:height .7s cubic-bezier(.2,.8,.2,1)}
-.vlab{font-size:var(--fs-nano);letter-spacing:.13em;color:var(--faint)}
+.vlab{font-size:var(--fs-nano);letter-spacing:.07em;color:var(--faint)}
 
 /* ---------- nav ---------- */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
@@ -117,14 +121,14 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:11px 0 10px;position:relative;color:var(--faint);transition:color .2s}
 nav button.on{color:var(--text)}
-nav button .nl{font-size:var(--fs-nano);letter-spacing:.11em;font-weight:700}
+nav button .nl{font-size:9.5px;letter-spacing:.04em;font-weight:700;white-space:nowrap}      /* fixed: five labels have to fit one line at every text size */
 nav button .mark{position:absolute;top:0;left:28%;right:28%;height:2px;background:transparent;transition:background .25s}
 nav button.on .mark{background:var(--amber)}
 nav button.on svg{color:var(--amber)}
 
 /* ---------- primitives ---------- */
 .sect{display:flex;align-items:center;gap:9px;margin:20px 0 11px;
-  font-size:var(--fs-caption);letter-spacing:.2em;font-weight:700;color:var(--dim)}
+  font-size:var(--fs-caption);letter-spacing:.1em;font-weight:700;color:var(--dim)}
 .sect h2{margin:0;font:inherit;letter-spacing:inherit;color:inherit}
 .sect .line{flex:1;height:1px;background:var(--rule)}
 .panel{background:var(--panel);border:1px solid var(--rule);border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);
@@ -152,11 +156,11 @@ p.t b{color:var(--text);font-weight:700}
 .tl{position:relative;padding:4px 0}
 .tl:before{content:'';position:absolute;left:57px;top:10px;bottom:10px;width:1px;background:var(--rule)}
 .ent{display:flex;gap:0;width:100%;text-align:left;padding:0;position:relative}
-.ent .time{width:46px;min-width:46px;padding:11px 0 0 13px;font-size:var(--fs-detail);font-weight:700;
+.ent .time{width:46px;min-width:46px;padding:12px 0 0 8px;font-size:10.5px;font-weight:700;white-space:nowrap;
   color:var(--faint);letter-spacing:-.02em}
 .ent .pip{width:22px;min-width:22px;display:flex;justify-content:center;padding-top:15px;position:relative;z-index:1}
 .pipdot{width:9px;height:9px;border:1.5px solid var(--rule2);background:var(--ink);transition:all .2s}
-.ent .meat{flex:1;padding:10px 13px 12px 4px;border-bottom:1px solid var(--rule);min-width:0}
+.ent .meat{flex:1;padding:10px 13px 12px 4px;border-bottom:1px solid var(--rule);min-width:0;text-align:left}
 .ent:last-child .meat{border-bottom:none}
 .ent .etitle{font-size:var(--fs-title);font-weight:600;line-height:1.3}
 .ent .esub{font-size:var(--fs-detail);color:var(--faint);margin-top:3px;line-height:1.45}
@@ -190,7 +194,7 @@ p.t b{color:var(--text);font-weight:700}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:13px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:13px}
 label.f{display:flex;flex-direction:column;gap:5px}
-label.f span{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
+label.f span{font-size:var(--fs-label);letter-spacing:.05em;color:var(--faint);text-transform:uppercase}
 input,select,textarea{background:var(--sunk);border:1px solid var(--rule);padding:10px;
   /* 16px, not --fs-form: iOS Safari auto-zooms the viewport to fit any focused
      input whose font-size is under 16px. That zoom-and-snap-back is the "screen
@@ -202,8 +206,8 @@ textarea{resize:vertical;min-height:54px;line-height:1.5;font-size:16px}
 select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
   background-position:calc(100% - 14px) 18px,calc(100% - 9px) 18px;background-size:5px 5px;background-repeat:no-repeat}
 input[type=date],input[type=time]{min-height:40px}
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;
-  background:var(--amber);color:var(--ink);font-size:var(--fs-detail);font-weight:700;letter-spacing:.14em}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;padding:14px;
+  background:var(--amber);color:var(--ink);font-size:var(--fs-detail);font-weight:700;letter-spacing:.07em}
 .btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--rule)}
 .btn.ghost:active{background:var(--panel2)}
 .chips{display:flex;gap:6px;padding:12px 13px 2px;flex-wrap:wrap}
@@ -220,17 +224,17 @@ input[type=date],input[type=time]{min-height:40px}
 .stats{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule);
   border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);margin-bottom:14px}
 .stat{flex:1;background:var(--panel);padding:15px 6px;text-align:center}
-.stat .v{font-family:var(--sans);font-weight:800;font-size:var(--fs-numeral-lg);line-height:1;margin-bottom:6px}
-.stat .l{font-size:var(--fs-nano);letter-spacing:.11em;color:var(--faint)}
+.stat .v{font-weight:800;font-size:var(--fs-numeral-lg);line-height:1;margin-bottom:6px}
+.stat .l{font-size:var(--fs-nano);letter-spacing:.06em;color:var(--faint)}
 .macros{display:flex;gap:1px;background:var(--rule);border-top:1px solid var(--rule)}
 .macro{flex:1;background:var(--panel);padding:14px 3px;text-align:center}
 .macro .v{font-size:16px;font-weight:700;margin-bottom:4px}
-.macro .l{font-size:var(--fs-nano);letter-spacing:.11em;color:var(--faint)}
+.macro .l{font-size:var(--fs-nano);letter-spacing:.06em;color:var(--faint)}
 
 /* ---------- accordions ---------- */
 .ahead{display:flex;align-items:center;gap:11px;width:100%;padding:13px;background:var(--panel);
   border:1px solid var(--rule);border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo);text-align:left}
-.ahead .an{flex:1;font-family:var(--sans);font-weight:800;font-size:var(--fs-headline);letter-spacing:.1em;text-transform:uppercase}
+.ahead .an{flex:1;font-weight:800;font-size:var(--fs-headline);letter-spacing:.05em;text-transform:uppercase}
 .abody{border:1px solid var(--rule);border-top:none;border-bottom-color:var(--edge-lo);background:#101317}
 .acc-group{margin-bottom:9px}
 
@@ -242,7 +246,7 @@ input[type=date],input[type=time]{min-height:40px}
 .bt{font-size:var(--fs-title);font-weight:600;line-height:1.3}
 .ba{font-size:var(--fs-detail);color:var(--faint);margin:3px 0 5px}
 .bw{font-size:var(--fs-detail);color:var(--dim);line-height:1.5;margin-bottom:6px}
-.bm{font-size:var(--fs-label);letter-spacing:.11em}
+.bm{font-size:var(--fs-label);letter-spacing:.06em}
 
 /* skills */
 .tiers{display:flex;gap:3px;padding:0 13px}
@@ -252,18 +256,18 @@ input[type=date],input[type=time]{min-height:40px}
 /* misc */
 .orders .o{display:flex;gap:13px;padding:13px;border-bottom:1px solid var(--rule)}
 .orders .o:last-child{border-bottom:none}
-.onum{font-family:var(--sans);font-weight:800;font-size:var(--fs-numeral-md);color:var(--faint);min-width:20px}
+.onum{font-weight:800;font-size:var(--fs-numeral-md);color:var(--faint);min-width:20px}
 .closing{padding:16px 15px;background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--amber);
   font-size:var(--fs-body);color:var(--dim);line-height:1.75;margin-bottom:14px}
 .cmt{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--rule);font-size:var(--fs-body)}
 .cmt:last-child{border-bottom:none}
 .cmt .x{color:var(--faint);padding:8px;margin:-8px;display:flex;align-items:center;justify-content:center}
 .spark{display:block;width:100%;height:120px}
-.badge{font-size:var(--fs-label);letter-spacing:.1em;padding:3px 6px;border:1px solid var(--rule);color:var(--faint)}
+.badge{font-size:var(--fs-label);letter-spacing:.05em;padding:3px 6px;border:1px solid var(--rule);color:var(--faint)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom));
   background:var(--panel2);border:1px solid var(--rule2);padding:10px 16px;font-size:var(--fs-body);z-index:50;
   animation:fade .2s ease both;pointer-events:none}
-.toastundo{pointer-events:auto;margin-left:14px;padding:4px 2px;color:var(--amber);font-weight:700;letter-spacing:.1em;font-size:var(--fs-caption)}
+.toastundo{pointer-events:auto;margin-left:14px;padding:4px 2px;color:var(--amber);font-weight:700;letter-spacing:.05em;font-size:var(--fs-caption)}
 
 /* ---------- drill-through steps ---------- */
 .brow{display:flex;align-items:stretch;border-bottom:1px solid #191D22}
@@ -278,13 +282,15 @@ input[type=date],input[type=time]{min-height:40px}
 
 /* ---------- food ---------- */
 .fuelbar{display:flex;flex-direction:column;gap:9px;padding:13px}
-.fb .fbtop{display:flex;justify-content:space-between;font-size:var(--fs-detail);color:var(--faint);margin-bottom:4px}
+.fb .fbtop{display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-detail);color:var(--faint);margin-bottom:4px}
+.fb .fbtop>span:last-child{font-size:17px;font-weight:700}
+.fb .fbtop>span:last-child span{font-size:var(--fs-detail);font-weight:500}
 .foodlist{border-top:1px solid var(--rule)}
-.flhead{display:flex;align-items:center;gap:8px;width:100%;padding:0 13px;border-top:1px solid var(--rule);font-size:var(--fs-caption);letter-spacing:.12em;font-weight:700;color:var(--faint)}
+.flhead{display:flex;align-items:center;gap:8px;width:100%;padding:0 13px;border-top:1px solid var(--rule);font-size:var(--fs-caption);letter-spacing:.06em;font-weight:700;color:var(--faint)}
 .flhead button{padding:11px 0;font:inherit;letter-spacing:inherit;font-weight:inherit;color:inherit}
 .flhead .flmain{flex:1;display:flex;align-items:center;gap:8px;text-align:left}
 .flhead .chev{padding:0}
-.flhead .fl-all{color:var(--amber);letter-spacing:.1em}
+.flhead .fl-all{color:var(--amber);letter-spacing:.05em}
 .cmt .cmtname{flex:1;min-width:0;display:flex;align-items:center;gap:6px;text-align:left;color:inherit;font:inherit}
 .cmt .cmtname .chev{padding:0;flex:none}
 .fdet{padding:0 13px 12px;border-bottom:1px solid var(--rule);font-size:var(--fs-detail);color:var(--dim)}
@@ -293,7 +299,7 @@ input[type=date],input[type=time]{min-height:40px}
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px 16px}
 .mgrid div{display:flex;justify-content:space-between;gap:8px}
 .mgrid div b{font-weight:600;color:var(--text);white-space:nowrap}
-.mhead{padding:12px 13px 4px;font-size:var(--fs-caption);letter-spacing:.14em;font-weight:700;color:var(--faint)}
+.mhead{padding:12px 13px 4px;font-size:var(--fs-caption);letter-spacing:.07em;font-weight:700;color:var(--faint)}
 .mrow{padding:5px 13px}
 .mrow .mt{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-detail);color:var(--dim)}
 .mrow .mt b{font-weight:600;color:var(--text)}
@@ -308,10 +314,10 @@ input[type=date],input[type=time]{min-height:40px}
 .suppchips .chip{display:inline-flex;align-items:center;gap:6px}
 .suppchips .chip i{font-style:normal;color:var(--faint);padding:0 2px}
 .fvtog{padding:11px 13px 2px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.fvtog span{font-size:var(--fs-caption);letter-spacing:.12em;color:var(--faint);font-weight:700}
+.fvtog span{font-size:var(--fs-caption);letter-spacing:.06em;color:var(--faint);font-weight:700}
 .foodpick{border-top:1px solid var(--rule);background:#101317}
 .searchrow{display:flex;align-items:center;gap:9px;padding:11px 13px;border-bottom:1px solid var(--rule)}
-.searchrow input{border:none;background:none;padding:2px 0;font-size:16px}
+.searchrow input{border:none;background:none;padding:2px 0;font-size:17px}
 .foodresults{max-height:290px;overflow-y:auto}
 .gramrow{display:flex;align-items:center;gap:8px;padding:7px 13px;border-bottom:1px solid var(--rule);font-size:var(--fs-caption);color:var(--faint)}
 .gramrow span{flex:1}
@@ -327,7 +333,7 @@ input[type=date],input[type=time]{min-height:40px}
 .wcol{flex:1;background:var(--panel);padding:9px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:background .2s}
 .wcol.on{background:var(--panel2)}
 .wcol.on .wlab{color:var(--amber)}
-.wlab{font-size:var(--fs-label);letter-spacing:.09em;color:var(--faint);font-weight:700}
+.wlab{font-size:var(--fs-label);letter-spacing:.05em;color:var(--faint);font-weight:700}
 .wtrack{position:relative;width:100%;max-width:22px;height:64px;background:var(--sunk);border:1px solid var(--rule)}
 .wcol.on .wtrack{border-color:var(--rule2)}
 .wbar{position:absolute;left:2px;right:2px;background:var(--steel);opacity:.85;min-height:3px}
@@ -344,7 +350,7 @@ input[type=date],input[type=time]{min-height:40px}
 .tbl{font-size:var(--fs-body)}
 .tr{display:grid;grid-template-columns:1.3fr 1fr .9fr .9fr .9fr .9fr 34px;align-items:center;padding:9px 13px;border-bottom:1px solid #191D22}
 .tr:last-child{border-bottom:none}
-.tr.th{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);border-bottom:1px solid var(--rule)}
+.tr.th{font-size:var(--fs-label);letter-spacing:.05em;color:var(--faint);border-bottom:1px solid var(--rule)}
 .tr .x{justify-self:end;padding:8px;margin:-8px;display:flex;align-items:center;justify-content:center}
 
 /* ---------- toast upgrade ---------- */
@@ -355,9 +361,14 @@ input[type=date],input[type=time]{min-height:40px}
 /* ---------- progression ---------- */
 .rx{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-caption);font-weight:700;letter-spacing:.06em}
 .rx.dim{color:var(--faint);font-weight:500}
-.setlog{background:#0C0F13;border-bottom:1px solid #191D22;padding:12px 15px 13px 57px}
-.setrow{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:var(--fs-title);border-bottom:1px solid #14181D}
-.setn{width:16px;font-size:var(--fs-caption);color:var(--faint)}
+.setlog{background:#0C0F13;border-bottom:1px solid #191D22;padding:12px 15px 13px}      /* full width: the numbers need the room more than the indent */
+.setrow{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:18px;font-weight:600;letter-spacing:-.01em;border-bottom:1px solid #14181D}
+/* a logged set lands with weight: the row drops into place under a flash of the accent. A record holds the accent and its edge longer. */
+@keyframes hit{0%{transform:scale(1.04);background:rgba(224,160,58,.26)}40%{transform:scale(.994)}100%{transform:none;background:transparent}}
+@keyframes hitpr{0%{transform:scale(1.06);background:rgba(224,160,58,.42);box-shadow:inset 4px 0 0 var(--amber)}30%{transform:scale(.992)}70%{background:rgba(224,160,58,.16);box-shadow:inset 4px 0 0 var(--amber)}100%{transform:none;background:transparent;box-shadow:inset 0 0 0 var(--amber)}}
+.setrow.hit{animation:hit .45s var(--ease) both;transform-origin:left center}
+.setrow.hit.pr{animation:hitpr 1.2s var(--ease) both}
+.setn{width:16px;font-size:var(--fs-caption);font-weight:500;letter-spacing:0;color:var(--faint)}
 .setadd{display:flex;align-items:center;gap:8px;margin-top:10px}
 .setadd input{width:76px;padding:9px;font-size:16px;text-align:center}
 .setx{color:var(--faint);font-size:var(--fs-body)}
@@ -400,7 +411,7 @@ input[type=date],input[type=time]{min-height:40px}
 /* ---------- week load overview ---------- */
 .wload{display:flex;gap:6px;padding:13px 13px 8px}
 .wlcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
-.wllab{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);font-weight:700}
+.wllab{font-size:var(--fs-label);letter-spacing:.05em;color:var(--faint);font-weight:700}
 .wlbar{width:100%;height:52px;background:var(--ink);border:1px solid var(--rule);display:flex;align-items:flex-end}
 .wlfill{width:100%;transition:height .25s}
 .wlhrs{font-size:var(--fs-label);font-weight:700;letter-spacing:.03em}
@@ -415,8 +426,8 @@ input[type=date],input[type=time]{min-height:40px}
   background:var(--panel);border:1px solid var(--rule);transition:all .18s}
 .dcell.sel{background:var(--panel2);border-color:var(--amber)}
 .dcell.today .dnum{color:var(--amber)}
-.dlab{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);font-weight:700}
-.dnum{font-family:var(--sans);font-weight:800;font-size:var(--fs-numeral-md);line-height:1;color:var(--dim)}
+.dlab{font-size:var(--fs-label);letter-spacing:.05em;color:var(--faint);font-weight:700}
+.dnum{font-weight:800;font-size:var(--fs-numeral-md);line-height:1;color:var(--dim)}
 .dcell.sel .dnum{color:var(--text)}
 .ddot{width:4px;height:4px;border-radius:50%}
 
@@ -424,8 +435,8 @@ input[type=date],input[type=time]{min-height:40px}
 .dayhead{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px}
 .nextup{background:linear-gradient(135deg,#16191E,#121417);border:1px solid var(--rule2);
   border-left:3px solid var(--amber);padding:14px 15px;margin-bottom:14px}
-.nueyebrow{font-size:var(--fs-label);letter-spacing:.2em;color:var(--amber);font-weight:700}
-.nutitle{font-family:var(--sans);font-weight:800;font-size:17px;letter-spacing:.01em;margin-top:7px;line-height:1.15}
+.nueyebrow{font-size:var(--fs-label);letter-spacing:.1em;color:var(--amber);font-weight:700}
+.nutitle{font-weight:700;font-size:20px;letter-spacing:-.01em;margin-top:7px;line-height:1.15}
 .nusub{font-size:var(--fs-body);color:var(--dim);line-height:1.5;margin-top:6px}
 .nuprog{font-size:var(--fs-caption);color:var(--faint);letter-spacing:.06em;margin-top:8px}
 
@@ -433,14 +444,14 @@ input[type=date],input[type=time]{min-height:40px}
 .segwrap{margin:15px 0 4px}
 .seg{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
 .segbtn{flex:1 0 auto;padding:11px 6px;background:var(--panel);font-size:var(--fs-caption);font-weight:700;
-  letter-spacing:.13em;color:var(--faint);transition:all .18s}
+  letter-spacing:.07em;color:var(--faint);transition:all .18s}
 .segbtn.on{background:var(--panel2);color:var(--amber)}
 
 /* ---------- now vs target comparison ---------- */
 .cmp{display:flex;align-items:stretch;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:13px}
 .cmpcol{flex:1;background:var(--panel);padding:13px 12px}
 .cmpcol.tgt{background:var(--panel2)}
-.cmphead{font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);font-weight:700;margin-bottom:10px}
+.cmphead{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);font-weight:700;margin-bottom:10px}
 .cmprow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:var(--fs-detail);color:var(--dim)}
 .cmprow b{font-size:var(--fs-title);color:var(--text);font-weight:700}
 .cmparrow{display:flex;align-items:center;padding:0 3px;background:var(--panel)}
@@ -449,7 +460,7 @@ input[type=date],input[type=time]{min-height:40px}
 .mslot{border-bottom:1px solid #191D22;padding:11px 13px}
 .mslot:last-of-type{border-bottom:none}
 .mslothead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.mslothead span{font-size:var(--fs-label);letter-spacing:.15em;color:var(--amber);font-weight:700}
+.mslothead span{font-size:var(--fs-label);letter-spacing:.07em;color:var(--amber);font-weight:700}
 .mslothead .chip{padding:5px 10px;font-size:var(--fs-caption)}
 .mitem{display:flex;gap:8px;padding:4px 0;font-size:var(--fs-body);color:var(--dim);line-height:1.4}
 .mitem b{color:var(--text)}
@@ -461,14 +472,14 @@ input[type=date],input[type=time]{min-height:40px}
   border:1px solid var(--banner-amber-border);border-left:3px solid var(--amber)}
 .brief.col{display:flex;align-items:center;gap:10px;padding:11px 13px}
 .brhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brtag{font-size:var(--fs-label);letter-spacing:.2em;color:var(--amber);font-weight:700;white-space:nowrap}
+.brtag{font-size:var(--fs-label);letter-spacing:.1em;color:var(--amber);font-weight:700;white-space:nowrap}
 .brx{padding:4px;margin:-4px}
 .brmini{flex:1;min-width:0;font-size:var(--fs-detail);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brline{font-family:var(--sans);font-weight:800;font-size:18px;line-height:1.3;letter-spacing:.005em;margin:11px 0 0;color:var(--text)}
+.brline{font-weight:700;font-size:19px;line-height:1.3;letter-spacing:-.01em;margin:11px 0 0;color:var(--text)}
 .brsrc{font-size:var(--fs-caption);color:var(--faint);margin-top:6px;letter-spacing:.06em}
 .brwhy{display:block;width:100%;text-align:left;margin-top:12px;padding:10px 11px;border:1px solid var(--rule2);background:rgba(0,0,0,.25);
   font-size:var(--fs-body);color:var(--text);line-height:1.5}
-.brwhy i{display:block;font-style:normal;font-size:var(--fs-label);letter-spacing:.18em;color:var(--faint);margin-bottom:4px}
+.brwhy i{display:block;font-style:normal;font-size:var(--fs-label);letter-spacing:.09em;color:var(--faint);margin-bottom:4px}
 .brwhy.empty{color:var(--dim);border-style:dashed}
 .brstats{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:11px;font-size:var(--fs-detail);color:var(--dim)}
 .brstats span{display:inline-flex;align-items:center;gap:5px}
@@ -488,12 +499,12 @@ input[type=date],input[type=time]{min-height:40px}
 .tmr.work.warn{background:#2A1A08}
 .tmr.rest{background:#0B1318}
 .tmr.prep{background:#14120B}
-.ttop{display:flex;justify-content:space-between;align-items:center;padding:14px var(--pad);font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);font-weight:700}
+.ttop{display:flex;justify-content:space-between;align-items:center;padding:14px var(--pad);font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);font-weight:700}
 .tbig{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 var(--pad);text-align:center}
-.tphase{font-size:var(--fs-headline);letter-spacing:.35em;font-weight:700;color:var(--dim)}
+.tphase{font-size:var(--fs-headline);letter-spacing:.17em;font-weight:700;color:var(--dim)}
 .tmr.work .tphase{color:var(--rust)} .tmr.work.warn .tphase{color:var(--amber)} .tmr.rest .tphase{color:var(--steel)} .tmr.prep .tphase{color:var(--amber)}
-.ttime{font-family:var(--sans);font-weight:800;font-size:min(30vw,150px);line-height:1;letter-spacing:-.02em;margin:14px 0 10px;font-variant-numeric:tabular-nums}
-.tround{font-size:var(--fs-title);letter-spacing:.18em;color:var(--dim)}
+.ttime{font-weight:800;font-size:min(30vw,150px);line-height:1;letter-spacing:-.02em;margin:14px 0 10px;font-variant-numeric:tabular-nums}
+.tround{font-size:var(--fs-title);letter-spacing:.09em;color:var(--dim)}
 .tbarw{width:100%;max-width:420px;height:6px;background:var(--rule);margin-top:26px}
 .tbar{height:100%;background:var(--rust);transition:width .1s linear}
 .tmr.rest .tbar{background:var(--steel)} .tmr.prep .tbar,.tmr.work.warn .tbar{background:var(--amber)}
@@ -506,7 +517,7 @@ input[type=date],input[type=time]{min-height:40px}
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
 .tst .sfi{align-items:stretch}
 .tval{flex:1;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
-  background:var(--sunk);font-family:var(--sans);font-weight:800;font-size:20px;padding:10px 0}
+  background:var(--sunk);font-weight:800;font-size:20px;padding:10px 0}
 .tmrbtn{color:var(--dim);border-color:var(--note-pain-border)}
 
 /* ---------- muscle map ---------- */
@@ -531,8 +542,8 @@ input[type=date],input[type=time]{min-height:40px}
 /* ---------- 90-day challenge ---------- */
 .chhero{display:flex;align-items:center;gap:14px;padding:14px 13px}
 .chday{display:flex;flex-direction:column;align-items:center;min-width:74px;padding:6px 0;border-right:1px solid var(--rule)}
-.chday span{font-size:var(--fs-label);letter-spacing:.18em;color:var(--faint)}
-.chday b{font-family:var(--sans);font-weight:800;font-size:38px;line-height:1.05;color:var(--amber)}
+.chday span{font-size:var(--fs-label);letter-spacing:.09em;color:var(--faint)}
+.chday b{font-weight:800;font-size:38px;line-height:1.05;color:var(--amber)}
 .chgoal{font-size:var(--fs-title);font-weight:600;line-height:1.35}
 .chsub{margin-top:7px;font-size:var(--fs-caption);color:var(--faint);line-height:1.5}
 .chgrid{display:grid;grid-template-columns:repeat(15,1fr);gap:3px;padding:13px}
@@ -542,23 +553,23 @@ input[type=date],input[type=time]{min-height:40px}
 .chposes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .chpose{position:relative;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--sunk);border:1px dashed var(--rule2);overflow:hidden;cursor:pointer}
 .chpose img{width:100%;height:100%;object-fit:cover}
-.chpose i{position:absolute;left:0;right:0;bottom:0;padding:4px 0;font-style:normal;text-align:center;font-size:var(--fs-label);letter-spacing:.14em;color:var(--dim);background:rgba(0,0,0,.6)}
+.chpose i{position:absolute;left:0;right:0;bottom:0;padding:4px 0;font-style:normal;text-align:center;font-size:var(--fs-label);letter-spacing:.07em;color:var(--dim);background:rgba(0,0,0,.6)}
 .chthumbs{display:flex;gap:6px;margin-top:8px}
 .chthumbs img{width:58px;height:78px;object-fit:cover;border:1px solid var(--rule)}
 .chcmp{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 13px 10px}
 .chcmp>div{aspect-ratio:3/4;background:var(--sunk);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:var(--fs-caption);color:var(--faint)}
 .chcmp img{width:100%;height:100%;object-fit:cover}
-.chcmp i{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-style:normal;font-size:var(--fs-label);letter-spacing:.16em;padding:3px 7px;background:rgba(0,0,0,.65);color:var(--text)}
+.chcmp i{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-style:normal;font-size:var(--fs-label);letter-spacing:.08em;padding:3px 7px;background:rgba(0,0,0,.65);color:var(--text)}
 .chsel select{padding-right:26px;font-size:15px}
 .brchip{display:inline-flex;align-items:center;gap:5px;color:var(--amber);font-size:var(--fs-detail)}
 
 /* ---------- fight camp ---------- */
 .camphero{display:flex;align-items:center;gap:14px;padding:14px 13px}
 .campph{margin-top:8px;font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
-.campph b{color:var(--rust);letter-spacing:.12em;margin-right:4px}
+.campph b{color:var(--rust);letter-spacing:.06em;margin-right:4px}
 .cutbox{margin:0 13px 13px;padding:11px;border:1px solid var(--rule);background:var(--sunk)}
 .cuthead{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-caption);letter-spacing:.06em;color:var(--faint);margin-bottom:8px}
-.cuthead span:first-child{font-weight:700;letter-spacing:.14em}
+.cuthead span:first-child{font-weight:700;letter-spacing:.07em}
 .cutsvg{display:block;width:100%;height:110px;background:#0C0F13;border:1px solid var(--rule)}
 .cutleg{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:var(--fs-caption);color:var(--faint)}
 .cutleg i{display:inline-block;width:9px;height:3px;margin-right:5px;vertical-align:2px}
@@ -568,14 +579,14 @@ input[type=date],input[type=time]{min-height:40px}
 .obdots{display:flex;gap:6px}
 .obdots span{width:22px;height:3px;background:var(--rule2)}
 .obdots span.on{background:var(--amber)}
-.obh{font-family:var(--sans);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.04em;margin:4px 0 14px}
-.obl{font-size:var(--fs-label);letter-spacing:.14em;color:var(--faint);margin:16px 0 8px;text-transform:uppercase}
+.obh{font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.04em;margin:4px 0 14px}
+.obl{font-size:var(--fs-label);letter-spacing:.07em;color:var(--faint);margin:16px 0 8px;text-transform:uppercase}
 .startopt.sel{border-color:var(--amber);background:var(--banner-amber-bg)}
-.sect.fold{width:100%;text-align:left;cursor:pointer}
+.sect.fold{width:100%;text-align:left;cursor:pointer;margin:6px 0 -3px;padding:14px 0}      /* same spacing as a plain .sect, but the whole 41px band is the tap target (was 13px) */
 .sect.fold .chev{color:var(--faint)}
 .foldsum{font-weight:500;letter-spacing:.06em;color:var(--faint);font-size:var(--fs-caption);white-space:nowrap}
 
-.qtier{display:inline-block;margin-left:6px;padding:1px 5px;border:1px solid;font-size:var(--fs-label);letter-spacing:.14em;font-weight:700;vertical-align:1px}
+.qtier{display:inline-block;margin-left:6px;padding:1px 5px;border:1px solid;font-size:var(--fs-label);letter-spacing:.07em;font-weight:700;vertical-align:1px}
 .qbrowse{margin-top:8px;border:1px solid var(--rule);background:var(--sunk);max-height:340px;overflow-y:auto}
 .qb{padding:11px;border-bottom:1px solid var(--rule)}
 .qb:last-of-type{border-bottom:none}
@@ -597,11 +608,11 @@ body.lock{overflow:hidden}
 .xtile{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;padding:13px 12px 12px;
   background:var(--panel);border:1px solid var(--rule);border-top-color:var(--edge-hi);border-bottom-color:var(--edge-lo)}
 .xtile:active{background:var(--panel2)}
-.xtt{font-family:var(--sans);font-weight:800;font-size:var(--fs-title);letter-spacing:.08em}
+.xtt{font-weight:800;font-size:var(--fs-title);letter-spacing:.08em}
 .xts{font-size:var(--fs-caption);color:var(--faint);line-height:1.4}
 .xw{margin-bottom:13px}
 .xwhead{padding:13px 13px 10px}
-.xwname{border:none;border-bottom:1px solid var(--rule);background:none;padding:4px 0 8px;font-family:var(--sans);font-weight:800;
+.xwname{border:none;border-bottom:1px solid var(--rule);background:none;padding:4px 0 8px;font-weight:800;
   font-size:16px;letter-spacing:.04em;text-transform:uppercase}
 .xwname::placeholder{color:var(--faint);text-transform:none;font-weight:500;letter-spacing:0}
 .xwstats{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:9px;font-size:var(--fs-detail);color:var(--faint)}
@@ -609,13 +620,13 @@ body.lock{overflow:hidden}
 .xmode{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 13px;border-top:1px solid var(--rule);
   font-size:var(--fs-detail);color:var(--faint)}
 .seg2{display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule)}
-.seg2 button{padding:7px 9px;background:var(--panel);font-size:var(--fs-caption);font-weight:700;letter-spacing:.09em;color:var(--faint)}
+.seg2 button{padding:7px 9px;background:var(--panel);font-size:var(--fs-caption);font-weight:700;letter-spacing:.05em;color:var(--faint)}
 .seg2 button.on{background:var(--panel2);color:var(--amber)}
 .xlist{border-top:1px solid var(--rule)}
 .xc{border-bottom:1px solid var(--rule)}
 .xc.open{background:#0C0F13}
 .xc.ss{border-left:3px solid var(--steel)}
-.sstag{display:block;font-size:var(--fs-label);letter-spacing:.14em;color:var(--steel);font-weight:700;margin-bottom:2px}
+.sstag{display:block;font-size:var(--fs-label);letter-spacing:.07em;color:var(--steel);font-weight:700;margin-bottom:2px}
 .xhead{display:flex;align-items:stretch}
 .xmain{flex:1;min-width:0;display:flex;align-items:flex-start;gap:11px;padding:12px 4px 12px 13px;text-align:left}
 .xdot{width:18px;height:18px;min-width:18px;margin-top:1px;border:1.5px solid #3C424A;display:flex;align-items:center;justify-content:center}
@@ -625,9 +636,9 @@ body.lock{overflow:hidden}
 .xt i{font-style:normal;font-size:var(--fs-caption);letter-spacing:.06em;color:var(--faint);text-transform:uppercase}
 .xt em{font-style:normal;font-size:var(--fs-detail);color:var(--steel);line-height:1.4}
 .xs{font-size:var(--fs-caption);color:var(--amber);letter-spacing:.06em;padding-top:2px;white-space:nowrap}
-.xbody{padding:2px 13px 14px 42px}
+.xbody{padding:2px 13px 14px}
 .bench{background:var(--banner-steel-bg);border:1px solid var(--banner-steel-border);padding:10px 11px}
-.benchl{display:flex;align-items:center;gap:6px;font-size:var(--fs-label);letter-spacing:.16em;color:var(--steel);font-weight:700}
+.benchl{display:flex;align-items:center;gap:6px;font-size:var(--fs-label);letter-spacing:.08em;color:var(--steel);font-weight:700}
 .benchv{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:7px;font-size:var(--fs-title);color:var(--text)}
 .benchv span.cur{color:var(--amber);font-weight:700}
 .benchb{margin-top:7px;font-size:var(--fs-detail);color:var(--dim)}
@@ -635,17 +646,17 @@ body.lock{overflow:hidden}
 .exnote textarea{min-height:0;padding:9px 11px;font-size:16px;line-height:1.4}
 .xnote{display:block;margin-top:2px;font-style:normal;font-size:var(--fs-caption);color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .benchn{margin-top:9px;padding-top:9px;border-top:1px solid var(--rule);font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
-.benchn b{letter-spacing:.14em;font-size:var(--fs-label);color:var(--steel)}
+.benchn b{letter-spacing:.07em;font-size:var(--fs-label);color:var(--steel)}
 .benchn.up b{color:var(--amber)}
 .benchn .chip{margin-left:6px;padding:4px 9px}
 .setadd2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .setadd2.three{grid-template-columns:1fr 1fr 1fr}
 .sf{min-width:0}
-.sfl{font-size:var(--fs-label);letter-spacing:.12em;color:var(--faint);margin-bottom:5px;white-space:nowrap}
+.sfl{font-size:var(--fs-label);letter-spacing:.06em;color:var(--faint);margin-bottom:5px;white-space:nowrap}
 .sfl span{opacity:.75;letter-spacing:.04em;text-transform:lowercase}
 .sfi{display:flex;align-items:stretch}
-.sfi input{min-width:0;text-align:center;padding:10px 2px;border-left:none;border-right:none}
-.stp{width:34px;min-width:34px;background:var(--panel2);border:1px solid var(--rule);font-size:18px;color:var(--dim);line-height:1}
+.sfi input{min-width:0;text-align:center;padding:11px 2px;border-left:none;border-right:none;font-size:26px;font-weight:700;letter-spacing:-.02em}
+.stp{width:44px;min-width:44px;background:var(--panel2);border:1px solid var(--rule);font-size:22px;color:var(--dim);line-height:1}
 .stp:active{background:var(--rule2);color:var(--text)}
 .platehint{margin-top:7px;font-size:var(--fs-caption);color:var(--faint);min-height:12px}
 .prtag{font-size:var(--fs-caption);color:var(--amber);letter-spacing:.08em}
@@ -657,7 +668,7 @@ body.lock{overflow:hidden}
 .histrow span:first-child{color:var(--text);flex:none}
 .histrow span:last-child{text-align:right;min-width:0}
 .histrow:last-child{border-bottom:none}
-.setedit{flex:1;min-width:0;text-align:left;color:inherit;padding:2px 0}
+.setedit{flex:1;min-width:0;text-align:left;color:inherit;font:inherit;letter-spacing:inherit;padding:2px 0}
 .startbox{padding:12px 13px 4px;border-top:1px solid var(--rule)}
 .startopt{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;background:var(--panel2);border:1px solid var(--rule2)}
 .startopt b{font-size:var(--fs-title)}
@@ -670,9 +681,9 @@ body.lock{overflow:hidden}
 .exchips .chip{white-space:nowrap;padding:6px 10px;font-size:var(--fs-caption)}
 .exrow{flex-direction:column;align-items:flex-start;gap:3px}
 .exrow .exn{font-size:var(--fs-title);line-height:1.3;text-align:left}
-.exrow .exn em{font-style:normal;font-size:var(--fs-label);color:var(--plum);letter-spacing:.1em;text-transform:uppercase}
+.exrow .exn em{font-style:normal;font-size:var(--fs-label);color:var(--plum);letter-spacing:.05em;text-transform:uppercase}
 .exrow .exm{font-size:var(--fs-caption);color:var(--faint);letter-spacing:.04em;text-align:left;line-height:1.4}
-.exsec{padding:10px 13px 6px;font-size:var(--fs-label);letter-spacing:.16em;color:var(--faint);line-height:1.5}
+.exsec{padding:10px 13px 6px;font-size:var(--fs-label);letter-spacing:.08em;color:var(--faint);line-height:1.5}
 .exadded{display:flex;align-items:center;padding:0 14px;border-left:1px solid #191D22}
 .restbar{position:fixed;left:10px;right:10px;bottom:calc(58px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;gap:8px;
   padding:0 0 0 12px;height:46px;background:var(--panel2);border:1px solid var(--rule2);border-left:3px solid var(--steel);overflow:hidden}
@@ -680,8 +691,8 @@ body.lock{overflow:hidden}
 .restfill{position:absolute;left:0;top:0;bottom:0;background:rgba(92,140,168,.14);transition:width .4s linear;pointer-events:none}
 .restbar.done .restfill{background:rgba(124,154,94,.18)}
 .restbar>:not(.restfill){position:relative}
-.restl{font-size:var(--fs-label);letter-spacing:.2em;color:var(--faint);font-weight:700}
-.restt{flex:1;font-family:var(--sans);font-weight:800;font-size:19px;letter-spacing:.04em}
+.restl{font-size:var(--fs-label);letter-spacing:.1em;color:var(--faint);font-weight:700}
+.restt{flex:1;font-weight:800;font-size:19px;letter-spacing:.04em}
 .restbar button{align-self:stretch;padding:0 11px;border-left:1px solid var(--rule2);font-size:var(--fs-caption);font-weight:700;letter-spacing:.08em;color:var(--dim)}
 .fsess{padding:12px 13px;border-bottom:1px solid var(--rule)}
 .fstop{display:flex;align-items:center;gap:10px;font-size:var(--fs-body)}
@@ -690,7 +701,7 @@ body.lock{overflow:hidden}
 .fstop .x{color:var(--faint);padding:8px;margin:-8px -4px;display:flex}
 .fsd{margin-top:5px;font-size:var(--fs-caption);color:var(--steel)}
 .fsl{margin-top:7px;font-size:var(--fs-detail);color:var(--dim);line-height:1.5}
-.fsl i{display:block;font-style:normal;font-size:var(--fs-label);letter-spacing:.16em;color:var(--faint);margin-bottom:2px}
+.fsl i{display:block;font-style:normal;font-size:var(--fs-label);letter-spacing:.08em;color:var(--faint);margin-bottom:2px}
 .fform{padding:13px;border-top:1px solid var(--rule);background:#101317}
 .rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:8px}
 .rpe button{padding:10px 0;background:var(--panel2);border:1px solid var(--rule);font-size:var(--fs-body);color:var(--faint)}
@@ -701,13 +712,40 @@ body.lock{overflow:hidden}
 .wlt{font-size:var(--fs-title);font-weight:600;line-height:1.3}
 .wls{font-size:var(--fs-detail);color:var(--faint);margin-top:3px;line-height:1.45}
 .wlbody{padding:2px 13px 14px;border-top:1px solid var(--rule)}
-.backbtn{display:flex;align-items:center;gap:7px;margin:14px 0 0;padding:6px 0;font-size:var(--fs-caption);letter-spacing:.14em;color:var(--faint);font-weight:700}
+.backbtn{display:flex;align-items:center;gap:7px;margin:14px 0 0;padding:6px 0;font-size:var(--fs-caption);letter-spacing:.07em;color:var(--faint);font-weight:700}
 .logbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:2px 0 6px;padding:11px;border:1px dashed var(--rule2);
-  font-size:var(--fs-caption);letter-spacing:.12em;color:var(--faint);font-weight:700}
+  font-size:var(--fs-caption);letter-spacing:.06em;color:var(--faint);font-weight:700}
 .repnote{padding:12px 15px 12px 57px;font-size:var(--fs-detail);color:var(--dim);line-height:1.55}
 .repnote b{color:var(--text)}
-.linkbtn{display:block;margin-top:7px;font-size:var(--fs-caption);letter-spacing:.1em;color:var(--amber);text-decoration:underline}
+.linkbtn{display:block;margin-top:7px;font-size:var(--fs-caption);letter-spacing:.05em;color:var(--amber);text-decoration:underline}
 
+/* ---------- insights ---------- */
+.hero{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px;padding:15px 13px 0}
+.hero b{font-size:42px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.hero span{font-size:var(--fs-detail);color:var(--faint)}
+.herosub{padding:6px 13px 12px;font-size:var(--fs-detail);color:var(--dim)}
+.how{border-top:1px solid var(--rule);padding:0 13px}
+.how summary{padding:13px 0;min-height:40px;font-size:var(--fs-label);letter-spacing:.08em;color:var(--faint);font-weight:700;cursor:pointer}
+.how div{padding:0 0 13px;font-size:var(--fs-detail);color:var(--dim);line-height:1.6}
+.how b{color:var(--text);font-weight:600}
+.fixline{margin:4px 13px 13px;padding:11px 12px;border:1px solid var(--banner-amber-border);border-left:3px solid var(--amber);background:var(--banner-amber-bg);font-size:var(--fs-body);line-height:1.5;color:var(--text)}
+.fixline .eyebrow{margin-bottom:5px}
+/* ---------- missions + callout ---------- */
+.reqrow{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-bottom:1px solid #14181D;font-size:var(--fs-detail);line-height:1.45}
+.reqrow svg{margin-top:2px} .reqrow b{display:block;font-weight:600;color:var(--text)} .reqrow span{display:block}
+.mis{padding:13px 13px 12px;border-bottom:1px solid var(--rule)}
+.mist{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:var(--fs-title)}
+.mist b{font-weight:600} .mism{font-size:var(--fs-caption);font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.misbar{position:relative;height:8px;margin:11px 0 8px;background:var(--sunk);border:1px solid var(--rule)}
+.misfill{height:100%;background:var(--amber)}
+.misbar i{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--rule2)} .misbar i.on{background:var(--text)}
+.misl{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:var(--fs-caption);color:var(--faint)} .misl b,.misl .on{color:var(--text);font-weight:600}
+.misw{margin-top:6px;font-size:var(--fs-caption);color:var(--faint);line-height:1.5}
+.brcall{margin:11px 0 0;font-weight:800;font-size:19px;line-height:1.3;letter-spacing:-.01em;color:var(--text)}
+.brproof{display:flex;gap:7px;align-items:flex-start;margin-top:11px;font-size:var(--fs-detail);color:var(--text);line-height:1.45}
+/* tap targets: the controls used one-handed between sets were 26-35px tall. 40px minimum (the steppers are 44 wide, see .stp). */
+.xtools button,.seg2 button,.rpe button,.rpe.c8 button,.chip,.badge[data-act]{min-height:40px}
+.chip,.badge[data-act]{display:inline-flex;align-items:center;justify-content:center}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -770,7 +808,11 @@ const Store = {
   async load(){
     /* a stored value that doesn't parse is damaged, not missing: throw, so boot shows the recovery screen (snapshot restore, raw
        download) instead of starting blank and overwriting it with the first save */
-    const parse = v => { try{ return JSON.parse(v); }catch(e){ throw new Error('Saved data is damaged (not valid JSON)'); } };
+    const parse = v => { let o; try{ o=JSON.parse(v); }catch(e){ throw new Error('Saved data is damaged (not valid JSON)'); }
+      /* valid JSON that isn't an object (5, [1,2], "x") is damaged too: starting blank would overwrite it with the first save */
+      if (o!==null && (typeof o!=='object' || Array.isArray(o))) throw new Error('Saved data is damaged (not a FORGE save)');
+      if (o) Store.raw=v;                                 // the exact string that was loaded: what snapshots and the pre-migration backup keep
+      return o; };
     const tryKey = async k => {
       let v=null;
       try{ if (window.storage){ const r = await window.storage.get(k); if (r&&r.value) v=r.value; } }catch(e){}
@@ -778,14 +820,24 @@ const Store = {
       if (v==null) v = mem[k] || null;
       return v ? parse(v) : null;
     };
+    try{ Store.last=localStorage.getItem(KEY)||''; }catch(e){ Store.last=''; }      // what this copy last saw in storage
     return (await tryKey(KEY)) || (await tryKey(OLDKEY));
   },
   async save(data){
+    if (Store.stale) return true;                          // another copy of the app has saved since: this one must not write over it
+    /* ...and one that saved without this copy hearing about it (during boot, or a missed storage event) is caught here, before the write */
+    if (Store.last!==undefined && Store.changedElsewhere()){ Store.yield(); return true; }
     const s = JSON.stringify(data); mem[KEY]=s;
     try{ if (window.storage){ await window.storage.set(KEY, s); return true; } }catch(e){}
-    try{ localStorage.setItem(KEY, s); return true; }catch(e){ return false; }
-  }
+    try{ localStorage.setItem(KEY, s); Store.last=s; return true; }catch(e){ return false; }
+  },
+  /* Two copies of the app (two tabs, or the installed app and a browser tab) each hold the whole state and save all of it, so the
+     older one would silently erase what the newer one logged. A copy that sees the save change underneath it stops saving and
+     reloads to pick up the newer data. */
+  changedElsewhere(){ let v=null; try{ v=localStorage.getItem(KEY); }catch(e){} return (v||'')!==(Store.last||''); },
+  yield(){ if (Store.stale) return; Store.stale=true; location.reload(); }
 };
+addEventListener('storage', e=>{ if (e.key===KEY && Store.changedElsewhere()) Store.yield(); });
 
 /* ---------------------------------------------------------------- data -- */
 const PHASES = [
@@ -1817,7 +1869,7 @@ const SPORTMET = Object.fromEntries(SPORTS.map(([k,,met])=>[k,met]));
 const SPORTLABEL = Object.fromEntries(SPORTS.map(([k,l])=>[k,l]));
 
 /* ============================================== physique archetype ======== */
-/* The Nolan-Batman build, expressed as measurable targets rather than vibes.
+/* The target build, expressed as measurable targets rather than vibes.
    FFMI = fat-free mass index. Untrained men sit ~19, well-trained ~21-22,
    the natural ceiling is ~24-25. 22.5 is "visibly built, still an athlete."   */
 const ARCH = {
@@ -1975,6 +2027,8 @@ const DEFAULTS = {
   off:{},                                  // days off: { 'YYYY-MM-DD': 'sick'|'travel'|'rest' }
   injury:null,                             // { area: key of INJURY, sev: 'mild'|'mod'|'severe', on: 'YYYY-MM-DD' }
   ui:{ fold:{}, seen:{} },                 // which Today sections you've folded/unfolded; which tour cards you've dismissed
+  missions:{ w:{}, m:{}, swap:{} },        // missions as generated: w[monday] = [three], m['YYYY-MM'] = one, swap[monday] = true once used. Progress is always worked out from the logs.
+  rank:{ i:0, at:{} },                     // highest rank earned (index into RANKS) and the date each was earned. Never goes down.
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 let toastMsg = null, toastTimer = null, toastUndo = false, undoSnap = null;
@@ -1994,7 +2048,7 @@ function commitSoon(){ _memo=null; clearTimeout(saveTimer); saveTimer=setTimeout
 function flushSave(){ if (saveTimer){ clearTimeout(saveTimer); commit(); } }
 function commit(){
   _memo=null; clearTimeout(saveTimer); saveTimer=null;
-  syncPRs();
+  syncPRs(); ensureMissions(); syncRank();
   Store.save(S).then(ok=>{
     if (ok!==false || Date.now()-saveWarnAt<60000) return;
     saveWarnAt=Date.now();
@@ -2073,7 +2127,7 @@ function buildDay(key){
   const buf=+p.commute||0;
   for (const c of fixed) free=subtract(free,c.s-buf,c.e+buf);
 
-  const out=[...fixed], missed=[], adapt=[], nudge=day(key).nudge;
+  const out=[...fixed], missed=[], adapt=[], nudge=(S.days[key]&&S.days[key].nudge)||{};      // read-only: day(key) would create a record for every date a calculation looks at
   const physMin = fixed.filter(c=>c.t==='physical').reduce((a,c)=>a+(c.e-c.s),0);
 
   const add=(id,label,sub,dur,anchor,win,kind)=>{
@@ -2146,10 +2200,21 @@ function dayScore(k){
   const x=(d.mind?1:0)+(d.news?1:0)+(d.rv&&d.rv.win?1:0);
   return clamp((b*1.1+h*0.7+x*1.1)/9,0,1);
 }
+/* A streak day has to be WON, not touched. Any one of: the session got done (60% of the plan, an own workout of 3+ exercises or
+   a 30-minute fight: trainRatio); protein reached 90% of the day's target; three habits were ticked. Ticking one meal block no
+   longer counts. Calibrated on four months of real logs: the old rule counted 77 days of 98, this one 54, session-only about 35. */
+function dayWon(k){
+  return memo('won:'+k,()=>{
+    if (trainRatio(k)>=0.6) return true;
+    const d=S.days[k]; if (!d) return false;
+    if (Object.values(d.habits||{}).filter(Boolean).length>=3) return true;
+    const N=nutrition(k); return !!N&&foodTotals(k).p>=N.protein*0.9;
+  });
+}
 function streak(){
   let n=0;
-  for(let i=0;i<1200;i++){ const s=dayScore(dkey(-i));
-    if(s>0.08)n++; else if(i===0||offOf(dkey(-i)))continue; else break; }      // a day off pauses the streak, it doesn't break it
+  for(let i=0;i<1200;i++){ const k=dkey(-i);
+    if(dayWon(k))n++; else if(i===0||offOf(k))continue; else break; }      // a day off pauses the streak, it doesn't break it
   return n;
 }
 /* the most recent log entry that actually HAS this field — not just the most
@@ -2171,12 +2236,6 @@ function trendWeight(){
   const win=S.log.filter(e=>e.weight!=null && e.date>=dkey(-6) && e.date<=T);
   if (win.length<2) return {kg:L.weight,n:1,raw:L.weight,date:L.date,smoothed:false};
   return {kg:win.reduce((a,e)=>a+e.weight,0)/win.length,n:win.length,raw:L.weight,date:L.date,smoothed:true};
-}
-/* rolling 7-day average at each weigh-in, for the chart */
-function weightTrendSeries(){
-  const ws=S.log.filter(e=>e.weight!=null);
-  return ws.map(e=>{ const from=addDays(e.date,-6), win=ws.filter(x=>x.date>=from && x.date<=e.date);
-    return win.reduce((a,x)=>a+x.weight,0)/win.length; });
 }
 /* days since the most recent LOGGED WEIGHT specifically (not just any log entry —
    a bodyweight-free entry like a squat PR shouldn't reset this) */
@@ -2322,7 +2381,7 @@ function nutrition(k){
     act:A.items,extra:Math.round(A.kcal),extraMin:A.min,sweat:A.sweat,loss,ea};
 }
 function foodTotals(k){
-  const f=day(k).food;
+  const f=foodOf(k);          // read-only: day(k) would create (and later save) an empty record for every date a screen looks at
   // Both real add-paths (addfood, addcustomfood) always supply p/c/f, but one
   // malformed entry — a hand-edited localStorage value, an older backup schema —
   // would otherwise poison the whole day's totals: undefined*q is NaN, and NaN
@@ -2574,7 +2633,7 @@ function rebuildPR(ex){
 function syncPRs(){ if (!S.prs||typeof S.prs!=='object'||Array.isArray(S.prs)) S.prs={}; for (const ex in EXS) if (gymSessions(ex).length) rebuildPR(ex); }
 function bestStreakEver(){
   let max=0,cur=0;
-  for (let i=1100;i>=0;i--){ const k=dkey(-i), s=dayScore(k); if(s>0.08){ cur++; if(cur>max)max=cur; } else if (!offOf(k)) cur=0; }
+  for (let i=1100;i>=0;i--){ const k=dkey(-i); if(dayWon(k)){ cur++; if(cur>max)max=cur; } else if (!offOf(k)) cur=0; }
   return Math.max(max,streak());
 }
 function totalSessions(){ return Object.keys(S.days).filter(k=>{ const d=S.days[k];
@@ -2627,10 +2686,9 @@ function inLoad(v){ const n=num(v); if(n==null) return null;
 
 /* ============================================================== deload === */
 function trainRatio(k){
-  const d=S.days[k]; if(!d||!d.blocks) return 0;
-  const wi=dowIdx(k);
-  const def=S.swap[k]!=null?(ALLDAYS[S.swap[k]]||WEEK[wi]):WEEK[wi];
-  const done=def.blocks.filter(b=>d.blocks[b.id]).length;
+  const d=S.days[k], def=dayDef(k);
+  /* no day record is not "no training": a workout or fight logged on a date nothing else was ticked on still counts (it used to be 0) */
+  const done=d&&d.blocks?def.blocks.filter(b=>d.blocks[b.id]).length:0;
   /* a custom workout or a logged fight counts toward a hard day the same way a planned session does */
   return Math.max(done/def.blocks.length, custRatio(k));
 }
@@ -2819,7 +2877,7 @@ function dayLoad(k){
 let view='today', openBlock='train', shiftId=null, openTrack=undefined, openPhase=null,
     chartKey='weight', planDay=DOW[dowIdx(dkey())], editIdx=null, preset=null,
     foodQ='', foodG='', foodGU='g', copyMode=false, copySel={}, swapOpen=false, foodOpen=false, injForm=false, injDraft={area:'ankle',sev:'mild'}, offForm=false, offDraft='sick',
-    buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='';
+    buildSub='target', openMeal=null, mealScale=true, importOpen=false, importErr='', importArm=false;
 const T = dkey();
 let viewOff = 0;
 const VD = () => dkey(viewOff);
@@ -2840,7 +2898,7 @@ function sparkline(vals,color,h=110,trend){
     <path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"${td?' opacity=".55"':''}/>
     ${td?`<path d="${td}" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>`:''}</svg>
   <div style="display:flex;justify-content:space-between;padding:0 13px 12px;font-size:var(--fs-caption);color:var(--faint)">
-    <span>low ${Math.round(min*10)/10}</span><span>${pts.length} entries${td?' · dashed = 7-day average':''}</span><span>high ${Math.round(max*10)/10}</span></div>`;
+    <span>low ${Math.round(min*10)/10}</span><span>${pts.length} entries${td?' · dashed = smoothed trend':''}</span><span>high ${Math.round(max*10)/10}</span></div>`;
 }
 const sect=(ico,t)=>`<div class="sect">${svg(ico,13,'var(--amber)')}<h2>${t}</h2><div class="line"></div></div>`;
 const chk=(on,c)=>`<div class="box" style="${on?`background:${c||'var(--amber)'};border-color:${c||'var(--amber)'}`:''}">${on?svg('check',12,'var(--ink)',3):''}</div>`;
@@ -2927,7 +2985,7 @@ function exGymHTML(ex,label){
     ${E.from?`<div class="note swapnote">${svg('rot',11,'var(--steel)')} <div>Swapped in for <b>${esc(EXS[E.from].n)}</b>. This lift keeps its own weights and history.<button class="unflag" data-act="g-swapreset" data-v="${E.from}">put it back</button></div></div>`:''}
     <div class="eyebrow" style="margin:12px 0 8px">TODAY'S SETS — ${esc(E.n).toUpperCase()}${E.added?' (ADDED WEIGHT)':''}</div>
     ${sets.map((s,i)=>{ const isPR = !s.wu&&pr&&pr.date===VD()&&Math.abs(pr.w-s.w)<0.01&&pr.r===s.r; if (!s.wu) n++;
-      return `<div class="setrow">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':n}</span>`}
+      return `<div class="setrow${hitCls(VD(),'g:'+ex,i)}">${isPR?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':n}</span>`}
       <button class="setedit" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${dispExact(s.w)} × ${s.r}${rpeTag(s)}${s.wu?' <span class="e1" style="color:var(--steel)">WARM-UP</span>':''}${isPR?' <span style=\"color:var(--amber);font-size:var(--fs-caption);letter-spacing:.08em\">PR</span>':''}</button>
       ${s.wu?'':s.r>=E.reps?svg('check',12,'var(--moss)',3):`<span style="font-size:var(--fs-caption);color:var(--rust)">-${E.reps-s.r}</span>`}
       <button class="x" data-act="gedit" data-v="${ex}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
@@ -2954,13 +3012,13 @@ function exGymHTML(ex,label){
 }
 function gymHTML(b){
   if(!BLOCKEX[b.id]) return ''; const exs=blockKeys(b);
-  return exs.map(ex=>exGymHTML(ex,exs.length>1)).join('')+`<div class="setlog" style="padding:0 0 4px 42px">${restPrefsHTML()}</div>`;
+  return exs.map(ex=>exGymHTML(ex,exs.length>1)).join('')+`<div class="setlog" style="padding:0 15px 4px">${restPrefsHTML()}</div>`;
 }
 
 function libBlockHTML(b){
   const ids=(BLOCKLIB[b.id]||[]).map(exSlug); if (!ids.length) return '';
   const vd=VD(), cw=S.cust[vd];
-  return `<div class="setlog" style="padding:0 0 4px 42px">${ids.map(id=>cw&&cw.items.includes(id)
+  return `<div class="setlog" style="padding:0 15px 4px">${ids.map(id=>cw&&cw.items.includes(id)
     ? `<div class="xlist">${exCardHTML(cw,id,cw.items.indexOf(id),vd)}</div>`
     : `<button class="logbtn" data-act="w-blkadd" data-v="${id}">${svg('plus',12,'var(--faint)')} LOG ${esc(exInfo(id).n).toUpperCase()}</button>`).join('')}</div>`;
 }
@@ -3303,6 +3361,11 @@ function normalizeCustom(){
   S.ui = Object.assign({fold:{}}, (S.ui&&typeof S.ui==='object')?S.ui:{});
   if (!S.ui.fold||typeof S.ui.fold!=='object') S.ui.fold={};
   if (!S.ui.seen||typeof S.ui.seen!=='object'||Array.isArray(S.ui.seen)) S.ui.seen={};
+  const plain=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
+  if (!plain(S.missions)) S.missions={}; for (const k of ['w','m','swap']) if (!plain(S.missions[k])) S.missions[k]={};
+  for (const k of Object.keys(S.missions.w)) if (!Array.isArray(S.missions.w[k])||S.missions.w[k].some(m=>!plain(m)||!Array.isArray(m.tiers))) delete S.missions.w[k];
+  for (const k of Object.keys(S.missions.m)) if (!plain(S.missions.m[k])||!Array.isArray(S.missions.m[k].tiers)) delete S.missions.m[k];
+  if (!plain(S.rank)||!(S.rank.i>=0)) S.rank={i:0,at:{}}; if (!plain(S.rank.at)) S.rank.at={};
   /* A backup that was hand-edited or damaged can hold entries of the wrong type. Drop those (and unreadable numbers) here so one bad
      entry can't make every screen throw. The import also draws every screen before it commits (adoptState). */
   const isObj=x=>!!x&&typeof x==='object'&&!Array.isArray(x), isDate=x=>typeof x==='string'&&/^\d{4}-\d\d-\d\d$/.test(x);
@@ -3330,15 +3393,14 @@ function normalizeCustom(){
 const DRY_SCREENS=[['today',''],['plan',''],['week',''],['build','target'],['build','fuel'],['build','log'],['build','ch90'],['mind',''],['ledger',''],
   ['wlog','workouts'],['wlog','body'],['wlog','lifts'],['wlog','fights']];
 function adoptState(parsed){
-  const prev={S,WEEK,view,buildSub,wlSub};
+  const prev={S,WEEK};
   try{
     S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),parsed);
     if (!(parsed.ui&&parsed.ui.seen)) S.ui=Object.assign({},S.ui,{seen:tourAllSeen()});         // restoring a backup is never a first run
     S.meta=Object.assign({},DEFAULTS.meta,S.meta||{}); S.meta.onboarded=true;
-    normalizeCustom(); WEEK=WEEKS[S.profile.program]||WEEK_STD;
-    for (const [v,sub] of DRY_SCREENS){ view=v; if (v==='build') buildSub=sub; if (v==='wlog') wlSub=sub; render(); }
+    WEEK=WEEKS[S.profile&&S.profile.program]||WEEK_STD; normalizeCustom(); migrate();            // an old backup is brought up to date here, not on the next reload
+    dryRender();
   }catch(err){ S=prev.S; WEEK=prev.WEEK; throw err; }
-  finally{ view=prev.view; buildSub=prev.buildSub; wlSub=prev.wlSub; }
 }
 /* parse a backup, dropping any "__proto__" key (it would swap the prototype of the object it is merged into) */
 const parseBackup=txt=>JSON.parse(txt,(k,v)=>k==='__proto__'?undefined:v);
@@ -3681,7 +3743,7 @@ function exCardHTML(cw,id,idx,vd){
         ${(()=>{ const h=nextWeightHint(id,vd); return h?`<div class="benchn ${h.mode}"><b>NEXT TIME</b> · ${esc(h.text)}${h.mode==='up'?` <button class="chip" data-act="w-usenext" data-v="${id}">USE ${esc(fmtW(h.w))}</button>`:''}</div>`:''; })()}</div>`
     : `<div class="bench"><div class="benchl">${svg('target',10,'var(--amber)')} FIRST TIME</div>
         <div class="benchv"><span>Whatever you log here becomes the benchmark next time.</span></div></div>`;
-  const rows=sets.map((s,i)=>`<div class="setrow">${prs[i]?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':i+1}</span>`}
+  const rows=sets.map((s,i)=>`<div class="setrow${hitCls(vd,id,i)}">${prs[i]?svg('award',12,'var(--amber)'):`<span class="setn">${s.wu?'W':i+1}</span>`}
       <button class="setedit" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${esc(fmtSet(E.k,s))}${s.wu?' <span class="e1" style="color:var(--steel)">WARM-UP</span>':''}${prs[i]?' <span class="prtag">PR</span>':''}${(E.k==='wr'&&!s.wu&&s.r>1)?` <span class="e1">≈${e1Txt(s.w,s.r)} 1RM</span>`:''}</button>
       <button class="x" data-act="w-edit" data-v="${id}" data-v2="${i}" aria-label="Edit set ${i+1}">${svg('edit',12)}</button>
       <button class="x" data-act="w-del" data-v="${id}" data-v2="${i}" aria-label="Delete set ${i+1}">${svg('x',12)}</button></div>`).join('');
@@ -3887,8 +3949,8 @@ function ViewWorkoutLog(){
   const tabs=[['workouts','WORKOUTS'],['body','MUSCLES'],['lifts','LIFTS'],['fights','FIGHTS'],['routines','ROUTINES']];
   let body='';
   if (wlSub==='workouts') body=wlWorkouts();
-  else if (wlSub==='body') body=MuscleMap();
-  else if (wlSub==='lifts') body=wlLifts();
+  else if (wlSub==='body') body=MuscleMap()+LoadPanel();
+  else if (wlSub==='lifts') body=StrengthPanel()+wlLifts();
   else if (wlSub==='fights') body=wlFights();
   else body=wlRoutines();
   return `<div class="view wrap">
@@ -4150,6 +4212,7 @@ function wAct(a,v,v2,el){
       const before=cw.sets[id].slice();
       cw.sets[id].push(s);
       const isPR=prFlags(id,vd,cw.sets[id]).pop();
+      markHit(vd,id,cw.sets[id].length-1,isPR);
       delete cdraft[dk];
       if (!cw.t0) cw.t0=Date.now();
       if (cw.fin){ cw.fin=false; cw.t1=null; }
@@ -4495,9 +4558,9 @@ function briefTag(){
   const plan=buildDay(T), type=plan.def.type, st=streak(), nowH=new Date().getHours();
   if (typeof campDaysOut==='function'){ const d=campDaysOut(); if (d!=null && d>=0 && d<=56) return 'camp'; }
   if (recentPR()) return 'pr';
-  if ([7,14,21,30,50,60,75,100,150,200,365].includes(st) && dayScore(T)>0.08) return 'milestone';
+  if ([7,14,21,30,50,60,75,100,150,200,365].includes(st) && dayWon(T)) return 'milestone';
   if (offOf(T)) return 'general';
-  if (st>0 && nowH>=18 && dayScore(T)<=0.08) return 'streakRisk';
+  if (st>0 && nowH>=18 && !dayWon(T)) return 'streakRisk';
   if (daysSinceStart()>=2 && dayScore(dkey(-1))<=0.08 && dayScore(dkey(-2))<=0.08 && daysLogged()>0) return 'comeback';
   if (deloadActive()) return 'deload';
   if (daysLogged()<7 && daysSinceStart()<10) return 'firstWeek';
@@ -4547,7 +4610,7 @@ function briefLine(tag){
   return pool[(strHash(T+tag)+shift)%pool.length];
 }
 function Briefing(){
-  const d=day(T), tag=briefTag(), line=briefLine(tag), st=streak();
+  const d=day(T), tag=briefTag(), line=briefLine(tag), st=streak(), co=callout(), proof=proofLine();
   const nowH=new Date().getHours();
   const head=nowH<12?'MORNING BRIEF':nowH<18?'AFTERNOON CHECK':'EVENING CHECK';
   const dl=daysLogged(), next=MILESTONES.find(m=>dl<m.d);
@@ -4558,17 +4621,19 @@ function Briefing(){
   if (typeof chBriefStat==='function'){ const c=chBriefStat(); if (c) extra.push(c); }
   if (d.bCol!==false){          // one line until you open it, so today's workout is on the first screen
     return `<button class="brief col" data-act="b-col" aria-expanded="false">
-      <span class="brtag">${esc(BRIEF_TAG_LABEL[tag])}</span><span class="brmini">${esc(line.t)}</span>${svg('chevD',13,'var(--faint)')}</button>`;
+      <span class="brtag">${esc(BRIEF_TAG_LABEL[tag])}</span><span class="brmini"${co?' style="color:var(--text)"':''}>${esc(co?co.t:line.t)}</span>${svg('chevD',13,'var(--faint)')}</button>`;
   }
   if (briefEdit) return BriefEditor();
   return `<div class="brief">
     <div class="brhead"><span class="brtag">${head} · ${esc(BRIEF_TAG_LABEL[tag])}</span>
       <button class="brx" data-act="b-col" aria-label="Collapse the briefing for today">${svg('chevD',14,'var(--faint)').replace('<svg','<svg style="transform:rotate(180deg)"')}</button></div>
-    <div class="brline">${esc(line.t)}</div>
+    ${co?`<div class="brcall">${esc(co.t)}</div>`:''}
+    <div class="brline"${co?' style="font-size:var(--fs-title);font-weight:600;color:var(--dim)"':''}>${esc(line.t)}</div>
     ${line.mine?'<div class="brsrc">— from your list</div>':''}
     ${line.quote?`<div class="brsrc"><b style="color:var(--text)">— ${esc(line.quote.who)}</b><span style="color:var(--faint)"> · ${esc(line.quote.desc)}</span> <span class="qtier" style="color:${QUOTE_TIER[line.quote.t][1]};border-color:${QUOTE_TIER[line.quote.t][1]}">${QUOTE_TIER[line.quote.t][0]}</span><br>${esc(line.quote.src)}</div>`:''}
     ${why?`<button class="brwhy" data-act="b-edit"><i>YOUR WHY</i>${esc(why)}</button>`
          :`<button class="brwhy empty" data-act="b-edit"><i>YOUR WHY</i>Write the one sentence you'd want to read on your worst morning. ${svg('edit',11,'var(--amber)')}</button>`}
+    ${proof?`<div class="brproof">${svg('trend',11,'var(--amber)')} ${esc(proof)}</div>`:''}
     <div class="brstats">
       <span>${svg('flame',11,st>0?'var(--amber)':'var(--faint)')} ${st} day streak</span>
       ${next?`<span>${next.d-dl} to ${esc(next.l)}</span>`:''}
@@ -5237,14 +5302,15 @@ function snapKeys(){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.t
 function snapGet(key){ return idb().then(db=>new Promise((res,rej)=>{ const r=db.transaction('s').objectStore('s').get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); }
 function snapDelete(key){ return idb().then(db=>new Promise(res=>{ const tx=db.transaction('s','readwrite'); tx.objectStore('s').delete(key); tx.oncomplete=res; tx.onerror=res; })); }
 /* one snapshot per day, taken the first time the app opens that day (before anything changes) */
-async function snapDaily(){
+async function snapDaily(raw){      // raw: the exact string loaded at boot, so the day's snapshot is the data as it was before this session touched it
   try{
     const keys=await snapKeys();
-    if (!keys.includes(T)) await snapPut(T,JSON.stringify(S));
-    const all=await snapKeys(), days=all.filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)), undos=all.filter(k=>k.startsWith('undo-'));
+    if (!keys.includes(T)) await snapPut(T,raw||JSON.stringify(S));
+    const all=await snapKeys(), days=all.filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)), undos=all.filter(k=>k.startsWith('undo-')), pres=all.filter(k=>k.startsWith('pre-'));
     for (const k of days.slice(SNAP_KEEP)) await snapDelete(k);
     for (const k of undos.slice(3)) await snapDelete(k);          // the three most recent undo points are kept
-    snapList=undos.slice(0,3).concat(days.slice(0,SNAP_KEEP));
+    for (const k of pres.slice(2)) await snapDelete(k);           // and the two most recent pre-migration copies
+    snapList=undos.slice(0,3).concat(pres.slice(0,2),days.slice(0,SNAP_KEEP));
   }catch(e){ snapList=[]; }
 }
 function backupAge(){ const b=S.meta.lastBackup; return b?daysBetween(b,T):null; }
@@ -5258,12 +5324,27 @@ function backupDue(){
 function BackupBanner(){
   if (!backupDue()) return '';
   const a=backupAge();
-  return `<div class="banner" style="align-items:center;gap:8px;padding:9px 11px">${svg('shield',13,'var(--amber)')}
+  return `<div class="banner" style="align-items:center;gap:8px;padding:7px 11px">${svg('shield',13,'var(--amber)')}
     <div style="flex:1;min-width:0"><b>${a==null?'No backup yet.':`Backup ${a}d old.`}</b> Data lives only on this phone.</div>
     <button class="chip on" data-act="s-backup" style="padding:5px 9px">BACK UP</button><button class="chip" data-act="s-snooze" style="padding:5px 9px">LATER</button></div>`;
 }
+/* The backup file is the whole state plus every progress photo (they live in IndexedDB, not in S) as data URLs under "photos".
+   Restoring puts them back. Snapshots and the clipboard copy stay photo-free: they would be megabytes. */
+const blobToURL=b=>new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(b); });
+function photoIds(o){ const c=(o&&o.ch90)||{};
+  return [...(c.checkins||[]),...(c.past||[]).flatMap(b=>(b&&b.checkins)||[])].flatMap(k=>Object.values((k&&k.photos)||{})).filter(id=>typeof id==='string'); }
+async function backupText(){
+  const photos={};
+  for (const id of photoIds(S)){ const b=await photoGet(id).catch(()=>null), u=b&&await blobToURL(b).catch(()=>null); if (u) photos[id]=u; }
+  return JSON.stringify(Object.keys(photos).length?{...S,photos}:S);
+}
+function restorePhotos(photos){
+  for (const [id,url] of Object.entries(photos&&typeof photos==='object'?photos:{}))
+    if (/^ph_[\w-]+$/.test(id) && typeof url==='string' && url.startsWith('data:image/'))
+      fetch(url).then(r=>r.blob()).then(b=>photoPut(id,b)).then(()=>{ delete photoURL[id]; hydratePhotos(); }).catch(()=>{});
+}
 async function doBackup(){
-  const txt=JSON.stringify(S), name=`forge-backup-${T}.json`;
+  const txt=await backupText(), name=`forge-backup-${T}.json`, small=txt.length<2e6;
   let how='downloaded';
   try{
     const file=new File([txt],name,{type:'application/json'});
@@ -5272,17 +5353,17 @@ async function doBackup(){
   }catch(e){
     if (e && e.name==='AbortError'){ toast('Backup cancelled'); return; }
     try{ const url=URL.createObjectURL(new Blob([txt],{type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500); }catch(err){}
-    if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});     // the toast below says so; the share-sheet route never touches the clipboard
+    if (navigator.clipboard && small) navigator.clipboard.writeText(txt).catch(()=>{});     // the toast below says so; the share-sheet route never touches the clipboard
   }
   S.meta.lastBackup=T; delete S.meta.backupSnooze; commit(); render();
-  toast(how==='shared'?'Backup saved — keep it somewhere off this phone':'Backup downloaded (also copied to clipboard)');
+  toast(how==='shared'?'Backup saved — keep it somewhere off this phone':small?'Backup downloaded (also copied to clipboard)':'Backup downloaded, photos included');
 }
 function SnapshotPanel(){
   const list=snapList||[];
   const a=backupAge();
-  return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Photos from the 90-day challenge aren't in the file; use SAVE PHOTOS there.</div>
+  return `<div class="note" style="border-top:1px solid var(--rule)"><b style="color:var(--text)">Last backup file:</b> ${a==null?'never':a===0?'today':`${a} day${a===1?'':'s'} ago`}. Progress photos are included in the file.</div>
     ${list.length?`<div class="eyebrow" style="padding:4px 13px 6px">AUTOMATIC SNAPSHOTS ON THIS PHONE</div>
-    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')?`<b>Undo a restore</b> <span style="color:var(--faint)">(your state at ${esc(new Date(+k.slice(5)).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
+    ${list.map(k=>`<div class="cmt"><span style="flex:1">${k.startsWith('undo-')||k.startsWith('pre-')?`<b>${k.startsWith('pre-')?'Before a data-format update':'Undo a restore'}</b> <span style="color:var(--faint)">(your state at ${esc(new Date(+k.split('-').pop()).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))})</span>`:esc(longDate(k))+(k===T?' <span style="color:var(--faint)">(start of today)</span>':'')}</span>
       <button class="chip" data-act="s-restore" data-v="${k}">${snapArm===k?'TAP TO CONFIRM':'RESTORE'}</button></div>`).join('')}
     <div class="note">One snapshot a day, the last ${SNAP_KEEP} kept, taken when you first open the app. Restoring replaces everything with that day's state (today's state is snapshotted first, so you can undo).</div>`:''}`;
 }
@@ -5291,7 +5372,7 @@ async function snapRestore(k){
     const json=await snapGet(k); if (!json){ toast('Snapshot not found'); return; }
     if (!k.startsWith('undo-')) await snapPut('undo-'+Date.now(),JSON.stringify(S)).catch(()=>{});   // a new key each time: restoring twice must not erase the first undo point
     adoptState(parseBackup(json));
-    snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':`Restored ${shortDate(k)}`);
+    snapArm=null; commit(); await snapDaily(); render(); toast(k.startsWith('undo-')?'Restore undone':k.startsWith('pre-')?'Restored the pre-update copy':`Restored ${shortDate(k)}`);
   }catch(e){ toast('Could not restore that snapshot'); }
 }
 
@@ -5420,7 +5501,8 @@ function sAct(a,v){
 document.addEventListener('change', e=>{
   const inp=e.target; if (inp.id!=='importfile' || !inp.files || !inp.files[0]) return;
   const r=new FileReader();
-  r.onload=()=>{ importOpen=true; render(); const ta=document.getElementById('importtxt'); if (ta){ ta.value=String(r.result||''); } toast('Backup loaded — check it, then RESTORE'); };
+  r.onload=()=>{ importOpen=true; importErr=''; importArm=false; render(); const ta=document.getElementById('importtxt'), pv=document.getElementById('importprev');
+    if (ta){ ta.value=String(r.result||''); if (pv) pv.innerHTML=importPreviewHTML(ta.value); } toast('Backup loaded — check the preview, then REPLACE or MERGE'); };
   r.onerror=()=>toast('Could not read that file');
   r.readAsText(inp.files[0]);
 });
@@ -5670,7 +5752,7 @@ function obFinish(){
 /* Today got long. Each lower section folds to a one-line header that still shows its key number; your choice
    is remembered. After-action opens by itself in the evening (or once you've written in it). */
 const FOLD_DEF = {
-  rail:()=>false, arc:()=>false, injury:()=>true, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
+  rail:()=>false, arc:()=>false, injury:()=>true, ready:()=>true, missions:()=>true, food:()=>true, foodlist:()=>true, supps:()=>true, habits:()=>true, last14:()=>false,
   review:()=>{ const d=S.days[VD()]; return new Date().getHours()>=17 || !!(d&&d.rv&&(d.rv.win||d.rv.miss||d.rv.next)); },
 };
 function foldOpen(k){ const o=S.ui&&S.ui.fold&&S.ui.fold[k]; return o!=null?o:FOLD_DEF[k](); }
@@ -5724,14 +5806,14 @@ const VITAL_HELP={
   BODY:'BODY: your lifts against bodyweight targets (60%) and your Engine tier (40%). Log sets on Today; set Engine in Ledger → Capability.',
   COMBAT:'COMBAT: the average of your Striking and Grappling tiers. Set them in Ledger → Capability.',
   MIND:'MIND: half from books finished (goal 48), half from your Capital markets, Economics and Language tiers.',
-  WILL:'WILL: pure consistency. Your current streak plus the total days you have logged.',
+  WILL:'WILL: pure consistency. Your current streak plus the total days you have logged. A streak day is a session done (60% of the plan or your own workout), your protein target hit, or three habits ticked. One ticked meal does not count.',
   CAPITAL:'CAPITAL: the share of the Capital Ladder you have cleared in Ledger.'};
 function Header(){
-  const P=pillars(),st=streak(),ph=PHASES[phaseIdx()];
+  const P=pillars(),st=streak(),rk=rankState();
   return `<header>
     <div class="hrow">
       <div><div class="brand">FORGE</div>
-        <div class="subline"><span style="color:var(--amber)">${ph.n}</span> / ${ph.name.toUpperCase()} · ${ph.span}</div></div>
+        <div class="subline"><span style="color:var(--amber)">${rk.rank.n}</span>${rk.next?` · ${rk.met}/3 TO ${rk.next.n}`:''} · ${rk.marks.total} MARKS</div></div>
       <div style="display:flex;align-items:center;gap:14px">
         <div class="streak">${svg('flame',15,st>0?'var(--amber)':'var(--faint)',2.4)}
           <span style="color:${st>0?'var(--text)':'var(--faint)'}">${st}</span></div>
@@ -5977,12 +6059,14 @@ function ViewToday(){
       <div>
         <div class="eyebrow">${vd===T?'TODAY':longDate(vd).toUpperCase()}</div>
         <div class="disp" style="font-size:21px;margin-top:4px">${esc(offOf(vd)?OFFDAY[offOf(vd)].head:trainName)}</div>
-        ${rep?`<div class="eyebrow" style="margin-top:5px;letter-spacing:.12em">INSTEAD OF ${esc(plan.def.title.toUpperCase())}</div>`:''}
+        ${rep?`<div class="eyebrow" style="margin-top:5px;letter-spacing:.06em">INSTEAD OF ${esc(plan.def.title.toUpperCase())}</div>`:''}
       </div>
       ${offOf(vd)?'':`<button class="badge" data-act="swapopen" aria-label="Swap this day's workout" style="border-color:var(--amber);color:var(--amber)">${DTYPE[plan.def.type].label} · SWAP ⇄</button>`}
     </div>
     ${vd===T?Tour('today'):''}
     ${vd===T?Briefing():''}
+    ${vd===T?MissionsCard():''}
+    ${vd===T?ReadinessCard():''}
     ${vd===T?BackupBanner():''}
     ${vd!==T?`<button class="banner steel" data-act="daygo" data-v="0" style="width:100%;text-align:left">
       ${svg('rot',13,'var(--steel)')}<div>Viewing another day — everything you tick here saves to <b>${longDate(vd)}</b>. Tap to return to today.</div></button>`:''}
@@ -6321,7 +6405,7 @@ function ViewLog(){
         <label class="f"><span>Resting HR</span><input type="number" id="f_rhr" inputmode="numeric" value="${pf('rhr')}"></label>
         <label class="f"><span>Sleep (h)</span><input type="number" step="0.1" id="f_sleep" inputmode="decimal" value="${pf('sleep')}"></label>
       </div>
-      <div style="padding:14px 13px 2px;font-size:var(--fs-label);letter-spacing:.12em;color:var(--faint)">TOP SETS - 1RM OR HEAVIEST 5</div>
+      <div style="padding:14px 13px 2px;font-size:var(--fs-label);letter-spacing:.06em;color:var(--faint)">TOP SETS - 1RM OR HEAVIEST 5</div>
       <div class="grid2">
         <label class="f"><span>Squat (${wu})</span><input type="number" step="0.5" id="f_squat" inputmode="decimal" value="${pf('squat',conv)}"></label>
         <label class="f"><span>Bench (${wu})</span><input type="number" step="0.5" id="f_bench" inputmode="decimal" value="${pf('bench',conv)}"></label>
@@ -6347,7 +6431,7 @@ function ViewLog(){
     ${S.log.length?`${sect('trend','TREND')}
     <div class="panel">
       <div class="chips">${Object.keys(chartMap).map(k=>`<button class="chip ${chartKey===k?'on':''}" data-act="chart" data-v="${k}">${k==='bf'?'Body fat':k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
-      ${sparkline(seriesFor(ck),cc,110,ck==='weight'?weightTrendSeries().map(v=>Math.round(conv(v)*10)/10):undefined)}
+      ${sparkline(seriesFor(ck),cc,110,ck==='weight'?weightTrend().map(p=>Math.round(conv(p.trend)*10)/10):undefined)}
       ${ck==='weight'&&trendWeight()&&trendWeight().smoothed?`<div class="note">7-day average <b style="color:var(--text)">${conv(trendWeight().kg)} ${wu}</b> from ${trendWeight().n} weigh-ins · latest ${conv(trendWeight().raw)} ${wu}. Calorie and strength targets use the average.</div>`:''}
     </div>`:''}
 
@@ -6421,7 +6505,7 @@ function ViewTarget(){
       const diff=N.kcal-N.tdee;
       return `<div class="panel" style="margin:0 13px 13px;background:var(--ink);padding:11px 12px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <span style="font-size:var(--fs-caption);letter-spacing:.1em;color:var(--faint)">AT THIS SETTING</span>
+          <span style="font-size:var(--fs-caption);letter-spacing:.05em;color:var(--faint)">AT THIS SETTING</span>
           <span style="font-size:var(--fs-numeral-md);font-weight:700;color:var(--amber)">${N.kcal} kcal/day</span>
         </div>
         <div style="font-size:var(--fs-detail);color:var(--dim);margin-top:3px">${Math.abs(diff)<10?'Right at maintenance':`${diff>0?'+':''}${diff} kcal vs your ${N.tdee} kcal maintenance`} — this is the exact number driving FUEL and every meal template below.</div>
@@ -6545,7 +6629,7 @@ function ViewFuel(){
       <p class="t">Judge by the two-week weight average, never a single morning.</p>
       <p class="t" style="color:var(--faint)">These targets are population-average estimates from your height, weight, age and training load — a starting point to adjust from over weeks. They are not a clinical prescription. Talk to a doctor or a registered dietitian before making significant dietary changes, particularly with any medical condition or a complicated history with food.</p>
     </div></div>
-`;
+${NutritionResults()}`;
 }
 
 /* =============================================================== build === */
@@ -6615,6 +6699,8 @@ function ViewLedger(){
   const nwVals=S.nw.map(x=>x.v);
   return `<div class="view wrap">
     ${Tour('ledger')}
+    ${RankPanel()}
+    ${ReportCard()}
     ${WeekReview()}
     ${sect('award','RECORDS')}
     <div class="stats">
@@ -6628,7 +6714,7 @@ function ViewLedger(){
     ${SKILLS.map(s=>{ const cur=S.tiers[s.id]??0; return `
       <div class="panel acc"><div class="acc-bar" style="background:${s.c}"></div>
         <div style="display:flex;align-items:center;gap:10px;padding:13px 13px 11px">
-          ${svg(s.ico,16,s.c)}<span class="disp" style="flex:1;font-size:var(--fs-form);letter-spacing:.09em">${s.n}</span>
+          ${svg(s.ico,16,s.c)}<span class="disp" style="flex:1;font-size:var(--fs-form);letter-spacing:.05em">${s.n}</span>
           <span style="font-size:var(--fs-detail);font-weight:700;color:${s.c}">TIER ${cur}</span></div>
         <div class="tiers">${s.t.map((_,i)=>`<button class="${i<=cur?'on':''}" data-act="tier" data-v="${s.id}" data-v2="${i}" style="background:${i<=cur?s.c:'var(--rule)'}"></button>`).join('')}</div>
         <div style="padding:11px 13px 0;font-size:var(--fs-title)">${esc(s.t[cur])}</div>
@@ -6671,6 +6757,68 @@ function ViewLedger(){
 }
 
 /* ================================================================= codex == */
+/* ---------- restore: check, preview, merge ---------- */
+/* Parse and shape-check a backup before S is touched, so a bad paste can never corrupt what is saved. */
+function importCheck(txt){
+  if (!txt||!txt.trim()) return {err:'Paste the backup JSON first.'};
+  let parsed;
+  try{ parsed=parseBackup(txt); }catch(e){ return {err:"That didn't parse as valid backup JSON — check nothing got cut off in the paste."}; }
+  const ok = parsed && typeof parsed==='object' && !Array.isArray(parsed)
+    && parsed.profile && typeof parsed.profile==='object' && typeof parsed.profile.height!=='undefined'
+    && parsed.days && typeof parsed.days==='object' && !Array.isArray(parsed.days)
+    && Array.isArray(parsed.log);
+  if (!ok) return {err:"That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."};
+  if (schemaOf(parsed)>SCHEMA) return {err:`That backup was made by a newer FORGE (data v${schemaOf(parsed)}). Update this copy of the app first; nothing was changed.`};
+  const photos=parsed.photos; delete parsed.photos;          // photos go back to IndexedDB after the restore, never into the saved state
+  return {parsed,photos};
+}
+/* what a saved state holds, for the before/after preview and the real-data check (tests/realdata.js) */
+function backupCounts(o){
+  const map=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{}, arr=x=>Array.isArray(x)?x:[], isD=k=>/^\d{4}-\d\d-\d\d$/.test(k);
+  const days=map(o.days), gym=map(o.gym), cust=map(o.cust), fights=map(o.fights);
+  const sets=Object.values(gym).reduce((a,g)=>a+Object.values(map(g)).reduce((b,l)=>b+arr(l).length,0),0)
+    +Object.values(cust).reduce((a,c)=>a+Object.values(map(c&&c.sets)).reduce((b,l)=>b+arr(l).length,0),0);
+  const dates=[...Object.keys(days).filter(k=>arr(days[k]&&days[k].food).length),...Object.keys(gym),...Object.keys(cust),...arr(o.log).map(e=>e&&e.date)].filter(isD).sort();
+  return {foodDays:Object.keys(days).filter(k=>arr(days[k]&&days[k].food).length).length,
+    foods:Object.values(days).reduce((a,d)=>a+arr(d&&d.food).length,0),
+    liftDays:Object.keys(gym).filter(k=>Object.values(map(gym[k])).some(l=>arr(l).length)).length,
+    workouts:Object.keys(cust).filter(k=>arr(cust[k]&&cust[k].items).length).length,
+    sets, fights:Object.values(fights).reduce((a,f)=>a+arr(f).length,0), log:arr(o.log).length,
+    checkins:arr(map(o.ch90).checkins).length, from:dates[0]||null, to:dates[dates.length-1]||null};
+}
+const COUNT_LABELS=[['foodDays','Days with food logged'],['foods','Food entries'],['liftDays','Program lift days'],['workouts','Own workouts'],['sets','Sets logged'],
+  ['fights','Fight sessions'],['log','Weigh-ins + measurements'],['checkins','90-day check-ins']];
+function importPreviewHTML(txt){
+  if (!txt||!txt.trim()) return '';
+  const c=importCheck(txt); if (c.err) return `<div class="note" style="color:var(--rust);border-top:none;padding:8px 0 0">${esc(c.err)}</div>`;
+  const f=backupCounts(c.parsed), m=backupCounts(S), span=x=>x.from?`${esc(shortDate(x.from))} ${x.from.slice(0,4)} – ${esc(shortDate(x.to))} ${x.to.slice(0,4)}`:'nothing dated';
+  return `<div class="eyebrow" style="margin:12px 0 6px">WHAT IS IN THIS FILE</div>
+    <div class="tbl"><div class="tr th" style="grid-template-columns:1.9fr 1fr 1fr"><span></span><span>File</span><span>This phone</span></div>
+    ${COUNT_LABELS.map(([k,l])=>`<div class="tr" style="grid-template-columns:1.9fr 1fr 1fr"><span style="text-align:left">${l}</span><span>${f[k].toLocaleString()}</span><span>${m[k].toLocaleString()}</span></div>`).join('')}</div>
+    <div class="note" style="border-top:none;padding:8px 0 0">File covers ${span(f)}. This phone: ${span(m)}.${c.photos?` The file carries ${Object.keys(c.photos).length} progress photos.`:''}</div>`;
+}
+/* MERGE: this phone wins. Only what it is missing is taken from the file: whole dates it has nothing logged for (food and ticks,
+   program sets, own workouts, fights, events), measurements for dates it has none, and saved foods / routines / exercises /
+   records it doesn't have. Settings, the 90-day challenge (its photos live on the other phone) and anything already here stay. */
+function mergeState(cur,inc){
+  const out=JSON.parse(JSON.stringify(cur)), map=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:{}, arr=x=>Array.isArray(x)?x:[];
+  const any=o=>Object.values(map(o)).some(Boolean);
+  const filled={
+    days:d=>!!d&&(any(d.blocks)||any(d.habits)||any(d.rv)||!!d.mind||!!d.news||arr(d.food).length>0||d.water>0||arr(d.supps).length>0),
+    gym:g=>Object.values(map(g)).some(l=>arr(l).length>0), cust:c=>!!c&&arr(c.items).length>0,
+    fights:f=>arr(f).length>0, extra:f=>arr(f).length>0 };
+  for (const f of ['days','gym','cust','fights','extra','off','reach','swap','books','bookDates','tiers','capital','prs','flags','exreg']){
+    const has=filled[f]||(x=>x!=null), src=map(inc[f]); out[f]=map(out[f]);
+    for (const k of Object.keys(src)) if (!has(out[f][k]) && has(src[k])) out[f][k]=src[k];
+  }
+  for (const f of ['log','nw']){ const seen=new Set(arr(out[f]).map(e=>e.date));
+    out[f]=arr(out[f]).concat(arr(inc[f]).filter(e=>e&&!seen.has(e.date))).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); }
+  const add=(f,key)=>{ out[f]=arr(out[f]); const seen=new Set(out[f].map(key)); for (const x of arr(inc[f])) if (x&&!seen.has(key(x))){ seen.add(key(x)); out[f].push(x); } };
+  add('myfoods',x=>String(x.n).toLowerCase()); add('routines',x=>x.id); add('myex',x=>x.id); add('mysupps',x=>x.k+'|'+x.a);
+  if (inc.meta&&inc.meta.start&&(!out.meta.start||inc.meta.start<out.meta.start)) out.meta.start=inc.meta.start;
+  return out;
+}
+
 /* backup, restore, CSV export and the automatic snapshots (lives in Settings) */
 function DataPanel(){
   return `
@@ -6681,12 +6829,15 @@ function DataPanel(){
       <p class="t">Back up weekly (FORGE reminds you) and before changing phones. BACK UP NOW opens the share sheet: pick Save to Files or iCloud Drive.</p>
     </div>
     ${importOpen?`<div style="padding:0 13px 13px">
-      <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what EXPORT BACKUP gave you, then RESTORE."></textarea></label>
+      <label class="f"><span>Paste backup JSON</span><textarea id="importtxt" style="min-height:110px" placeholder="Paste what BACK UP NOW gave you. A preview appears before anything changes."></textarea></label>
+      <div id="importprev">${importPreviewHTML((document.getElementById('importtxt')||{}).value)}</div>
       ${importErr?`<div class="note" style="color:var(--rust);border-top:none;padding:8px 0 0">${esc(importErr)}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:9px">
-        <button class="btn" data-act="importgo">RESTORE — REPLACES EVERYTHING STORED</button>
-        <button class="btn ghost" data-act="importcancel" style="max-width:90px">CANCEL</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px">
+        <button class="btn" data-act="importgo">${importArm?'TAP AGAIN: REPLACE EVERYTHING':'REPLACE EVERYTHING'}</button>
+        <button class="btn ghost" data-act="importmerge">MERGE INTO THIS PHONE</button>
       </div>
+      <div class="note" style="border-top:none;padding:8px 0 0"><b style="color:var(--text)">Replace</b> makes this phone identical to the file. <b style="color:var(--text)">Merge</b> keeps everything here and adds only what this phone is missing: days it has nothing logged for, measurements for dates it has none, saved foods, routines and exercises. Either way the current state is snapshotted first (Undo a restore, below).</div>
+      <button class="btn ghost" data-act="importcancel" style="margin-top:9px">CANCEL</button>
     </div>`:`<div style="padding:0 13px 13px;display:flex;gap:8px">
       <button class="btn ghost" data-act="s-backup">BACK UP NOW</button>
       <button class="btn ghost" data-act="s-importfile">RESTORE FILE</button>
@@ -6740,7 +6891,7 @@ function ArcSection(){
           ${open?svg('chevD',14,'var(--faint)'):svg('chev',14,'var(--faint)')}</button>
         ${open?`<div class="abody" style="padding:14px 13px 4px">
           <p class="t" style="color:var(--text)">${p.thesis}</p>
-          <div style="font-size:var(--fs-label);letter-spacing:.17em;color:var(--amber);margin:13px 0 7px">MOVE ON WHEN</div>
+          <div style="font-size:var(--fs-label);letter-spacing:.09em;color:var(--amber);margin:13px 0 7px">MOVE ON WHEN</div>
           <p class="t">${p.exit}</p></div>`:''}</div>`;}).join('')}
 
     ${sect('shield','STANDING ORDERS')}
@@ -6780,7 +6931,7 @@ let lastRenderedView=null;
    is lost unless render() carries it across: the exercise sheet's scroll position, the muscle/equipment chip
    rows' horizontal scroll, and half-typed fields in the custom-food, body-log and program-lift set forms. */
 let scrollReset=false, lastRenderedDay=null;                               // set by actions that change what the sheet lists (muscle/equipment filter)
-const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_|sp_a$)/;            // f_date is left out on purpose: after saving, the date goes back to today
+const KEEP_FIELD=/^(cf_|f_(?!date$)|sw_|sr_|sp_a$|importtxt$)/;            // f_date is left out on purpose: after saving, the date goes back to today
 function render(){
   _memo=null;
   document.documentElement.dataset.text=(S.ui&&S.ui.text)||'';
@@ -6930,6 +7081,16 @@ function handleClick(e){
   if (/^camp-/.test(a)){ if (campAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^s-/.test(a)){ if (sAct(a,v,v2,el)!=='norender') render(); return; }
   if (/^ch-/.test(a)){ if (chAct(a,v,v2,el)!=='norender') render(); return; }
+  if (a==='mis-swap'){ const wk=weekOf(T), W=S.missions.w[wk]; if (!W||S.missions.swap[wk]) return;
+    W[2]=weakPoint(wk,1); S.missions.swap[wk]=true; commit(); render(); toast('Swapped. That was this week\'s one swap.',false,3000); return; }
+  if (a==='ins-lift'){ insLift=v; render(); return; }
+  if (a==='rc-week'){ rcPrev=v==='1'; render(); return; }
+  if (a==='rd-sleep'){
+    const x=num((document.getElementById('rd_sleep')||{}).value);
+    if (!(x>0&&x<=24)){ toast('Enter hours slept, up to 24'); return; }
+    S.log=[...S.log.filter(e=>e.date!==T),{...(S.log.find(e=>e.date===T)||{}),date:T,sleep:x}].sort((p,q)=>p.date>q.date?1:-1);
+    commit(); render(); toast('Sleep logged'); return;
+  }
   if (a==='mm-sel'){ mmSel=mmSel===v?null:v; render(); return; }
   if (a==='mm-win'){ mmWin=+v||0; render(); return; }
   if (a==='mm-open'){ view='wlog'; wlSub='body'; mmSel=null; render(); window.scrollTo(0,0); return; }
@@ -6957,7 +7118,7 @@ function handleClick(e){
       if (S.extra[v]){ S.extra[v].splice(+v2,1); if(!S.extra[v].length) delete S.extra[v]; }
       commit(); break;
     }
-    case 'view': view=v; briefEdit=false; briefBrowse=false; editSet=null; gymEdit=null; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; render(); window.scrollTo(0,0); return;
+    case 'view': view=v; briefEdit=false; briefBrowse=false; editSet=null; gymEdit=null; exPickOpen=false; exCreate=false; armDiscard=false; armRm=null; if(v==='today') viewOff=0; shiftId=null; foodOpen=false; openMeal=null; importOpen=false; importArm=false; render(); window.scrollTo(0,0); return;
     case 'golog': view='build'; buildSub='log'; render(); window.scrollTo(0,0); return;
 
     /* ---- day preview navigation ---- */
@@ -7218,6 +7379,7 @@ function handleClick(e){
       S.gym[VD()][ex].push(set);
       delete cdraft[dk];
       const isPR = set.wu ? false : checkPR(ex, set.w, set.r, VD());
+      markHit(VD(),'g:'+ex,S.gym[VD()][ex].length-1,isPR);
       ['sw_','sr_'].forEach(p=>{ const el=document.getElementById(p+ex); if (el) el.value=''; });
       commit();
       /* the same rest timer a custom workout uses: not after a warm-up, and in a superset only after its last exercise */
@@ -7303,27 +7465,22 @@ function handleClick(e){
     /* in-app textarea instead of prompt() — multi-line paste into prompt()
        is unreliable on iOS Safari / home-screen PWAs, the app's primary
        target per the README, and a backup blob is well past one line. */
-    case 'import': importOpen=true; importErr=''; break;
-    case 'importcancel': importOpen=false; importErr=''; break;
-    case 'importgo': {
-      const txt=(document.getElementById('importtxt')||{}).value;
-      if(!txt||!txt.trim()){ importErr='Paste the backup JSON first.'; break; }
-      let parsed;
-      try{ parsed=parseBackup(txt); }
-      catch(err){ importErr="That didn't parse as valid backup JSON — check nothing got cut off in the paste."; break; }
-      // Valid JSON isn't the same as a valid backup: check the shape everything
-      // else in the app depends on before overwriting live data with it. This
-      // runs before S is touched, so a bad paste can never corrupt what's
-      // already saved — only a shape check that passes gets to that line.
-      const shapeOk = parsed && typeof parsed==='object' && !Array.isArray(parsed)
-        && parsed.profile && typeof parsed.profile==='object' && typeof parsed.profile.height!=='undefined'
-        && parsed.days && typeof parsed.days==='object' && !Array.isArray(parsed.days)
-        && Array.isArray(parsed.log);
-      if (!shapeOk){ importErr="That's valid JSON, but not a FORGE backup — it's missing profile/days/log. Nothing was changed; your current data is untouched."; break; }
-      snapPut('undo-'+Date.now(),JSON.stringify(S)).then(snapDaily).catch(()=>{});   // today's state stays recoverable under "Undo a restore"
-      try{ adoptState(parsed); }
-      catch(err){ importErr=`That file reads as a backup but something in it would break the app (${String(err.message).slice(0,70)}). Nothing was changed; your current data is untouched.`; break; }
-      importOpen=false; importErr=''; commit(); render(); toast('Backup restored'); return;
+    case 'import': importOpen=true; importErr=''; importArm=false; break;
+    case 'importcancel': importOpen=false; importErr=''; importArm=false; break;
+    case 'importgo': case 'importmerge': {
+      const c=importCheck((document.getElementById('importtxt')||{}).value);
+      if (c.err){ importErr=c.err; importArm=false; break; }
+      if (a==='importgo' && !importArm){ importArm=true; importErr=''; break; }     // replacing everything takes a second tap
+      importArm=false;
+      const cur=S, curWeek=WEEK, was=backupCounts(S);
+      snapPut('undo-'+Date.now(),JSON.stringify(S)).then(()=>snapDaily()).catch(()=>{});   // today's state stays recoverable under "Undo a restore"
+      /* adoptState brings the file up to date (migrations), repairs it and draws every screen with it; a merge then does the same
+         again with the combined data. If either throws, the live data is put back untouched. */
+      try{ adoptState(c.parsed); if (a==='importmerge'){ const merged=mergeState(cur,S); S=cur; WEEK=curWeek; adoptState(merged); } }
+      catch(err){ S=cur; WEEK=curWeek; importErr=`That file reads as a backup but something in it would break the app (${String(err.message).slice(0,70)}). Nothing was changed; your current data is untouched.`; break; }
+      importOpen=false; importErr=''; commit(); restorePhotos(c.photos); render();
+      const now=backupCounts(S), added=['foodDays','liftDays','workouts','log','fights'].reduce((n,k)=>n+now[k]-was[k],0);
+      toast(a==='importmerge'?(added>0?`Merged: ${added} days and entries added from the file`:'Merged: this phone already had everything in that file'):'Backup restored',false,4000); return;
     }
   }
   render();
@@ -7355,7 +7512,8 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.cwin){ const cw=curCW(); if (cw){ cw[t.dataset.cwin]=t.value; commitSoon(); } return; }
   if (t.id==='swq'){ gSwapQ=t.value; const r=document.getElementById('swres'); if (r&&gSwap) r.innerHTML=swapRowsHTML(gSwap); return; }   // swap picker search: swap only the list
   if (t.id==='foodq'){ foodQ=t.value; const r=document.getElementById('foodres'); if (r) r.innerHTML=foodResultsHTML(); return; }   // filter live, swap only the list
-  if (t.id==='foodg'){ foodG=t.value; return; }                              // amount box: remember, no re-render
+  if (t.id==='foodg'){ foodG=t.value; return; }
+  if (t.id==='importtxt'){ importArm=false; const pv=document.getElementById('importprev'); if (pv) pv.innerHTML=importPreviewHTML(t.value); return; }                              // amount box: remember, no re-render
   const el=t.closest('[data-in]'); if(!el) return;
   const path=el.dataset.in, val=el.value;
   if (path.startsWith('rv.')){ day(VD()).rv[path.slice(3)]=val; commitSoon(); return; }
@@ -7395,7 +7553,10 @@ document.addEventListener('change', e => {
 
 
 /* ========================================================= notifications == */
-let tickerId=null; const fired={};
+let tickerId=null, lastTouch=0, hitRow=null; const fired={};      // hitRow: 'date|exercise|index|pr' of the set logged a moment ago
+function markHit(vd,ex,i,pr){ hitRow=`${vd}|${ex}|${i}|${pr?1:0}`; setTimeout(()=>{ hitRow=null; },1300); }
+const hitCls=(vd,ex,i)=>hitRow===`${vd}|${ex}|${i}|1`?' hit pr':hitRow===`${vd}|${ex}|${i}|0`?' hit':'';
+['pointerdown','input'].forEach(t=>document.addEventListener(t,()=>{ lastTouch=Date.now(); },true));
 function notify(title,body){
   try{
     if (navigator.serviceWorker&&navigator.serviceWorker.getRegistration){
@@ -7427,6 +7588,519 @@ function checkNotif(){
 }
 function startTicker(){ if(tickerId) return; checkNotif(); tickerId=setInterval(checkNotif,45000); }
 
+/* ============================================================== insights == */
+/* The analysis layer. Everything is computed from what was logged; nothing is measured, and where a number stands in for something
+   a wearable would measure it is a model and is labelled as one. Each result carries the inputs it was built from, so a screen can
+   show how it was calculated. Weights are kg, dates are local YYYY-MM-DD, a week starts on Monday. */
+const weekOf=k=>addDays(k,-dowIdx(k));
+/* a date's working sets as [[libraryExerciseId, sets]]: program lifts and your own workout together */
+function dayLifts(k){
+  const out=[], g=S.gym[k], cw=S.cust[k];
+  if (g) for (const key in g){ const st=workSets(g[key]||[]); if (st.length) out.push([EXLINK_ID[key]||key,st]); }
+  if (cw) for (const id of cw.items){ const st=workSets(cw.sets[id]||[]); if (st.length) out.push([id,st]); }
+  return out;
+}
+/* TONNAGE = sets x reps x external weight, working sets only. Bodyweight reps count their added weight only (a pull-up at +10 kg is
+   10 kg x reps), so tonnage understates bodyweight work; timed, cardio and carry sets are not in it. A lift's tonnage is credited
+   to its main muscle in full and to helper muscles at half, the same rule the muscle map uses for sets. */
+function tonnageIndex(){
+  return memo('tonnage',()=>{
+    const ix={};
+    for (const k of new Set([...Object.keys(S.gym||{}),...Object.keys(S.cust||{})])){
+      const d={total:0,sets:0,byLift:{},byMuscle:{}};
+      for (const [id,sets] of dayLifts(k)){
+        const E=exInfo(id); if (E.k!=='wr'&&E.k!=='bw') continue;
+        let t=0; for (const x of sets) if (x.w>0&&x.r>0) t+=x.w*x.r;
+        d.sets+=sets.length; if (!t) continue;
+        d.total+=t; d.byLift[id]=(d.byLift[id]||0)+t;
+        for (const [m,w] of Object.entries(exMuscles(E))) d.byMuscle[m]=(d.byMuscle[m]||0)+t*w;
+      }
+      if (d.sets) ix[k]=d;
+    }
+    return ix;
+  });
+}
+const dayTonnage=k=>(tonnageIndex()[k]||{total:0,sets:0,byLift:{},byMuscle:{}});
+/* the last n weeks (oldest first, the current week last): tonnage in total, per lift and per muscle, lifting days and sets */
+function weeklyLoad(n=12,end=T){
+  const out=[];
+  for (let i=n-1;i>=0;i--){
+    const week=addDays(weekOf(end),-7*i), w={week,tonnage:0,sets:0,days:0,byLift:{},byMuscle:{},freq:{}};      // freq: days that week each muscle was loaded
+    for (let d=0;d<7;d++){ const t=tonnageIndex()[addDays(week,d)]; if (!t) continue;
+      w.tonnage+=t.total; w.sets+=t.sets; w.days++;
+      for (const id in t.byLift) w.byLift[id]=(w.byLift[id]||0)+t.byLift[id];
+      for (const m in t.byMuscle){ w.byMuscle[m]=(w.byMuscle[m]||0)+t.byMuscle[m]; w.freq[m]=(w.freq[m]||0)+1; } }
+    out.push(w);
+  }
+  return out;
+}
+/* ACUTE : CHRONIC LOAD = tonnage of the last 7 days / the average week of the last 28. Around 0.8-1.3 is a steady build; well above
+   1.5 is a spike. Needs 28 days of lifting history. Lifting only: fights and cardio have no tonnage. */
+function acwr(k=T){
+  const first=Object.keys(tonnageIndex()).sort()[0]; if (!first||daysBetween(first,k)<27) return null;
+  let acute=0, chronic=0;
+  for (let i=0;i<28;i++){ const t=dayTonnage(addDays(k,-i)).total; chronic+=t; if (i<7) acute+=t; }
+  chronic/=4;
+  return chronic>0?{ratio:acute/chronic,acute,chronic}:null;
+}
+
+/* ---------- strength ---------- */
+/* a lift's best working set per session by estimated 1RM (Epley, reps capped at 10: the same e1rm() the rest of the app uses) */
+function e1rmSeries(id){
+  return memo('e1s:'+id,()=>exHist(id).map(h=>{ let b=null;
+    for (const x of workSets(h.sets)) if (x.w>0&&x.r>0){ const v=e1rm(x.w,x.r); if (!b||v>b.e1) b={date:h.date,e1:v,w:x.w,r:x.r}; }
+    return b; }).filter(Boolean));
+}
+/* weight x reps lifts with enough history to say something about, most-trained first */
+function insightLifts(min=3){
+  return Object.keys(histIndexAll()).filter(id=>exInfo(id).k==='wr'&&e1rmSeries(id).length>=min)
+    .sort((a,b)=>e1rmSeries(b).length-e1rmSeries(a).length);
+}
+function histIndexAll(){            // every library exercise id with any history, including program lifts logged in the plan
+  return memo('histAll',()=>{ const ids={}; for (const id in histIndex()) ids[id]=1;
+    for (const k in S.gym||{}) for (const key in S.gym[k]) ids[EXLINK_ID[key]||key]=1; return ids; });
+}
+/* every record a lift has set, in order: heaviest weight, best estimated 1RM, most reps at a weight at least that heavy, and the
+   most tonnage in one session. A first session sets baselines, not records. */
+function liftPRs(id){
+  const out=[]; let maxW=0, maxE=0, maxV=0, first=true; const repsAt=[];        // repsAt: [weight, reps] bests
+  for (const h of exHist(id)){
+    const sets=workSets(h.sets).filter(x=>x.w>0&&x.r>0); if (!sets.length) continue;
+    let w=0, e=0, v=0, rep=null;
+    for (const x of sets){ w=Math.max(w,x.w); e=Math.max(e,e1rm(x.w,x.r)); v+=x.w*x.r;
+      if (!repsAt.some(([pw,pr])=>pw>=x.w-0.01&&pr>=x.r) && (!rep||x.r>rep.r)) rep=x; }
+    if (!first){
+      if (w>maxW+0.01) out.push({date:h.date,type:'weight',v:w});
+      if (e>maxE+0.01) out.push({date:h.date,type:'e1rm',v:e});
+      if (rep&&rep.w<=maxW+0.01) out.push({date:h.date,type:'reps',v:rep.r,w:rep.w});
+      if (v>maxV+0.01) out.push({date:h.date,type:'volume',v});
+    }
+    for (const x of sets) repsAt.push([x.w,x.r]);
+    maxW=Math.max(maxW,w); maxE=Math.max(maxE,e); maxV=Math.max(maxV,v); first=false;
+  }
+  return out;
+}
+/* PLATEAU: the best estimated 1RM of the last 4 sessions is no more than 1% above the best before them, and those 4 sessions span
+   at least 3 weeks. Needs 5 sessions. */
+function plateau(id,N=4,minDays=21,gain=0.01){
+  const sr=e1rmSeries(id); if (sr.length<N+1) return null;
+  const win=sr.slice(-N), before=Math.max(...sr.slice(0,-N).map(x=>x.e1)), best=Math.max(...win.map(x=>x.e1));
+  const days=daysBetween(win[0].date,win[N-1].date);
+  return {stalled:days>=minDays&&best<=before*(1+gain),sessions:N,days,best,before,since:win[0].date};
+}
+
+/* ---------- bodyweight ---------- */
+/* TREND = an exponentially weighted moving average of the weigh-ins: each day the trend moves 10% of the way to the reading
+   (alpha 0.1), and a gap of d days counts as d steps, so weighing weekly or daily gives a comparable line. The first reading
+   starts the trend. This is the smoothed line for charts and for anything compared against food; raw readings are kept. */
+function weightTrend(alpha=0.1){
+  return memo('wtrend',()=>{ const out=[]; let t=null, last=null;
+    for (const e of S.log.filter(e=>e.weight>0).sort((a,b)=>a.date<b.date?-1:1)){
+      t=t==null?e.weight:t+(1-Math.pow(1-alpha,Math.max(1,daysBetween(last,e.date))))*(e.weight-t);
+      last=e.date; out.push({date:e.date,raw:e.weight,trend:t}); }
+    return out; });
+}
+function trendAt(k){ let v=null; for (const p of weightTrend()){ if (p.date>k) break; v=p.trend; } return v; }
+/* RELATIVE STRENGTH = estimated 1RM / trend bodyweight on that date (the first trend value if the lift predates the weigh-ins) */
+function relStrength(id){
+  const tr=weightTrend(); if (!tr.length) return [];
+  return e1rmSeries(id).map(x=>({date:x.date,rel:x.e1/(trendAt(x.date)||tr[0].trend)}));
+}
+
+/* ---------- nutrition against results ---------- */
+const PROTEIN_HIT=0.9, KCAL_BAND=0.1;      // a protein day = 90% of target or more; a calorie day = within 10% of target
+/* one week of eating against that week's targets. Targets come from nutrition(), which uses today's trend weight for every date. */
+function nutritionWeek(week){
+  const w={week,logged:0,proteinDays:0,kcalDays:0,kcal:0,p:0,target:0,ptarget:0};
+  for (let d=0;d<7;d++){ const k=addDays(week,d), ft=foodTotals(k); if (!(ft.kcal>0)) continue;
+    const N=nutrition(k); w.logged++; w.kcal+=ft.kcal; w.p+=ft.p;
+    if (N){ w.target+=N.kcal; w.ptarget+=N.protein; if (ft.p>=N.protein*PROTEIN_HIT) w.proteinDays++; if (Math.abs(ft.kcal-N.kcal)<=N.kcal*KCAL_BAND) w.kcalDays++; } }
+  const n=w.logged||1;
+  return Object.assign(w,{avgKcal:w.kcal/n,avgP:w.p/n,avgTarget:w.target/n,balance:(w.kcal-w.target)/n});      // balance: kcal a day over (+) or under (-) target
+}
+/* Pearson correlation of paired numbers. r runs -1 to 1; with few pairs it is mostly noise, so n is always returned with it. */
+function pearson(xs,ys){
+  const n=Math.min(xs.length,ys.length); if (n<3) return {r:null,n};
+  const mx=xs.slice(0,n).reduce((a,b)=>a+b,0)/n, my=ys.slice(0,n).reduce((a,b)=>a+b,0)/n;
+  let sxy=0,sxx=0,syy=0; for (let i=0;i<n;i++){ const dx=xs[i]-mx, dy=ys[i]-my; sxy+=dx*dy; sxx+=dx*dx; syy+=dy*dy; }
+  return {r:sxx>0&&syy>0?sxy/Math.sqrt(sxx*syy):null,n};
+}
+/* STRENGTH INDEX at the end of a week: for every lift with 3+ sessions, its best estimated 1RM so far / its first; the index is the
+   mean of those ratios (1.00 = where each lift started). */
+function strengthIndex(weekEnd){
+  let s=0,n=0;
+  for (const id of insightLifts()){ const sr=e1rmSeries(id).filter(x=>x.date<=weekEnd); if (!sr.length) continue;
+    s+=Math.max(...sr.map(x=>x.e1))/sr[0].e1; n++; }
+  return n?s/n:null;
+}
+/* Week by week: did eating over or under target move the weight trend, and did protein track strength gains? Only weeks with 4+
+   logged food days count. A correlation here is a hint about your own data, never proof of cause: sleep, stress, the programme
+   and water all move both sides. MIN_WEEKS is the fewest pairs worth showing at all. */
+const MIN_WEEKS=8;
+function nutritionVsResults(nWeeks=26){
+  const rows=[];
+  for (let i=nWeeks;i>=1;i--){                                    // completed weeks only
+    const week=addDays(weekOf(T),-7*i), end=addDays(week,6), nw=nutritionWeek(week); if (nw.logged<4) continue;
+    const w0=trendAt(addDays(week,-1)), w1=trendAt(end), s0=strengthIndex(addDays(week,-1)), s1=strengthIndex(end);
+    rows.push({week,balance:nw.balance,pkg:w1?nw.avgP/w1:null,dW:w0!=null&&w1!=null?w1-w0:null,dS:s0&&s1?(s1/s0-1)*100:null});
+  }
+  const pair=(x,y)=>{ const r=rows.filter(o=>o[x]!=null&&o[y]!=null); return Object.assign(pearson(r.map(o=>o[x]),r.map(o=>o[y])),{enough:r.length>=MIN_WEEKS}); };
+  return {rows,weight:pair('balance','dW'),strength:pair('pkg','dS')};
+}
+
+/* ---------- weekly report card ---------- */
+function reportCard(week=weekOf(T)){
+  const end=addDays(week,6), days=Array.from({length:7},(_,i)=>addDays(week,i)).filter(k=>k<=T);
+  const [prev,cur]=weeklyLoad(2,week), nw=nutritionWeek(week);
+  const planned=days.filter(k=>!offOf(k)&&dayDef(k).type!=='recover').length, done=days.filter(k=>trainRatio(k)>=0.6).length;
+  const prs=[]; let best=null;
+  for (const id of Object.keys(histIndexAll())){
+    for (const p of liftPRs(id)) if (p.date>=week&&p.date<=end) prs.push(Object.assign({id},p));
+    const sr=e1rmSeries(id), wk=sr.filter(x=>x.date>=week&&x.date<=end), old=sr.filter(x=>x.date<week);
+    if (wk.length&&old.length>=2){ const g=Math.max(...wk.map(x=>x.e1))/Math.max(...old.map(x=>x.e1))-1; if (!best||g>best.gain) best={id,gain:g,e1:Math.max(...wk.map(x=>x.e1))}; }
+  }
+  const w0=trendAt(addDays(week,-1)), w1=trendAt(end), a=acwr(days[days.length-1]);
+  const stalled=insightLifts(5).filter(id=>{ const p=plateau(id); return p&&p.stalled; });
+  /* the one thing to fix: the first of these that is true, in this order */
+  const fix = planned-done>=2 ? {k:'sessions',t:`${planned-done} planned sessions missed. Put them in the calendar before the week starts.`}
+    : nw.logged<5&&days.length>=5 ? {k:'logging',t:`Food logged on ${nw.logged} of ${days.length} days. The numbers can't steer you on days that aren't logged.`}
+    : nw.logged&&nw.proteinDays<nw.logged-1 ? {k:'protein',t:`Protein hit on ${nw.proteinDays} of ${nw.logged} logged days. Fix breakfast first: it is the meal that decides the total.`}
+    : a&&a.ratio>1.5 ? {k:'spike',t:`This week's lifting load is ${a.ratio.toFixed(1)}x your four-week average. Hold volume flat next week.`}
+    : stalled.length ? {k:'plateau',t:`${exInfo(stalled[0]).n} has not moved in ${plateau(stalled[0]).sessions} sessions. Change one thing: reps, variation or an extra set.`}
+    : w1==null||!S.log.some(e=>e.weight>0&&e.date>=week&&e.date<=end) ? {k:'weighin',t:'No weigh-in this week. One morning reading is enough to keep the trend honest.'}
+    : {k:'hold',t:'Nothing is slipping. Repeat the week.'};
+  return {week,end,planned,done,tonnage:cur.tonnage,prevTonnage:prev.tonnage,sets:cur.sets,liftDays:cur.days,prs,best,nutrition:nw,
+    prLifts:[...new Set(prs.filter(x=>x.type==='e1rm').map(x=>x.id))],                    // lifts that beat their best estimated 1RM this week
+    weightChange:w0!=null&&w1!=null?w1-w0:null,acwr:a,stalled,fix};
+}
+
+/* ---------- readiness (a model, not a measurement) ---------- */
+/* A 0-100 guess at how ready you are to train hard today, from three things you logged. It cannot see heart-rate variability,
+   illness or stress, and says so wherever it is shown.
+     sleep (weight 0.40)   last night's hours / target, capped at 1. Read from today's body-log entry.
+     load  (weight 0.35)   1 while the acute:chronic ratio is 1.1 or less, falling in a straight line to 0 at 1.8.
+     fresh (weight 0.25)   1 - 0.4 x (yesterday's tonnage / your median lifting day of the last 28 days), floored at 0.2.
+   A part with no data is left out and the remaining weights are scaled up, so the score never invents an input. */
+const SLEEP_TARGET=7.5;
+function readiness(k=T){
+  const parts=[], e=S.log.find(x=>x.date===k), a=acwr(addDays(k,-1));
+  if (e&&e.sleep>0) parts.push({k:'sleep',w:0.40,v:clamp(e.sleep/SLEEP_TARGET,0,1),d:`${e.sleep} h of ${SLEEP_TARGET} h`});
+  if (a) parts.push({k:'load',w:0.35,v:clamp(1-(a.ratio-1.1)/0.7,0,1),d:`acute:chronic ${a.ratio.toFixed(2)}`});
+  const recent=[]; for (let i=1;i<=28;i++){ const t=dayTonnage(addDays(k,-i)).total; if (t>0) recent.push(t); }
+  if (recent.length>=4){ recent.sort((x,y)=>x-y); const med=recent[Math.floor(recent.length/2)], y=dayTonnage(addDays(k,-1)).total;
+    parts.push({k:'fresh',w:0.25,v:clamp(1-0.4*y/med,0.2,1),d:y?`yesterday ${Math.round(y/med*100)}% of a typical day`:'no lifting yesterday'}); }
+  if (!parts.length) return null;
+  const tw=parts.reduce((s,p)=>s+p.w,0);
+  return {score:Math.round(parts.reduce((s,p)=>s+p.v*p.w,0)/tw*100),parts,missing:['sleep','load','fresh'].filter(x=>!parts.some(p=>p.k===x))};
+}
+
+/* ---------- insights: screens ---------- */
+/* These live inside the tabs that already exist: strength under Training log > LIFTS, load under MUSCLES, nutrition against
+   results under Body > FUEL, the report card at the top of Ledger, readiness on Today. Every panel ends with how its numbers are
+   calculated (a native <details>, closed by default). */
+let insLift=null, rcPrev=null;
+const how=t=>`<details class="how"><summary>HOW THIS IS CALCULATED</summary><div>${t}</div></details>`;
+const uW=kg=>Math.round(isImp()?kg*2.20462:kg), uW1=kg=>(Math.round((isImp()?kg*2.20462:kg)*10)/10).toFixed(1);
+const signed=(n,d=0)=>(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(d);
+function StrengthPanel(){
+  const ids=insightLifts(2).slice(0,8);
+  if (!ids.length) return sect('trend','STRENGTH TREND')+`<div class="panel"><div class="empty">Log the same weighted lift in two sessions and its estimated 1RM line, records and plateau check appear here.</div></div>`;
+  const id=ids.includes(insLift)?insLift:ids[0], sr=e1rmSeries(id), cur=sr[sr.length-1], first=sr[0], p=plateau(id), rel=relStrength(id), prs=liftPRs(id).slice(-4).reverse();
+  const prTxt=x=>x.type==='weight'?`Heaviest weight: ${fmtW(x.v)}`:x.type==='e1rm'?`Best estimated 1RM: ${uW(x.v)} ${wUnit()}`:x.type==='reps'?`Most reps at ${fmtW(x.w)}: ${x.v}`:`Most volume in a session: ${fmtVol(x.v)}`;
+  return sect('trend','STRENGTH TREND')+`<div class="panel">
+    <div class="chips" style="padding-bottom:10px">${ids.map(x=>`<button class="chip ${x===id?'on':''}" data-act="ins-lift" data-v="${x}">${esc(exInfo(x).n.replace(/^(Barbell|Dumbbell) /,''))}</button>`).join('')}</div>
+    <div class="hero"><b>${uW(cur.e1)}</b><span>${wUnit()} estimated 1RM · ${esc(fmtW(cur.w))} × ${cur.r} on ${esc(shortDate(cur.date))}</span></div>
+    <div class="herosub">${signed(uW(cur.e1)-uW(first.e1))} ${wUnit()} since ${esc(shortDate(first.date))} · ${sr.length} sessions${rel.length?` · ${rel[rel.length-1].rel.toFixed(2)} × bodyweight`:''}</div>
+    ${sparkline(sr.map(x=>uW(x.e1)),'#E0A03A',96)}
+    <div class="histrow" style="padding:10px 13px"><span>Status</span><span style="color:${p&&p.stalled?'var(--rust)':'var(--text)'}">${!p?`Plateau check needs 5 sessions (${sr.length} so far)`:p.stalled?`Stalled: no gain over 1% in ${p.sessions} sessions (${p.days} days)`:'Moving'}</span></div>
+    ${prs.length?`<div class="eyebrow" style="padding:10px 13px 2px">LATEST RECORDS</div>${prs.map(x=>`<div class="histrow" style="padding:8px 13px"><span>${esc(shortDate(x.date))}</span><span>${esc(prTxt(x))}</span></div>`).join('')}`:''}
+    ${how(`Estimated 1RM uses the Epley formula, <b>weight × (1 + reps ÷ 30)</b>, with reps capped at 10 and a single counted as the weight itself. Each point is the best working set of one session (warm-ups never count). A lift is <b>stalled</b> when the best of its last 4 sessions is no more than 1% above the best before them and those sessions span 3 weeks or more. Relative strength divides by your bodyweight trend on that date. Records: heaviest weight, best estimated 1RM, most reps at a weight at least that heavy, most volume (weight × reps) in one session.`)}
+  </div>`;
+}
+function LoadPanel(){
+  const wl=weeklyLoad(8), cur=wl[7], prev=wl[6], a=acwr(), max=Math.max(...wl.map(w=>w.tonnage),1);
+  if (!wl.some(w=>w.tonnage>0)) return sect('act','TRAINING LOAD')+`<div class="panel"><div class="empty">Log weighted sets and weekly tonnage, load ratio and per-muscle volume appear here.</div></div>`;
+  const band=!a?null:a.ratio<0.8?['Easing off','var(--steel)']:a.ratio<=1.3?['Steady build','var(--moss)']:a.ratio<=1.5?['Pushing','var(--amber)']:['Spike','var(--rust)'];
+  const mus=Object.entries(cur.byMuscle).sort((x,y)=>y[1]-x[1]).slice(0,8);
+  return sect('act','TRAINING LOAD')+`<div class="panel">
+    <div class="hero"><b>${uW(cur.tonnage).toLocaleString()}</b><span>${wUnit()} lifted this week · ${cur.sets} sets · ${cur.days} day${cur.days===1?'':'s'}</span></div>
+    <div class="herosub">${prev.tonnage?`${signed(Math.round((cur.tonnage/prev.tonnage-1)*100))}% against last week (${uW(prev.tonnage).toLocaleString()} ${wUnit()})`:'No lifting logged last week'}</div>
+    <div class="wload">${wl.map((w,i)=>`<div class="wlcol"><div class="wlbar"><div class="wlfill" style="height:${w.tonnage/max*100}%;background:${i===7?'var(--amber)':'var(--steel)'}"></div></div><div class="wllab">${esc(shortDate(w.week).replace(/^\D+/,''))}</div></div>`).join('')}</div>
+    <div class="note" style="border-top:none;padding-top:0">Weekly tonnage, last 8 weeks (week starting, Monday).</div>
+    <div class="histrow" style="padding:10px 13px;border-top:1px solid var(--rule)"><span>Load ratio</span><span>${a?`<b style="color:${band[1]}">${a.ratio.toFixed(2)}</b> · ${band[0]}`:'Needs 28 days of lifting history'}</span></div>
+    ${mus.length?`<div class="eyebrow" style="padding:10px 13px 2px">THIS WEEK BY MUSCLE</div>${mus.map(([m,t])=>`<div class="histrow" style="padding:8px 13px"><span>${esc((MM_RL[m]||[0,m])[1])}</span><span>${uW(t).toLocaleString()} ${wUnit()} · ${cur.freq[m]}× this week</span></div>`).join('')}`:''}
+    ${how(`<b>Tonnage</b> = sets × reps × weight, working sets only. Bodyweight reps count only their added weight, and timed, cardio and carry sets are not included, so it understates that work. A lift credits its main muscle in full and helper muscles at half, the same rule as the muscle map above. <b>Load ratio</b> = tonnage of the last 7 days ÷ the average week of the last 28. Roughly 0.8 to 1.3 is a steady build; above 1.5 is a jump your recent training has not prepared you for. Lifting only: fights and cardio have no tonnage.`)}
+  </div>`;
+}
+function NutritionResults(){
+  const nv=nutritionVsResults(), rows=nv.rows.slice(-6).reverse();
+  if (!rows.length) return sect('trend','FOOD AGAINST RESULTS')+`<div class="panel"><div class="empty">Once a full week has food logged on 4 or more days, it is lined up here against your weight trend and strength.</div></div>`;
+  const line=(c,what)=>!c.enough?`<p class="t"><b>${what}:</b> needs ${MIN_WEEKS} comparable weeks to say anything (${c.n} so far).</p>`
+    :c.r==null?`<p class="t"><b>${what}:</b> no variation to compare yet.</p>`
+    :`<p class="t"><b>${what}:</b> r = ${c.r.toFixed(2)} over ${c.n} weeks. ${Math.abs(c.r)<0.3?'No clear link in your data yet.':Math.abs(c.r)<0.6?`A moderate ${c.r>0?'positive':'negative'} link.`:`A strong ${c.r>0?'positive':'negative'} link.`}</p>`;
+  return sect('trend','FOOD AGAINST RESULTS')+`<div class="panel"><div class="tbl">
+    <div class="tr th" style="grid-template-columns:1.1fr 1fr 1.2fr 1.1fr"><span>Week of</span><span>Protein</span><span>Kcal / day</span><span>Weight trend</span></div>
+    ${rows.map(r=>{ const nw=nutritionWeek(r.week); return `<div class="tr" style="grid-template-columns:1.1fr 1fr 1.2fr 1.1fr"><span>${esc(shortDate(r.week))}</span><span>${nw.proteinDays}/${nw.logged} days</span><span>${signed(Math.round(r.balance))}</span><span>${r.dW==null?'·':signed(isImp()?r.dW*2.20462:r.dW,1)+' '+wUnit()}</span></div>`; }).join('')}</div>
+    <div style="padding:12px 13px 2px">${line(nv.weight,'Calories over or under target against weight trend change')}${line(nv.strength,'Protein per kg against strength change')}
+      <p class="t" style="color:var(--faint)">A correlation in ${Math.max(nv.weight.n,nv.strength.n)} weeks of one person's logs is a hint, not proof. Sleep, stress, the programme and water move both sides.</p></div>
+    ${how(`Only completed weeks with food logged on 4 or more days count. <b>Protein</b>: days at 90% of target or more, out of days logged. <b>Kcal / day</b>: average intake minus average target on logged days. <b>Weight trend</b>: change in your smoothed bodyweight over the week (each day the trend moves 10% of the way to a new reading, so one heavy morning barely moves it). <b>Strength</b>: the change in a strength index, the mean across lifts with 3+ sessions of best estimated 1RM so far ÷ first. <b>r</b> is the Pearson correlation, from −1 to 1. Targets use today's bodyweight for every week.`)}
+  </div>`;
+}
+function ReportCard(){
+  const late=dowIdx(T)>=5, prev=rcPrev==null?!late:rcPrev, week=addDays(weekOf(T),prev?-7:0), c=reportCard(week), nw=c.nutrition;
+  const dT=c.prevTonnage?Math.round((c.tonnage/c.prevTonnage-1)*100):null, col=(v,good,ok)=>v>=good?'var(--moss)':v>=ok?'var(--amber)':'var(--rust)';
+  return sect('award','REPORT CARD')+`
+    <div class="seg" style="margin-bottom:10px"><button class="segbtn ${prev?'on':''}" data-act="rc-week" data-v="1">LAST WEEK</button><button class="segbtn ${prev?'':'on'}" data-act="rc-week" data-v="0">THIS WEEK SO FAR</button></div>
+    <div class="stats">
+      <div class="stat"><div class="v" style="color:${col(c.planned?c.done/c.planned:1,0.85,0.6)}">${c.done}<span style="font-size:var(--fs-form);color:var(--faint)">/${c.planned}</span></div><div class="l">SESSIONS</div></div>
+      <div class="stat"><div class="v">${dT==null?'—':signed(dT)+'%'}</div><div class="l">TONNAGE</div></div>
+      <div class="stat"><div class="v" style="color:${c.prLifts.length?'var(--amber)':'var(--faint)'}">${c.prLifts.length}</div><div class="l">LIFT RECORDS</div></div>
+      <div class="stat"><div class="v" style="color:${nw.logged?col(nw.proteinDays/nw.logged,0.85,0.6):'var(--faint)'}">${nw.logged?nw.proteinDays:'—'}<span style="font-size:var(--fs-form);color:var(--faint)">${nw.logged?'/'+nw.logged:''}</span></div><div class="l">PROTEIN DAYS</div></div>
+    </div>
+    <div class="panel">
+      <div class="histrow" style="padding:10px 13px"><span>Lifted</span><span>${uW(c.tonnage).toLocaleString()} ${wUnit()} · ${c.sets} sets · ${c.liftDays} days</span></div>
+      <div class="histrow" style="padding:10px 13px"><span>Best lift</span><span>${c.best&&c.best.gain>0?`${esc(exInfo(c.best.id).n)} ${uW(c.best.e1)} ${wUnit()} est. 1RM (+${(c.best.gain*100).toFixed(1)}%)`:'No lift beat its previous best'}</span></div>
+      <div class="histrow" style="padding:10px 13px"><span>Food</span><span>${nw.logged?`${Math.round(nw.avgKcal).toLocaleString()} kcal, ${Math.round(nw.avgP)} g protein a day · ${signed(Math.round(nw.balance))} against target`:'Nothing logged'}</span></div>
+      <div class="histrow" style="padding:10px 13px"><span>Weight trend</span><span>${c.weightChange==null?'Not enough weigh-ins':signed(isImp()?c.weightChange*2.20462:c.weightChange,1)+' '+wUnit()}</span></div>
+      <div class="fixline"><div class="eyebrow" style="color:var(--amber)">FIX ${prev?'THIS':'NEXT'} WEEK</div>${esc(c.fix.t)}</div>
+      ${how(`<b>Sessions</b>: days where 60% or more of the planned session (or an equivalent workout of your own) was done, out of days that had a training session planned and were not marked off. <b>Tonnage</b>: this week against the week before. <b>Lift records</b>: lifts that beat their best estimated 1RM that week. <b>Protein days</b>: days at 90% of target or more, out of days with food logged. <b>Best lift</b>: the largest gain in estimated 1RM over that lift's previous best (it needs two earlier sessions to count). <b>The one thing to fix</b> is the first of these that is true: 2 or more planned sessions missed; food logged on fewer than 5 days; protein missed on 2 or more logged days; load ratio above 1.5; a stalled lift; no weigh-in.`)}
+    </div>`;
+}
+function ReadinessCard(){
+  const r=readiness(), e=S.log.find(x=>x.date===T), slept=e&&e.sleep>0;
+  const L={sleep:'Sleep',load:'Load ratio',fresh:'Yesterday'};
+  return foldHead('ready','act','READINESS',r?`${r.score} · model`:'log sleep to start')+(foldOpen('ready')?`<div class="panel">
+    ${r?`<div class="hero"><b style="color:${r.score>=75?'var(--moss)':r.score>=50?'var(--amber)':'var(--rust)'}">${r.score}</b><span>of 100 · a model from your logs, not a measurement</span></div>
+      ${r.parts.map(x=>`<div class="histrow" style="padding:8px 13px"><span>${L[x.k]}</span><span>${esc(x.d)} · ${Math.round(x.v*100)}</span></div>`).join('')}
+      ${r.missing.length?`<div class="note" style="border-top:none">Left out today (not logged): ${r.missing.map(k=>L[k].toLowerCase()).join(', ')}.</div>`:''}`
+    :`<div class="empty">Needs last night's sleep, or about four weeks of lifting history.</div>`}
+    ${slept?'':`<div class="gramrow" style="border-top:1px solid var(--rule);border-bottom:none"><span>Sleep last night (hours)</span><input type="number" id="rd_sleep" inputmode="decimal" step="0.25" placeholder="${SLEEP_TARGET}" aria-label="Hours slept last night"><button class="chip on" data-act="rd-sleep">SAVE</button></div>`}
+    ${how(`A 0 to 100 estimate of how ready you are to train hard, built only from what you logged. It cannot see heart-rate variability, illness or stress. <b>Sleep</b> (weight 40%): last night's hours ÷ ${SLEEP_TARGET}, capped at 100. <b>Load ratio</b> (35%): 100 while your 7-day lifting load is at most 1.1× your 4-week average, falling to 0 at 1.8×. <b>Yesterday</b> (25%): 100 after a day without lifting, 60 after a typical lifting day, down to 20 after a day twice as heavy. A part with no data is left out and the others are scaled up, so nothing is invented.`)}
+  </div>`:'');
+}
+
+/* ============================================================ motivation == */
+/* Earned, not cheered. Rank comes from strength, weeks of showing up and marks; marks come from missions and records, never from
+   opening the app. Everything except what was generated (the missions themselves) and the highest rank reached is worked out
+   from the logs each time, so editing a set or a food entry moves it honestly. */
+
+/* ---------- weeks ---------- */
+/* completed weeks, newest first: sessions done, sessions planned (days not marked off whose plan is not recovery), protein days */
+function pastWeeks(n){
+  return memo('pw:'+n,()=>Array.from({length:n},(_,i)=>{ const week=addDays(weekOf(T),-7*(i+1)); let done=0, planned=0;
+    for (let d=0;d<7;d++){ const k=addDays(week,d); if (!offOf(k)&&dayDef(k).type!=='recover') planned++; if (trainRatio(k)>=0.6) done++; }
+    return {week,done,planned}; }));
+}
+const weeksWith=(n,f)=>pastWeeks(n).filter(f).length;
+const proteinWeeks=n=>memo('prw:'+n,()=>Array.from({length:n},(_,i)=>nutritionWeek(addDays(weekOf(T),-7*(i+1))).proteinDays));
+
+/* ---------- ranks ---------- */
+/* What a forge does to metal. A rank needs all three at once: strength (s), discipline (d) and marks. STRENGTH SCORE = the mean over
+   squat, bench, deadlift and overhead press of best estimated 1RM / (bodyweight x the standard in LIFTS), each capped at 1. */
+const RANKS=[
+  {n:'RAW',s:0,marks:0,dl:'Where everyone starts',d:()=>true},
+  {n:'IRON',s:0.40,marks:10,dl:'3+ sessions a week, 4 weeks straight',d:()=>weeksWith(4,w=>w.done>=3)===4},
+  {n:'STEEL',s:0.55,marks:40,dl:'4+ sessions in 8 of the last 10 weeks, and protein 5+ days in 6 of the last 8',d:()=>weeksWith(10,w=>w.done>=4)>=8&&proteinWeeks(8).filter(p=>p>=5).length>=6},
+  {n:'TEMPERED',s:0.70,marks:100,dl:'12 straight weeks within one session of the plan',d:()=>weeksWith(12,w=>w.planned>0&&w.done>=w.planned-1)===12},
+  {n:'HARDENED',s:0.85,marks:220,dl:'4+ sessions in 22 of the last 26 weeks',d:()=>weeksWith(26,w=>w.done>=4)>=22},
+  {n:'DAMASCUS',s:1,marks:450,dl:'4+ sessions in 48 of the last 52 weeks',d:()=>weeksWith(52,w=>w.done>=4)>=48},
+];
+const RANK_LIFTS=['squat','bench','dead','ohp'];
+function strengthScore(){
+  return memo('sscore',()=>{ const tw=trendWeight(), bw=tw&&tw.kg;
+    const lifts=RANK_LIFTS.map(k=>{ const L=LIFTS.find(x=>x.k===k), best=Math.max(bestLift(k)||0,...e1rmSeries(EXLINK_ID[k]).map(x=>x.e1));
+      return {k,l:L.l,best,std:L.m,ratio:bw?best/bw:0,pct:bw?clamp(best/(bw*L.m),0,1):0}; });
+    return {score:lifts.reduce((a,x)=>a+x.pct,0)/lifts.length,lifts,bw}; });
+}
+/* where you stand against the next rank. Promotion is recorded (S.rank) so it can never be lost; "slipping" is shown instead when
+   two or more of the last four weeks fell under the held rank's weekly floor (3 sessions for IRON, 4 above it). */
+function rankState(){
+  return memo('rank',()=>{ const i=clamp(S.rank.i|0,0,RANKS.length-1), next=RANKS[i+1]||null, ss=strengthScore(), marks=marksTotal();
+    const req=next?[{k:'strength',ok:ss.score>=next.s-1e-9,t:`Strength score ${Math.round(next.s*100)}%`,now:`${Math.round(ss.score*100)}%`},
+      {k:'discipline',ok:next.d(),t:next.dl,now:`last 4 weeks: ${pastWeeks(4).map(w=>w.done).reverse().join(', ')} sessions`},
+      {k:'marks',ok:marks.total>=next.marks,t:`${next.marks} marks`,now:`${marks.total}`}]:[];
+    const floor=i>=2?4:3, slipping=i>=1&&weeksWith(4,w=>w.done<floor)>=2;
+    return {i,rank:RANKS[i],next,req,met:req.filter(r=>r.ok).length,marks,strength:ss,slipping,floor}; });
+}
+function syncRank(){
+  if (!S.rank) return;
+  for (let guard=0;guard<RANKS.length;guard++){ _memo=null; const r=rankState(); if (!r.next||r.met<3) break; S.rank.i=r.i+1; S.rank.at[S.rank.i]=T; }
+  _memo=null;
+}
+
+/* ---------- missions ---------- */
+/* Three a week (training, fuel, a weak point), one a month. Each has THREE bars: BASE, HARD and MAX. There is nothing to choose:
+   you aim at MAX, and how far you got decides the marks (1 / 2 / 3 for a weekly mission, 3 / 5 / 8 for the monthly one), so
+   falling just short of a high bar still pays more than clearing a low one. Reaching HARD or better on all three in a week adds 1.
+   A mission is generated once, from the weeks before it, and then only read: v(m, from, to) works its progress out of the logs. */
+const TIER_NAMES=['BASE','HARD','MAX'], WEEK_MARKS=[0,1,2,3], MONTH_MARKS=[0,3,5,8];
+const bestE1=(id,from,to)=>Math.max(0,...e1rmSeries(id).filter(x=>x.date>=from&&x.date<=to).map(x=>x.e1));
+const eachDay=(from,to,f)=>{ let n=0; for (let k=from;k<=to;k=addDays(k,1)) if (f(k)) n++; return n; };
+const MISSION={
+  sessions:{t:m=>'Sessions done',v:(m,a,b)=>eachDay(a,b,k=>trainRatio(k)>=0.6),u:'sessions',why:'60% of the planned session, your own workout of 3+ exercises, or a 30-minute fight.'},
+  protein:{t:m=>'Days at protein target',v:(m,a,b)=>eachDay(a,b,k=>{ const N=nutrition(k); return !!N&&foodTotals(k).p>=N.protein*PROTEIN_HIT; }),u:'days',why:'A day counts at 90% of the protein target or more.'},
+  stall:{t:m=>`Break the stall: ${exInfo(m.id).n}`,v:(m,a,b)=>bestE1(m.id,a,b),w:1,u:'est. 1RM',why:'Best estimated 1RM this week. BASE matches your best, HARD beats it by 1%, MAX by 2.5%.'},
+  muscle:{t:m=>`${(MM_RL[m.mu]||[0,m.mu])[1]}: working sets`,v:(m,a,b)=>{ const t=mmTally(daysBetween(T,a),Math.min(0,daysBetween(T,b))).tot[m.mu]||0; return Math.round(t*10)/10; },u:'sets',why:'Working sets this week, helper muscles at half credit. It was under its range last week.'},
+  weigh:{t:m=>'Morning weigh-ins',v:(m,a,b)=>S.log.filter(e=>e.weight>0&&e.date>=a&&e.date<=b).length,u:'weigh-ins',why:'One reading a week leaves the trend guessing.'},
+  sleep:{t:m=>'Nights of 7+ hours',v:(m,a,b)=>S.log.filter(e=>e.sleep>=7&&e.date>=a&&e.date<=b).length,u:'nights',why:'Logged on Today under Readiness, or in the body log.'},
+  tonnage:{t:m=>'Total weight lifted',v:(m,a,b)=>{ let t=0; for (let k=a;k<=b;k=addDays(k,1)) t+=dayTonnage(k).total; return t; },w:1,u:'',why:'This week against last: match it, +5%, +10%.'},
+  e1rm:{t:m=>`${exInfo(m.id).n}: estimated 1RM`,v:(m,a,b)=>bestE1(m.id,a,b),w:1,u:'est. 1RM',why:'Your main lift furthest below its standard. One, two or three loadable steps over where the month started.'},
+  msessions:{t:m=>'Sessions this month',v:(m,a,b)=>eachDay(a,b,k=>trainRatio(k)>=0.6),u:'sessions',why:'Every session counts the same way the weekly mission counts it.'},
+};
+const missionVal=(m,a,b)=>MISSION[m.t]?MISSION[m.t].v(m,a,b>T?T:b):0;
+const missionTier=(m,v)=>m.tiers.filter(x=>v>=x-1e-6).length;
+const missionFmt=(m,x)=>MISSION[m.t].w?(m.t==='tonnage'?uW(x).toLocaleString():String(uW(x)))+' '+wUnit():String(Math.round(x*10)/10);
+const monthSpan=ym=>{ const [y,mo]=ym.split('-').map(Number); return [ym+'-01',`${ym}-${pad(new Date(y,mo,0).getDate())}`]; };
+/* the weak-point candidates, most pressing first; `skip` steps past the first ones (the one swap a week) */
+function weakPoint(week,skip=0){
+  const prev=addDays(week,-7), out=[], hurt=!!injNow();
+  if (!hurt){
+    const st=insightLifts(5).filter(id=>{ const p=plateau(id), sr=e1rmSeries(id); return p&&p.stalled&&daysBetween(sr[sr.length-1].date,week)<=21; })[0];
+    if (st){ const b=Math.max(...e1rmSeries(st).map(x=>x.e1)); out.push({t:'stall',id:st,tiers:[b,b*1.01,b*1.025]}); }
+    const tally=mmTally(daysBetween(T,prev),daysBetween(T,addDays(prev,6))).tot;
+    const low=MM_REG.filter(r=>r[2]>=6&&(tally[r[0]]||0)<r[2]).sort((x,y)=>(tally[x[0]]||0)/x[2]-(tally[y[0]]||0)/y[2])[0];
+    if (low) out.push({t:'muscle',mu:low[0],tiers:[low[2],Math.round((low[2]+low[3])/2),low[3]]});
+  }
+  if (S.log.filter(e=>e.weight>0&&e.date>=prev&&e.date<week).length<3) out.push({t:'weigh',tiers:[3,5,7]});
+  out.push({t:'sleep',tiers:[4,5,6]});
+  if (!hurt){ const base=weeklyLoad(1,prev)[0].tonnage; if (base>0) out.push({t:'tonnage',tiers:[base,base*1.05,base*1.10]}); }
+  return out[skip%out.length];
+}
+function genWeek(week){
+  let planned=0; for (let d=0;d<7;d++){ const k=addDays(week,d); if (!offOf(k)&&dayDef(k).type!=='recover') planned++; }
+  planned=Math.max(3,planned);
+  const lastP=nutritionWeek(addDays(week,-7)).proteinDays;
+  return [{t:'sessions',tiers:[planned-2,planned-1,planned]},{t:'protein',tiers:lastP<=3?[4,6,7]:[5,6,7]},weakPoint(week)];
+}
+function genMonth(ym){
+  const from=ym+'-01', ss=strengthScore();
+  const c=injNow()?null:ss.lifts.map(x=>({x,id:EXLINK_ID[x.k],sr:e1rmSeries(EXLINK_ID[x.k])}))
+    .filter(o=>o.sr.length>=3&&daysBetween(o.sr[o.sr.length-1].date,from)<=28).sort((a,b)=>a.x.pct-b.x.pct)[0];
+  if (!c) return {t:'msessions',tiers:[14,16,18]};
+  const base=Math.max(...c.sr.map(x=>x.e1)), step=isImp()?5/2.20462:2.5;
+  return {t:'e1rm',id:c.id,tiers:[base+step,base+2*step,base+3*step]};
+}
+/* generate this week's and this month's missions once there is real training to build them from */
+function ensureMissions(){
+  if (!S.missions||!hasRealData()) return;
+  const wk=weekOf(T), ym=T.slice(0,7);
+  if (!S.missions.w[wk]) S.missions.w[wk]=genWeek(wk);
+  if (!S.missions.m[ym]) S.missions.m[ym]=genMonth(ym);
+}
+/* MARKS = mission tiers reached (every week and month on record) + 1 for each week a main lift set an estimated-1RM record */
+function marksTotal(){
+  return memo('marks',()=>{ let weekly=0, monthly=0, sweeps=0, prs=0;
+    for (const wk in S.missions.w){ const tiers=S.missions.w[wk].map(m=>missionTier(m,missionVal(m,wk,addDays(wk,6))));
+      weekly+=tiers.reduce((a,t)=>a+WEEK_MARKS[t],0); if (tiers.length===3&&tiers.every(t=>t>=2)) sweeps++; }
+    for (const ym in S.missions.m){ const m=S.missions.m[ym], [a,b]=monthSpan(ym); monthly+=MONTH_MARKS[missionTier(m,missionVal(m,a,b))]; }
+    const seen=new Set();
+    for (const L of LIFTS){ const id=EXLINK_ID[L.k]; if (id) for (const p of liftPRs(id)) if (p.type==='e1rm') seen.add(id+'|'+weekOf(p.date)); }
+    prs=seen.size;
+    return {total:weekly+monthly+sweeps+prs,weekly,monthly,sweeps,prs}; });
+}
+
+/* ---------- accountability: one line, when it is earned ---------- */
+/* At most one callout a day, the first of these that is true. On plan, it says nothing. */
+function callout(){
+  const nowH=new Date().getHours(), y=dkey(-1), planned=k=>!offOf(k)&&dayDef(k).type!=='recover'&&k>=(S.meta.start||T);
+  if (S.rank.at[S.rank.i]===T&&S.rank.i>0) return {k:'rank',t:`Rank earned: ${RANKS[S.rank.i].n}.`};
+  let pr=null; for (const L of LIFTS){ const id=EXLINK_ID[L.k]; if (id) for (const p of liftPRs(id)) if (p.type==='e1rm'&&p.date>=y&&(!pr||p.date>=pr.date)) pr=p; }
+  if (pr) return {k:'pr',t:`${uW(pr.v)}. That's the new floor.`};
+  if (offOf(T)||!hasRealData()) return null;
+  if (streak()>0&&nowH>=18&&!dayWon(T)) return {k:'streak',t:'Nothing counted today. The streak ends at midnight.'};
+  let out=0; while (out<30&&trainRatio(dkey(-1-out))<0.6&&!offOf(dkey(-1-out))) out++;
+  if (out>=3&&out<30&&trainRatio(T)<0.6) return {k:'gap',t:`${out} days out. Start with the first set.`};
+  const missed=eachDay(weekOf(T),y,k=>planned(k)&&trainRatio(k)<0.6);
+  if (missed>=2) return {k:'missed2',t:`${missed} sessions missed this week. The plan only works if you show up.`};
+  if (planned(y)&&trainRatio(y)<0.6) return {k:'missed',t:"Yesterday's session didn't happen. Today's does."};
+  const fed=[]; for (let i=1;i<=7&&fed.length<3;i++){ const k=dkey(-i), N=nutrition(k), ft=foodTotals(k); if (N&&ft.kcal>0) fed.push(ft.p<N.protein*PROTEIN_HIT); }
+  if (fed.length===3&&fed.every(Boolean)) return {k:'protein',t:"Protein short three days running. You're training for muscle you aren't feeding."};
+  const st=insightLifts(5).find(id=>{ const p=plateau(id); return p&&p.stalled&&RANK_LIFTS.some(k=>EXLINK_ID[k]===id); });
+  if (st) return {k:'stall',t:`${exInfo(st).n.replace(/^Barbell /,'')} hasn't moved in ${plateau(st).sessions} sessions. Same weight, same result.`};
+  const dsw=daysSinceWeight(); if (dsw!=null&&dsw>=10) return {k:'weigh',t:`No weigh-in in ${dsw} days. You're steering blind.`};
+  return null;
+}
+/* proof of progress: your own receipt, a different one each day among the lifts that have moved most */
+function proofLine(){
+  const main=new Set(LIFTS.map(L=>EXLINK_ID[L.k]));                 // the main lifts speak first; accessories only if none of them has moved
+  let c=insightLifts(3).map(id=>{ const sr=e1rmSeries(id); return {id,a:sr[0],b:Math.max(...sr.map(x=>x.e1))}; }).filter(o=>uW(o.b)-uW(o.a.e1)>=5);
+  if (c.some(o=>main.has(o.id))) c=c.filter(o=>main.has(o.id));
+  c=c.sort((x,y)=>(y.b-y.a.e1)-(x.b-x.a.e1)).slice(0,3);
+  if (!c.length) return '';
+  const o=c[strHash(T)%c.length];
+  return `${exInfo(o.id).n.replace(/^Barbell /,'')}: ${uW(o.a.e1)} → ${uW(o.b)} ${wUnit()} estimated 1RM since ${shortDate(o.a.date)}.`;
+}
+
+/* ---------- screens ---------- */
+function missionRow(m,a,b,marks,canSwap){
+  const D=MISSION[m.t]; if (!D) return '';
+  const v=missionVal(m,a,b), tier=missionTier(m,v), max=m.tiers[2], lo=D.w?m.tiers[0]*0.9:0, pos=x=>clamp((x-lo)/(max-lo||1)*100,0,100);
+  return `<div class="mis">
+    <div class="mist"><b>${esc(D.t(m))}</b><span class="mism" style="color:${tier?'var(--amber)':'var(--faint)'}">${tier?`${TIER_NAMES[tier-1]} · +${marks[tier]}`:'—'}</span></div>
+    <div class="misbar"><div class="misfill" style="width:${v>0?pos(v):0}%"></div>${m.tiers.map((x,i)=>`<i class="${v>=x-1e-6?'on':''}" style="left:${pos(x)}%"></i>`).join('')}</div>
+    <div class="misl"><span>Now <b>${v>0||!D.w?missionFmt(m,v):'not trained yet'}</b></span>${m.tiers.map((x,i)=>`<span class="${v>=x-1e-6?'on':''}">${TIER_NAMES[i]} ${missionFmt(m,x)}</span>`).join('')}</div>
+    <div class="misw">${esc(D.why)}${canSwap?` <button class="linkbtn" data-act="mis-swap" style="display:inline;margin:0">SWAP THIS ONE</button>`:''}</div></div>`;
+}
+function MissionsCard(){
+  const wk=weekOf(T), ym=T.slice(0,7), W=S.missions.w[wk], M=S.missions.m[ym];
+  if (!W&&!M) return '';
+  const tiers=(W||[]).map(m=>missionTier(m,missionVal(m,wk,addDays(wk,6)))), got=tiers.reduce((a,t)=>a+WEEK_MARKS[t],0)+(tiers.length===3&&tiers.every(t=>t>=2)?1:0);
+  const left=daysBetween(T,addDays(wk,6)), [ma,mb]=monthSpan(ym);
+  return foldHead('missions','target','MISSIONS',`${got} of 10 marks · ${left===0?'ends tonight':left+'d left'}`)+(foldOpen('missions')?`<div class="panel">
+    ${(W||[]).map((m,i)=>missionRow(m,wk,addDays(wk,6),WEEK_MARKS,i===2&&!S.missions.swap[wk])).join('')}
+    ${M?`<div class="eyebrow" style="padding:12px 13px 0">THIS MONTH · ${daysBetween(T,mb)}D LEFT</div>${missionRow(M,ma,mb,MONTH_MARKS,false)}`:''}
+    <div class="note">Aim at MAX. Each mission pays for how far you got: 1, 2 or 3 marks a week (3, 5 or 8 for the month), plus 1 when all three reach HARD. Progress is read from your logs; there is nothing to tick.</div>
+  </div>`:'');
+}
+function RankPanel(){
+  const r=rankState(), ss=r.strength;
+  return sect('shield','RANK')+`<div class="panel">
+    <div class="hero"><b>${r.rank.n}</b><span>${r.next?`${r.met} of 3 requirements met for ${r.next.n}`:'the top of the ladder'} · ${r.marks.total} marks</span></div>
+    ${r.slipping?`<div class="fixline" style="margin-top:12px"><div class="eyebrow" style="color:var(--amber)">SLIPPING</div>Two or more of your last four weeks were under ${r.floor} sessions. The rank is yours to keep; this is what holding it looks like.</div>`:'<div style="height:12px"></div>'}
+    ${r.req.map(q=>`<div class="reqrow">${q.ok?svg('check',14,'var(--moss)',3):svg('x',14,'var(--faint)')}<div><b>${esc(q.t)}</b><span style="color:${q.ok?'var(--moss)':'var(--dim)'}">Now: ${esc(q.now)}</span></div></div>`).join('')}
+    <div class="eyebrow" style="padding:12px 13px 2px">STRENGTH SCORE · ${Math.round(ss.score*100)}%</div>
+    ${ss.lifts.map(x=>`<div class="histrow" style="padding:8px 13px"><span>${esc(x.l)}</span><span>${x.best?`${uW(x.best)} ${wUnit()} · ${x.ratio.toFixed(2)}× of ${x.std}× bodyweight`:'not logged'}</span></div>`).join('')}
+    <div class="eyebrow" style="padding:12px 13px 2px">THE LADDER</div>
+    ${RANKS.map((k,i)=>`<div class="histrow" style="padding:8px 13px;${i===r.i?'background:var(--panel2)':''}"><span style="color:${i<=r.i?'var(--text)':'var(--faint)'}"><b>${k.n}</b>${S.rank.at[i]?` · ${esc(shortDate(S.rank.at[i]))}`:''}</span><span style="color:var(--faint)">${i?`${Math.round(k.s*100)}% · ${k.marks} marks`:''}</span></div>${i&&i===r.i+1?`<div class="note" style="border-top:none;padding-top:0">${esc(k.dl)}</div>`:''}`).join('')}
+    <div class="histrow" style="padding:10px 13px;border-top:1px solid var(--rule)"><span>Marks</span><span>${r.marks.weekly} weekly · ${r.marks.monthly} monthly · ${r.marks.sweeps} sweeps · ${r.marks.prs} records</span></div>
+    ${how(`A rank needs three things at once. <b>Strength score</b>: the average over squat, bench, deadlift and overhead press of your best estimated 1RM ÷ (bodyweight × its standard: 2×, 1.5×, 2.5×, 1×), each capped at 100%. A lift you have never logged counts as zero. <b>Discipline</b>: completed weeks only; a session is 60% of the planned session, your own workout of 3 or more exercises, or a 30-minute fight. <b>Marks</b>: 1, 2 or 3 for each weekly mission by the bar you reached (BASE, HARD, MAX), 3, 5 or 8 for the monthly one, 1 for a week where all three reached HARD, and 1 for each week a main lift set a new estimated-1RM record. Nothing is earned by opening the app. A rank, once earned, is never taken away.`)}
+  </div>`;
+}
+
+/* ============================================================ migrations == */
+/* S.schemaVersion says which shape the saved data is in. MIGRATIONS[n] takes it from version n to n+1 and must be safe to run on
+   empty data. Never edit one that has shipped: add the next and raise SCHEMA. Boot and every import run this, and nothing is
+   saved until the migrated data has drawn every screen (see bootApp / adoptState). Data from a NEWER build than this one (an old
+   cached copy of the app can load it) is refused rather than rewritten. */
+const SCHEMA=1;
+const MIGRATIONS=[
+  function v0to1(){
+    /* S.swap used to store a position in the active WEEK array, so a swap could resolve to a different workout after switching
+       programs. Convert leftover numbers to the stable day id. */
+    for (const k in S.swap){ const v=S.swap[k]; if (typeof v==='number'){ const d=WEEK[v]; if (d) S.swap[k]=d.id; else delete S.swap[k]; } }
+    /* Friday's "Row 4x10" block used to log under the same key as Wednesday's 3x8 ('row'). It has its own key now (rowvol): move
+       anything logged under 'row' on a Friday across. Once only (meta.rowSplit): 'row' can now legitimately land on a Friday. */
+    if (!S.meta.rowSplit){
+      for (const k in S.gym) if (S.gym[k]&&S.gym[k].row&&dowIdx(k)===4){ S.gym[k].rowvol=(S.gym[k].rowvol||[]).concat(S.gym[k].row); delete S.gym[k].row; }
+      if (S.prs.row && dowIdx(S.prs.row.date)===4 && (!S.prs.rowvol || S.prs.row.e1rm>S.prs.rowvol.e1rm)){ S.prs.rowvol=S.prs.row; delete S.prs.row; }
+      S.meta.rowSplit=true;
+    }
+  },
+];
+const schemaOf=o=>{ const v=+(o&&o.schemaVersion); return v>0?Math.floor(v):0; };
+function migrate(){
+  const from=schemaOf(S);
+  if (from>SCHEMA) throw new Error(`This data was saved by a newer FORGE (data v${from}, this copy reads v${SCHEMA}). Reload to update the app.`);
+  for (let v=from; v<SCHEMA; v++) MIGRATIONS[v]();
+  S.schemaVersion=SCHEMA;
+  return from<SCHEMA;
+}
+function dryRender(){
+  const prev={view,buildSub,wlSub};
+  try{ for (const [v,sub] of DRY_SCREENS){ view=v; if (v==='build') buildSub=sub; if (v==='wlog') wlSub=sub; render(); } }
+  finally{ view=prev.view; buildSub=prev.buildSub; wlSub=prev.wlSub; }
+}
+
 /* ================================================================== boot == */
 /* Shown when the app can't draw what is saved (a damaged backup, an edited file). Settings can't render either then, so the way back
    lives here: the newest automatic snapshot that does draw, a raw download of what is stored, or a fresh start. */
@@ -7434,10 +8108,12 @@ function recoveryScreen(err){
   const app=document.getElementById('app'); if (!app) return;
   app.innerHTML=`<div class="wrap" style="padding:28px 18px"><div class="eyebrow" style="color:var(--rust)">FORGE COULDN'T DRAW YOUR SAVED DATA</div>
     <p class="t" style="margin:12px 0">Nothing has been deleted. The problem: <b>${esc(String(err&&err.message||err).slice(0,120))}</b></p>
-    <button class="btn" id="rc_snap" style="width:100%;margin-top:10px">RESTORE THE NEWEST WORKING SNAPSHOT</button>
+    <button class="btn" id="rc_reload" style="width:100%;margin-top:10px">RELOAD THE APP</button>
+    <button class="btn ghost" id="rc_snap" style="width:100%;margin-top:10px">RESTORE THE NEWEST WORKING SNAPSHOT</button>
     <button class="btn ghost" id="rc_dl" style="width:100%;margin-top:10px">DOWNLOAD MY RAW DATA</button>
     <button class="btn ghost" id="rc_reset" style="width:100%;margin-top:10px">START FRESH</button><div class="note" id="rc_msg" style="border:none"></div></div>`;
   const msg=t=>{ const m=document.getElementById('rc_msg'); if (m) m.textContent=t; };
+  document.getElementById('rc_reload').onclick=()=>location.reload();
   document.getElementById('rc_dl').onclick=()=>{ let raw=null; try{ raw=localStorage.getItem(KEY)||localStorage.getItem(OLDKEY); }catch(e){}
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([raw||'{}'],{type:'application/json'})); a.download=`forge-raw-${dkey()}.json`; a.click(); };
   document.getElementById('rc_snap').onclick=async()=>{
@@ -7451,6 +8127,8 @@ function recoveryScreen(err){
   try{ await bootApp(); }catch(err){ recoveryScreen(err); }
 })();
 async function bootApp(){
+  /* Nothing is written to storage in here until render() has succeeded: if the saved data can't be drawn, the recovery screen
+     opens with the original untouched. */
   const saved=await Store.load();
   if (saved){
     S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),saved);
@@ -7458,61 +8136,44 @@ async function bootApp(){
     S.profile=Object.assign({},DEFAULTS.profile,saved.profile||{});
     S.fixed=Object.assign({},DEFAULTS.fixed,saved.fixed||{});
     S.meta=Object.assign({},DEFAULTS.meta,saved.meta||{});
-    Store.save(S);                                      // migrate old key forward
   }
   WEEK = WEEKS[S.profile.program] || WEEK_STD;
+  const from=schemaOf(S);
+  if (from>SCHEMA) migrate();                              // throws: newer data than this copy understands is never normalised or saved
   normalizeCustom();
-  { /* one-time migration: S.swap used to store a position in the active WEEK array,
-       which meant a swap could silently resolve to a different workout after switching
-       programs. Convert any leftover numeric values to the stable day id instead. */
-    let migrated=false;
-    for (const k in S.swap){ const v=S.swap[k];
-      if (typeof v==='number'){ const d=WEEK[v]; S.swap[k]=d?d.id:undefined; if(!d) delete S.swap[k]; migrated=true; } }
-    if (migrated) commit();
-  }
-  { /* one-time migration: Friday's "Barbell row — 4x10" block used to log under the
-       same key as Wednesday's "Barbell row — 3x8" ('row'), on the premise they'd
-       share one progression number — which showed Wednesday's 3x8 target on Friday's
-       4x10 block. Now split into its own key (rowvol). Move anything already logged
-       under 'row' on a Friday (the only weekday d8c can appear on) over to rowvol so
-       it doesn't just vanish from the page it was actually logged on. */
-    let rowMigrated=false;
-    if (!S.meta.rowSplit) for (const k in S.gym){
-      if (S.gym[k]&&S.gym[k].row&&dowIdx(k)===4){
-        S.gym[k].rowvol=(S.gym[k].rowvol||[]).concat(S.gym[k].row);
-        delete S.gym[k].row;
-        rowMigrated=true;
-      }
-    }
-    if (!S.meta.rowSplit && S.prs.row && dowIdx(S.prs.row.date)===4 &&
-        (!S.prs.rowvol || S.prs.row.e1rm>S.prs.rowvol.e1rm)){
-      S.prs.rowvol=S.prs.row; delete S.prs.row; rowMigrated=true;
-    }
-    /* run once only: the row exercise can now legitimately be logged on a Friday
-       (swapped days, other programs), and re-running would keep moving it. */
-    if (!S.meta.rowSplit){ S.meta.rowSplit=true; rowMigrated=true; }
-    if (rowMigrated) commit();
-  }
-  if (S.meta.onboarded==null){
+  /* about to change the shape of real data: keep the exact original first (the two newest are kept, see snapDaily) */
+  if (saved && from<SCHEMA && Store.raw) await snapPut(`pre-v${from}-${Date.now()}`,Store.raw).catch(()=>{});
+  const migrated=migrate();
+  if (S.meta.onboarded==null)
     S.meta.onboarded = !!saved && (S.log.length>0 || Object.keys(S.gym).length>0 || Object.keys(S.cust).length>0 || daysLogged()>0);
-    commit();
-  }
   if (!S.meta.start){
     const hasHistory = S.log.length>0 || Object.keys(S.gym).length>0 || daysLogged()>0;
     S.meta.start = hasHistory ? dkey(-30) : T;   // existing users skip the ramp entirely
-    commit();
   }
+  ensureMissions(); syncRank();
+  if (saved && migrated) dryRender();                      // migrated data has to draw every screen before it may replace the original
   render();
-  snapDaily().then(()=>{ if (view==='plan') render(); });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  commit();                                               // first write (also carries an old key forward)
+  try{ if (navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}    // ask the browser not to evict the data under storage pressure
+  snapDaily(Store.raw).then(()=>{ if (view==='plan') render(); });
+  if ('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    /* the worker says a newer copy of the app arrived after this page had already started from the old one. Never reload by itself: a set may be half-typed. */
+    navigator.serviceWorker.addEventListener('message',e=>{ if (e.data==='forge-update') toast('Update downloaded. Close and reopen FORGE to use it.',false,8000); });
+  }
   if (S.notif.on&&typeof Notification!=='undefined'&&Notification.permission==='granted') startTicker();
   const ms=new Date(new Date().setHours(24,0,30,0))-new Date();
-  const busy=()=>(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Object.values(cdraft).some(d=>Object.values(d).some(x=>x));
-  const midnight=()=>{ if (busy()) setTimeout(midnight,60000); else location.reload(); };     // wait out a running round timer or a set that's typed but not logged
+  /* "Today" is fixed when the page loads, so the page reloads when the date changes. It waits out a running round timer and anyone
+     using the app right now, but not a half-typed set from hours ago: that used to block the reload for good, leaving Today on
+     yesterday (and the weigh-in form dated yesterday) until the app was force-closed. */
+  const busy=()=>(tmrOpen && ['prep','work','rest'].includes(tmr.phase)) || Date.now()-lastTouch<120000;
+  const midnight=()=>{ if (busy()) setTimeout(midnight,60000); else location.reload(); };
   setTimeout(midnight,Math.max(ms,60000));
   document.addEventListener('visibilitychange', ()=>{
     if (document.visibilityState==='hidden') flushSave();
-    if (document.visibilityState==='visible' && dkey()!==T && !busy()) location.reload();
+    if (document.visibilityState!=='visible') return;
+    if (Store.changedElsewhere()) return Store.yield();     // another copy saved while this one was in the background
+    if (dkey()!==T && !busy()) location.reload();
   });
   addEventListener('pagehide', flushSave);
 }
