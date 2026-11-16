@@ -116,10 +116,10 @@ module.exports = { name: 'Today: switching days, minimizing the workout, saving 
 
   async 'text size: LARGE and EXTRA LARGE grow the small print, persist, and do not overflow a 320px phone'(page, a){
     const px = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--fs-body'));
-    a.equal(await px(), '11px');
+    a.equal(await px(), '13.5px');
     await page.evaluate(() => { view = 'plan'; render(); });
     await page.click('[data-act=textsize][data-v=large]');
-    a.equal(await px(), '13px');
+    a.equal(await px(), '14.5px');
     a.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('forge.v1')).ui.text), 'large');
     const pg = await openApp(page.ctx.browser(), { width: 320, state: await page.evaluate(() => ({ ...S, ui: { ...S.ui, text: 'xl' } })) });
     try {
